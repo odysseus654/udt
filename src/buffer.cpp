@@ -47,7 +47,7 @@ The receiving buffer is a logically circular memeory block.
 
 /*****************************************************************************
 written by 
-   Yunhong Gu [ygu@cs.uic.edu], last updated 09/09/2004
+   Yunhong Gu [ygu@cs.uic.edu], last updated 10/11/2004
 *****************************************************************************/
 
 
@@ -600,6 +600,12 @@ __int32 CRcvBuffer::registerUserBuf(char* buf, const __int32& len, const __int32
    m_iLastAckPos = m_iStartPos;
 
    return m_iUserBufAck;
+}
+
+void CRcvBuffer::removeUserBuf(const __int32& handle)
+{
+   m_pcUserBuf = NULL;
+   m_iUserBufAck = 0;
 }
 
 __int32 CRcvBuffer::getCurUserBufSize() const

@@ -66,7 +66,7 @@ CUDT: 		UDT
 
 /*****************************************************************************
 written by:
-   Yunhong Gu [ygu@cs.uic.edu], last updated 09/23/2004
+   Yunhong Gu [ygu@cs.uic.edu], last updated 10/11/2004
 *****************************************************************************/
 
 
@@ -1089,6 +1089,15 @@ public:
       //    Size of data that has been received by now.
 
    __int32 registerUserBuf(char* buf, const __int32& len, const __int32& handle);
+
+      // Functionality:
+      //    remove the user buffer from the protocol buffer.
+      // Parameters:
+      //    0) [in] handle: descriptor of this overlapped receiving.
+      // Returned value:
+      //    None.
+
+   void removeUserBuf(const __int32& handle);
 
       // Functionality:
       //    Query how many data has been received into user buffer.

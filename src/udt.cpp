@@ -48,7 +48,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 09/23/2004
+   Yunhong Gu [ygu@cs.uic.edu], last updated 10/11/2004
 *****************************************************************************/
 
 #ifndef WIN32
@@ -2064,7 +2064,7 @@ __int32 CUDT::recv(char* data, const __int32& len, __int32* overlapped, UDT_MEM_
       }
    }
 
-   if (NULL == overlapped)
+   if ((NULL == overlapped) || m_bBroken)
    {
       __int32 avail = m_pRcvBuffer->getRcvDataSize();
       if (len <= avail)
@@ -2122,10 +2122,14 @@ __int32 CUDT::recv(char* data, const __int32& len, __int32* overlapped, UDT_MEM_
    #endif
 
    // check if the receiving is successful or the connection is broken
+   __int32 avail;
    if (m_bBroken)
-      return (len < m_pRcvBuffer->getRcvDataSize()) ? len : m_pRcvBuffer->getRcvDataSize();
+      avail = (len < m_pRcvBuffer->getRcvDataSize()) ? len : m_pRcvBuffer->getRcvDataSize();
 
-   return len;
+   // remove incompleted overlapped recv buffer
+   m_pRcvBuffer->removeUserBuf(*overlapped);
+
+   return avail;
 }
 
 bool CUDT::getOverlappedResult(const int& handle, __int32& progress, const bool& wait)
