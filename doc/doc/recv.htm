@@ -31,10 +31,11 @@ data into a local memory buffer.</font></p>
 	<br>
 &nbsp; int <a class="synParam" onclick="showTip(this)"><font color="#FFFFFF">flags</font>,</a></font></p>
 	<p style="margin-top: 0; margin-bottom: 0">
-    <font face="Courier New" size="1">&nbsp; int *<font color="#FFFFFF">handle</font>,</font></p>
+    <font face="Courier New" size="1">&nbsp; int *<font color="#FFFFFF">handle </font>
+	= NULL,</font></p>
 	<p style="margin-top: 0; margin-bottom: 0">
     <font face="Courier New" size="1">&nbsp; <a href="structure.htm#MEM">UDT_MEM_ROUTINE</a>
-	<font color="#FFFFFF">routine</font>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	<font color="#FFFFFF">routine</font>&nbsp;= NULL&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 	<br>
 	);</font></p>
     </td>
@@ -60,10 +61,10 @@ data into a local memory buffer.</font></p>
 	<dd><font face="Verdana" size="2">[in] Ignored. For compatibility use only.</font></dd>
 	<dt><font face="Verdana"><i><font size="2">handle</font></i><font size="2">
 	</font></font> </dt>
-	<dd><font face="Verdana" size="2">[out] An descriptor to this <b>recv</b> call.</font></dd>
+	<dd><font face="Verdana" size="2">[out] Optional. An descriptor to this <b>recv</b> call.</font></dd>
 	<dt><font face="Verdana"><i><font size="2">routine</font></i><font size="2">
 	</font></font> </dt>
-	<dd><font face="Verdana" size="2">[in] function used to process the buffer 
+	<dd><font face="Verdana" size="2">[in] Optional. Function used to process the buffer 
 	after the sending is finished. </font></dd>
 </dl>
 <h4><font face="Verdana" size="2">Return Values</font></h4>
@@ -124,15 +125,15 @@ is returned and the specific error information can be retrieved by
 <P><font face="Verdana" size="2">The <b>recv </b>method reads certain amount of 
 data from the protocol buffer. If there is not enough data in the buffer, <b>recv</b> 
 only reads the available data in the protocol buffer and returns. On 
-non-blocking socket, <b>recv</b> returns immediately, otherwise recv may wait until 
+non-blocking socket, <b>recv</b> returns immediately, otherwise <b>recv</b> may wait until 
 some data is available to read.</font></P>
-<P><font face="Verdana" size="2">If the handle parameter is assigned, the <b>recv</b> 
+<P><font face="Verdana" size="2">If the <i>handle</i> parameter is assigned, the <b>recv</b> 
 method is enabled with overlapped IO processing. On blocking mode, UDT will wait 
 until exact the same size of <i>len</i> data are received. On non-blocking mode, 
 <b>recv</b> 
 returns immediately but the successive data continue to be written into the user 
 buffer. In either case, after the IO is completed, the function pointed by 
-routine (if it is not NULL) will be executed on the buffer.</font></P>
+<i>routine</i> (if it is not NULL) will be executed on the buffer.</font></P>
 <P><font face="Verdana" size="2">The current UDT implementation only allow at 
 most one non-blocking overlapped receiving at the same time. More non-blocking overlapped 
 <b>recv</b> call will 

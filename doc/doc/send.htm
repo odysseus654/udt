@@ -32,10 +32,11 @@ buffer.</font></p>
 	<br>
 &nbsp; int <a class="synParam" onclick="showTip(this)"><font color="#FFFFFF">flags</font>,</a></font></p>
 	<p style="margin-top: 0; margin-bottom: 0">
-    <font face="Courier New" size="1">&nbsp; int *<font color="#FFFFFF">handle</font>,</font></p>
+    <font face="Courier New" size="1">&nbsp; int *<font color="#FFFFFF">handle </font>
+	= NULL,</font></p>
 	<p style="margin-top: 0; margin-bottom: 0">
     <font face="Courier New" size="1">&nbsp; <a href="structure.htm#MEM">UDT_MEM_ROUTINE</a> 
-	<font color="#FFFFFF">routine</font>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	<font color="#FFFFFF">routine</font>&nbsp;= NULL&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 	<br>
 	);</font></p>
     </td>
@@ -60,11 +61,11 @@ buffer.</font></p>
 	<dd><font face="Verdana" size="2">[in] Ignored. For compatibility use only. </font></dd>
 	<dt><font face="Verdana"><i><font size="2">handle</font></i><font size="2">
 	</font></font> </dt>
-	<dd><font face="Verdana" size="2">[out] An descriptor to this send call.
+	<dd><font face="Verdana" size="2">[out] Optional. An descriptor to this send call.
 	</font></dd>
 	<dt><font face="Verdana"><i><font size="2">routine</font></i><font size="2">
 	</font></font> </dt>
-	<dd><font face="Verdana" size="2">[in] function used to process the buffer 
+	<dd><font face="Verdana" size="2">[in] optional. Function used to process the buffer 
 	after the sending is finished. </font></dd>
 </dl>
 <h4><font face="Verdana" size="2">Return Values</font></h4>
@@ -129,10 +130,10 @@ blocked until there is enough buffer size in the UDT sender's buffer. On
 non-blocking IO, send will return immediately. UDT <b>send</b> either sends all 
 the data specified by the length parameter or nothing. However, it is still 
 recommended to use a loop to check the return value for future compatibilities.</font></P>
-<P><font face="Verdana" size="2">In overlapped IO (a handle parameter is given), 
+<P><font face="Verdana" size="2">In overlapped IO (when the <i>handle</i> parameter is given), 
 a blocking sending waits until all data are sent out, whereas a non-blocking IO 
 returns immediately and the data will be sent at background (if there is enough 
-buffer). Once the data sending is completed, the function of routine will be 
+buffer). Once the data sending is completed, the function of <i>routine</i> will be 
 executed on the data.</font></P>
 <H4><font face="Verdana" size="2">See Also</font></H4>
 <P><font face="Verdana" size="2"><b><a href="recv.htm">recv</a></b>, <b>

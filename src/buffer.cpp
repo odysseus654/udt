@@ -47,7 +47,7 @@ The receiving buffer is a logically circular memeory block.
 
 /*****************************************************************************
 written by 
-   Yunhong Gu [ygu@cs.uic.edu], last updated 09/03/2004
+   Yunhong Gu [ygu@cs.uic.edu], last updated 09/09/2004
 *****************************************************************************/
 
 
@@ -233,10 +233,24 @@ bool CSndBuffer::getOverlappedResult(const int& handle, __int32& progress)
 {
    CGuard bufferguard(m_BufLock);
 
-   if ((NULL != m_pCurrAckBlk) && (handle == m_pCurrAckBlk->m_iHandle))
+   if (NULL != m_pCurrAckBlk)
    {
-      progress = m_iCurrAckPnt;
-      return false;
+      if (handle == m_pCurrAckBlk->m_iHandle)
+      {
+         progress = m_iCurrAckPnt;
+         return false;
+      }
+      else 
+      {
+         __int32 end = (m_pLastBlock->m_iHandle >= m_pCurrAckBlk->m_iHandle) ? m_pLastBlock->m_iHandle : m_pLastBlock->m_iHandle + (1 << 30);
+         __int32 h = (handle >= m_pCurrAckBlk->m_iHandle) ? handle : handle + (1 << 30);
+
+         if ((h > m_pCurrAckBlk->m_iHandle) && (h <= end))
+         {
+            progress = 0;
+            return false;
+         }
+      }
    }
 
    progress = 0;
