@@ -9,7 +9,7 @@
 
 int main(int argc, char* argv[])
 {
-   if ((argc < 3) or (0 == atoi(argv[2])))
+   if ((argc < 3) || (0 == atoi(argv[2])))
    {
       cout << "usage: appclient server_address server_port" << endl;
       return 0;

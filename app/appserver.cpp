@@ -5,7 +5,7 @@
 
 int main(int argc, char* argv[])
 {
-   if ((argc > 2) or ((2 == argc) and (0 == atoi(argv[1]))))
+   if ((argc > 2) || ((2 == argc) && (0 == atoi(argv[1]))))
    {
       cout << "usage: appserver [server_port]" << endl;
       cout << "parameters omited" << endl;

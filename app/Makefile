@@ -24,6 +24,7 @@ recvfile: recvfile.o
 
 clean:
 	rm -f *.o
+	rm -f appserver appclient sendfile recvfile
 
 install:
 	export PATH=$(DIR):$$PATH

@@ -8,7 +8,7 @@
 
 int main(int argc, char* argv[])
 {
-   if ((argc < 4) or (0 == atoi(argv[2])))
+   if ((argc < 4) || (0 == atoi(argv[2])))
    {
       cout << "usage: recvfile server_address server_port filename" << endl;
       return 0;
