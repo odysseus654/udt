@@ -1,0 +1,88 @@
+Programming Manual for SABUL 2.x
+
+I. Introduction.
+
+SABUL 2.x is implemented in C++. It provides two classes to users: CSabulSender and CSabulRecver, for data sending and receiving, 
+respectively.
+
+Header file:
+#include <sender.h>
+#inlcude <recver.h>
+
+Library:
+libsabul.so
+
+You may want to modify the environment variable of LD_LIBRARY_PATH as
+export LD_LIBRARY_PATH=<path where libsabul.so exists>:$LD_LIBRARY_PATH
+or uses similar command line on other shell (e.g., setenv...)
+
+
+A SABUL session is uni-directional. A SABUL entity starts with an "open" call and ends with a "close" call. A sender starts the  
+session by calling "listen" method, and waiting a receiver to connect to it with a "connect" call.
+
+Examples:
+appserver.cpp, appclient.cpp
+
+SABUL can send or receive disk file directly. File and in-memory data transfer are orthogonal, i.e., a SABUL entity can send or received 
+either in-memory data or disk file, no matter what way its peer side uses. 
+
+Examples:
+sendfile.cpp, recvfile.cpp
+
+
+II. API manual
+
+2.1 CSabulSender public methods:
+   int open(const int& port = 0);
+   Open a SABUL connection at port number of the parameter "port".
+   On success, return the port number that SABUL is binded to. This port number is useful for a peer node to connect to. 
+
+   void listen();
+   An initiator SABUL entity uses this method to wait for a peer node to connect to it. 
+
+   void connect(const char* ip, const int& port = 0);
+   A SABUL entity connects to the initiator listening at address "ip" with port number "port". The "port" is the value returned by the 
+"open" method of its peer side.
+
+   void close();
+   Closes SABUL session.
+
+   void send(char* data, const int& len);
+   Send data starting from address "data" with size of "len".
+
+   void sendfile(const int& fd, const int& offset, const int& size);
+   Send data from a disk file with file descriptor "fd", started from "offset" and the data size is "size".
+
+   void setRate(const double& initrate, const double& l_limit = 0, const double& u_limit = 1000);
+   Set the initial sending rate, the lower limit of the sending rate, and the upper limit of the sending rate. Data is in Mbps.
+
+   int getCurrBufSize();
+   Query the size of the data that is waiting to be sent out. This is useful if the application want to track the data sending. For
+example, if this method return 0, then it is safely to close SABUL connection now.
+
+   void sendfile(const int& fd, const int& offset, const int& size);
+   Send data from a disk file with file descriptor "fd", started from "offset" and the data size is "size".
+
+   void setOpt(SblOpt optName, const int& optval);
+   Set up SABUL options. 
+   The only SABUL option availbale currently is SBL_BLOCK. If the value is 0, the data sending is non-blocking, otherwise it is 
+blocking.  "sendfile" method is always blocking and is not affected by this option. The default value is 0. If non-blocking mode is 
+activated, SABUL will try to release the sent data buffer automatically.
+
+   int getOpt(SblOpt optName);
+   Read the current configuration of SABUL.
+
+
+2.2 CSabulRecver
+
+   int open(const char* ip, const int& port);
+   Open a SABUL receiver entity and connect to the sender listening at "ip":"port".
+
+   void close();
+   Close the SABUL receiver.
+
+   long recv(char* data, const long& len);
+   Received data with size of "len" to memory buffer pointed by "data".
+
+   long recvfile(const int& fd, const int& offset, const int& size);
+   Received data to a disk file with file descriptor "fd", started from "offset" and the data size is "size".

@@ -1,0 +1,36 @@
+
+SABUL - Simple Available Bandwidth Utilization Library
+version: 2.1
+
+Author
+==============================================================
+Yunhong Gu [yunhong@lac.uic.edu]
+
+
+Directories
+==============================================================
+./src: sabul library source codes
+./smp: paralell sabul library source codes [PERMANENTLY DELAYED]
+./kernel: kernel mode sabul library source codes, with APIC timer and zero-copy socket API included [CANCELED]
+./lossy: fast sabul (lossy) library source codes [TBD]
+./app: application examples
+./doc: sabul technical reports and papers
+./model: formal description of sabul in SMC, SPIN and SMV
+./sim: sabul moduls as extensions to NS-2
+./multicast: multicast supporting [TBD]
+
+Platform
+==============================================================
+Linux on Intel IA-32 architecture and above, SMP supported
+
+
+Manually Tuning
+==============================================================
+Some of the parameters cannot be automatically tunning yet. 
+1) Sending and Receiving Buffer size.
+   Location: channel.cpp line 14-15, the sender buffer should be small, while the receiver buffer should be large
+2) SYN interval
+   Location: recver.cpp line 13, tune it according to RTT
+
+
+COPYRIGHT (C) 2001, 2002, University of Illinois. All Rights Reserved.
