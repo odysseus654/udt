@@ -1,0 +1,10 @@
+This directory contains the GNU terminal control utilities tput and
+tabs.  tput is a program to enable shell scripts to portably use
+special terminal capabilities.  Although its interface is similar to
+that of terminfo-based tput programs, it actually uses termcap.  tabs
+is a program to set hardware terminal tab settings.
+ 
+See the file INSTALL for compilation and installation instructions.
+ 
+Mail suggestions and bug reports for the GNU terminal utilities to
+bug-gnu-utils@prep.ai.mit.edu.      

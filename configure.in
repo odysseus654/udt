@@ -1,0 +1,57 @@
+dnl
+dnl Process this file with autoconf to produce a configure script 
+dnl   -- Qiao (11/06/01)
+dnl
+AC_INIT(sabul.cpp)
+AM_INIT_AUTOMAKE(sabul, 1.01)
+AM_CONFIG_HEADER(config.h)
+AC_PREREQ(0.1)
+dnl AC_ARG_PROGRAM
+dnl AC_SUBST(ALLOCA)  dnl Bogus thing for automake
+dnl AM_MAINTAINER_MODE
+
+dnl
+dnl  check the compiler
+
+dnl
+AC_PROG_CXX
+dnl AC_PROG_INSTALL
+AC_PROG_RANLIB
+
+dnl
+dnl Get cannonical host
+dnl
+AC_CANONICAL_HOST
+AC_DEFINE_UNQUOTED(OS_TYPE, "$host_os")
+
+dnl
+dnl  check libraries 
+dnl
+AC_CHECK_LIB(socket, socket)
+AC_CHECK_LIB(nsl, gethostbyname)
+AC_CHECK_LIB(pthread, pthread_create)
+
+dnl
+dnl  check for library functions
+dnl
+AC_CHECK_FUNCS(strcpy strerror snprintf)
+AC_CHECK_FUNCS(gettimeofday select ntop)
+
+dnl 
+case "$host_os" in
+  *freebsd* ) LIBS="-pthread" ;;
+esac
+
+dnl 
+dnl  check for header file
+dnl
+AC_STDC_HEADERS
+AC_HAVE_HEADERS(string.h fcntl.h)
+
+dnl
+dnl  check for types
+dnl
+AC_TYPE_SIZE_T
+dnl AC_CHECK_TYPE(socklen_t, int) 
+
+AC_OUTPUT(Makefile)

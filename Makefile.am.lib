@@ -1,0 +1,17 @@
+noinst_LIBRARIES = libsabul.a
+
+libsabul_a_SOURCES = ipaddr.cpp tcpsocket.cpp udpsocket.cpp sabul.cpp\
+	ipaddr.h tcpsocket.h udpsocket.h sabul.h
+DIST_OTHER = COPYING ChangeLog install-sh $(HEADERS) config.h.in 
+
+INCLUDES = -I$(srcdir) -I.
+
+LDADD = libsabul.a
+
+ipaddr.o: ipaddr.h
+tcpsocket.o: tcpsocket.h
+udpsocket.o:udpsocket.h
+sabul.o:sabul.h	
+
+distname:
+	echo sabul
