@@ -45,7 +45,7 @@ A UDT packet is a 2-dimension vector of packet header and data.
 
 /*****************************************************************************
 written by 
-   Yunhong Gu [ygu@cs.uic.edu], last updated 08/10/2004
+   Yunhong Gu [ygu@cs.uic.edu], last updated 10/23/2004
 *****************************************************************************/
 
 //////////////////////////////////////////////////////////////////////////////
@@ -136,7 +136,7 @@ m_iSeqNo((__int32&)(m_nHeader)),
 m_pcData((char*&)(m_PacketVector[1].iov_base))
 {
    m_PacketVector[0].iov_base = (char *)&m_nHeader;
-   m_PacketVector[0].iov_len = sizeof(__int32);
+   m_PacketVector[0].iov_len = CPacket::m_iPktHdrSize;
 }
 
 CPacket::~CPacket()

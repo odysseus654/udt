@@ -51,7 +51,7 @@ UDT packet definition: packet.h
 
 /*****************************************************************************
 written by 
-   Yunhong Gu [ygu@cs.uic.edu], last updated 09/29/2004
+   Yunhong Gu [ygu@cs.uic.edu], last updated 10/23/2004
 *****************************************************************************/
 
 #ifndef WIN32
@@ -104,7 +104,7 @@ m_iRcvBufSize(307200)
 CChannel::CChannel(const __int32& version):
 m_iIPversion(version),
 m_iSndBufSize(102400),
-m_iRcvBufSize(307200)
+m_iRcvBufSize(409600)
 {
    #ifdef WIN32
       WORD wVersionRequested;
@@ -214,14 +214,14 @@ const CChannel& CChannel::operator<<(CPacket& packet) const
 const CChannel& CChannel::operator>>(CPacket& packet) const
 {
    // Packet length indicates if the packet is successfully received
-   packet.setLength(readv(m_iSocket, packet.getPacketVector(), 2) - sizeof(__int32));
+   packet.setLength(readv(m_iSocket, packet.getPacketVector(), 2) - CPacket::m_iPktHdrSize);
 
    #ifdef UNIX
       //simulating RCV_TIMEO
       if (packet.getLength() <= 0)
       {
          usleep(10);
-         packet.setLength(readv(m_iSocket, packet.getPacketVector(), 2) - sizeof(__int32));
+         packet.setLength(readv(m_iSocket, packet.getPacketVector(), 2) - CPacket::m_iPktHdrSize);
       }
    #endif
 
@@ -250,24 +250,24 @@ __int32 CChannel::sendto(CPacket& packet, const sockaddr* addr) const
    packet.m_nHeader = htonl(packet.m_nHeader);
 
    char* buf;
-   if (sizeof(__int32) + packet.getLength() <= 9000)
+   if (CPacket::m_iPktHdrSize + packet.getLength() <= 9000)
       buf = m_pcChannelBuf;
    else
-      buf = new char [sizeof(__int32) + packet.getLength()];
+      buf = new char [CPacket::m_iPktHdrSize + packet.getLength()];
 
-   memcpy(buf, packet.getPacketVector()[0].iov_base, sizeof(__int32));
-   memcpy(buf + sizeof(__int32), packet.getPacketVector()[1].iov_base, packet.getLength());
+   memcpy(buf, packet.getPacketVector()[0].iov_base, CPacket::m_iPktHdrSize);
+   memcpy(buf + CPacket::m_iPktHdrSize, packet.getPacketVector()[1].iov_base, packet.getLength());
 
    socklen_t addrsize = (4 == m_iIPversion) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
 
-   int ret = ::sendto(m_iSocket, buf, sizeof(__int32) + packet.getLength(), 0, addr, addrsize);
+   int ret = ::sendto(m_iSocket, buf, CPacket::m_iPktHdrSize + packet.getLength(), 0, addr, addrsize);
 
    #ifdef UNIX
       while (ret <= 0)
-         ret = ::sendto(m_iSocket, buf, sizeof(__int32) + packet.getLength(), 0, addr, addrsize);
+         ret = ::sendto(m_iSocket, buf, CPacket::m_iPktHdrSize + packet.getLength(), 0, addr, addrsize);
    #endif
 
-   if (sizeof(__int32) + packet.getLength() > 9000)
+   if (CPacket::m_iPktHdrSize + packet.getLength() > 9000)
       delete [] buf;
 
    // convert back into local host order
@@ -282,29 +282,29 @@ __int32 CChannel::sendto(CPacket& packet, const sockaddr* addr) const
 __int32 CChannel::recvfrom(CPacket& packet, sockaddr* addr) const
 {
    char* buf;
-   if (sizeof(__int32) + packet.getLength() <= 9000)
+   if (CPacket::m_iPktHdrSize + packet.getLength() <= 9000)
       buf = m_pcChannelBuf;
    else
-      buf = new char [sizeof(__int32) + packet.getLength()];
+      buf = new char [CPacket::m_iPktHdrSize + packet.getLength()];
 
    socklen_t addrsize = (4 == m_iIPversion) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
 
-   int ret = ::recvfrom(m_iSocket, buf, sizeof(__int32) + packet.getLength(), 0, addr, &addrsize);
+   int ret = ::recvfrom(m_iSocket, buf, CPacket::m_iPktHdrSize + packet.getLength(), 0, addr, &addrsize);
 
    #ifdef UNIX
       //simulating RCV_TIMEO
       if (ret <= 0)
       {
          usleep(10);
-         ret = ::recvfrom(m_iSocket, buf, sizeof(__int32) + packet.getLength(), 0, addr, &addrsize);
+         ret = ::recvfrom(m_iSocket, buf, CPacket::m_iPktHdrSize + packet.getLength(), 0, addr, &addrsize);
       }
    #endif
 
-   if (ret > int(sizeof(__int32)))
+   if (ret > CPacket::m_iPktHdrSize)
    {
-      packet.setLength(ret - sizeof(__int32));
-      memcpy(packet.getPacketVector()[0].iov_base, buf, sizeof(__int32));
-      memcpy(packet.getPacketVector()[1].iov_base, buf + sizeof(__int32), ret - sizeof(__int32));
+      packet.setLength(ret - CPacket::m_iPktHdrSize);
+      memcpy(packet.getPacketVector()[0].iov_base, buf, CPacket::m_iPktHdrSize);
+      memcpy(packet.getPacketVector()[1].iov_base, buf + CPacket::m_iPktHdrSize, ret - CPacket::m_iPktHdrSize);
 
       // convert back into local host order
       packet.m_nHeader = ntohl(packet.m_nHeader);
@@ -319,7 +319,7 @@ __int32 CChannel::recvfrom(CPacket& packet, sockaddr* addr) const
       packet.setLength(ret);
    }
 
-   if (sizeof(__int32) + packet.getLength() > 9000)
+   if (CPacket::m_iPktHdrSize + packet.getLength() > 9000)
       delete [] buf;
 
    return ret;

@@ -66,7 +66,7 @@ CUDT: 		UDT
 
 /*****************************************************************************
 written by:
-   Yunhong Gu [ygu@cs.uic.edu], last updated 10/14/2004
+   Yunhong Gu [ygu@cs.uic.edu], last updated 10/23/2004
 *****************************************************************************/
 
 #ifndef _UDT_H_
@@ -451,6 +451,8 @@ friend class CChannel;
 public:
    __int32& m_iSeqNo;		// alias: sequence number
    char*& m_pcData;		// alias: data/control information
+
+   const static __int32 m_iPktHdrSize = 4;
 
 public:
    CPacket();
@@ -1131,7 +1133,7 @@ public:
       //    None.
       // Returned value:
       //    Total size of the pending overlapped recv buffers.
-                                                                                                                            
+
    __int32 getPendingQueueSize() const;
 
 private:
@@ -1152,10 +1154,10 @@ private:
    {
       char* m_pcData;                   // pointer to the overlapped recv buffer
       __int32 m_iLength;                // length of the block
-                                                                                                                            
+
       __int32 m_iHandle;                // a unique handle to represent this receiving request
       UDT_MEM_ROUTINE m_pMemRoutine;    // function to process buffer after a complete receiving
-                                                                                                                            
+
       Block* m_next;                    // next block
    }  *m_pPendingBlock, *m_pLastBlock;
 

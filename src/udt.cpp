@@ -48,7 +48,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 10/19/2004
+   Yunhong Gu [ygu@cs.uic.edu], last updated 10/23/2004
 *****************************************************************************/
 
 #ifndef WIN32
@@ -364,7 +364,7 @@ void CUDT::open(const sockaddr* addr)
 
    // Initial sequence number, loss, acknowledgement, etc.
    m_iPktSize = m_iMSS - 28;
-   m_iPayloadSize = m_iPktSize - 4;
+   m_iPayloadSize = m_iPktSize - CPacket::m_iPktHdrSize;
    m_iISN = 0;
    m_iPeerISN = 0;
  
@@ -596,7 +596,7 @@ void CUDT::connect(const sockaddr* serv_addr)
    m_iMSS = hs->m_iMSS;
    m_iMaxFlowWindowSize = hs->m_iFlightFlagSize;
    m_iPktSize = m_iMSS - 28;
-   m_iPayloadSize = m_iPktSize - 4;
+   m_iPayloadSize = m_iPktSize - CPacket::m_iPktHdrSize;
 
    m_iPeerISN = hs->m_iISN;      
 
@@ -682,7 +682,7 @@ void CUDT::connect(const sockaddr* peer, const CHandShake* hs)
    *m_pChannel << initpkt;
   
    m_iPktSize = m_iMSS - 28;
-   m_iPayloadSize = m_iPktSize - 4;
+   m_iPayloadSize = m_iPktSize - CPacket::m_iPktHdrSize;
 
    m_iUserBufBorder = m_iRcvLastAck + (__int32)ceil(double(m_iUDTBufSize) / m_iPayloadSize);
 
@@ -1001,13 +1001,16 @@ DWORD WINAPI CUDT::sndHandler(LPVOID sender)
                   timeout.tv_sec = now.tv_sec + 1;
                   timeout.tv_nsec = now.tv_usec * 1000;
                }
-               pthread_cond_timedwait(&self->m_WindowCond, &self->m_WindowLock, &timeout);
+               if (0 == pthread_cond_timedwait(&self->m_WindowCond, &self->m_WindowLock, &timeout))
+                  break;
             #else
-               WaitForSingleObject(self->m_WindowCond, 1);
+               if (WAIT_TIMEOUT != WaitForSingleObject(self->m_WindowCond, 1))
+                  break;
             #endif
             self->m_pTimer->rdtsc(currtime);
          }
 
+         self->m_pTimer->rdtsc(currtime);
          if (currtime >= targettime)
             self->m_ullTimeDiff += currtime - targettime;
          else
@@ -1662,13 +1665,6 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
       if (*((__int32 *)ctrlpkt.m_pcData + 4) > 0)
          m_iBandwidth = (m_iBandwidth * 7 + *((__int32 *)ctrlpkt.m_pcData + 4)) >> 3;
 
-      // Wake up the waiting sender and correct the sending rate
-      if (m_ullInterval > m_iRTT * m_ullCPUFrequency)
-      {
-         m_ullInterval = m_iRTT * m_ullCPUFrequency;
-         m_pTimer->interrupt();
-      }
-
       #ifndef CUSTOM_CC
          // an ACK may activate rate control
          timeval currtime;
@@ -1681,6 +1677,9 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
             rateControl();
          }
       #endif
+
+      // Wake up the waiting sender and correct the sending rate
+      m_pTimer->interrupt();
 
       #ifdef TRACE
          ++ m_iRecvACK;
@@ -1789,6 +1788,7 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
       }
 
       // Wake up the waiting sender (avoiding deadlock on an infinite sleeping)
+      m_pSndLossList->insert(const_cast<__int32&>(m_iSndLastAck), const_cast<__int32&>(m_iSndLastAck));
       m_pTimer->interrupt();
 
       #ifndef WIN32
