@@ -53,7 +53,7 @@ CUDT:           UDT
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 02/06/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 02/16/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -66,6 +66,10 @@ modified by
 
 #ifdef CUSTOM_CC
 #undef NO_BUSY_WAITING
+#endif
+
+#ifndef LINUX
+#undef CAPI
 #endif
 
 #ifndef WIN32
@@ -124,6 +128,7 @@ typedef set<UDTSOCKET> ud_set;
 #define UD_SET(u, uset) ((uset)->insert(u))
 #define UD_ZERO(uset) ((uset)->clear())
 
+const char g_pcSysLibPath[] = "libc.so.6";
 
 ////////////////////////////////////////////////////////////////////////////////
 enum UDTOpt
@@ -734,6 +739,19 @@ private:
 
 private:
    void setChannelOpt();
+
+private:				// function pointers to the system socket library
+   void* m_pHSysSockLib;
+   int (*sys_socket)(int, int, int);
+   int (*sys_bind)(int, const struct sockaddr*, unsigned int);
+   int (*sys_connect)(int, const struct sockaddr*, socklen_t);
+   int (*sys_close)(int);
+   ssize_t (*sys_send)(int, const void*, unsigned int, int);
+   ssize_t (*sys_recv)(int, void*, unsigned int, int);
+   int (*sys_getpeername)(int, struct sockaddr*, socklen_t*);
+   int (*sys_getsockname)(int, struct sockaddr*, socklen_t*);
+   int (*sys_getsockopt)(int, int, int, void*, socklen_t*);
+   int (*sys_setsockopt)(int, int, int, const void*, socklen_t);
 };
 
 

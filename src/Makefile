@@ -9,12 +9,13 @@ ifndef arch
 endif
 
 #WARNING: Optimization option may decrease the performance!
-CCFLAGS = -fPIC -Wall -D$(os) -finline-functions
+CCFLAGS = -fpic -Wall -D$(os) -finline-functions
 
 CCFLAGS += -DTRACE
 CCFLAGS += -DNO_BUSY_WAITING
 #IMPOTANT: NO_BUSY_WAITING has NO effect when CUSTOM_CC is used!
 #CCFLAGS += -DCUSTOM_CC
+CCFLAGS += -DCAPI
 
 ifeq ($(arch), IA32)
    CCFLAGS += -DIA32 #-mcpu=pentiumpro -march=pentiumpro -mmmx -msse
@@ -36,7 +37,7 @@ ifeq ($(arch), AMD64)
    CCFLAGS += -DAMD64
 endif
 
-OBJS = common.o list.o buffer.o packet.o channel.o udt.o api.o
+OBJS = common.o list.o buffer.o packet.o channel.o udt.o api.o socket.o
 DIR = $(shell pwd)
 
 all: libudt.so libudt.a udt
