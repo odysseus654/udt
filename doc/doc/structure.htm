@@ -191,7 +191,15 @@ trace information. Its member attributes can be read directly by applications.</
 	<tr>
       <td>
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
-		int pktLossTotal</font></td>
+		int pktSndLossTotal</font></td>
+      <td width="83%">
+      <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
+		total number of lost packets, measured in the sending side</font></td>
+    </tr>
+	<tr>
+      <td>
+      <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
+		int pktRcvLossTotal</font></td>
       <td width="83%">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		total number of lost packets, measured in the receiving side</font></td>
@@ -262,7 +270,15 @@ trace information. Its member attributes can be read directly by applications.</
 	<tr>
       <td>
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
-		int pktLoss</font></td>
+		int pktSndLoss</font></td>
+      <td width="83%">
+      <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
+		number of lost packets, measured in the sending side</font></td>
+    </tr>
+	<tr>
+      <td>
+      <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
+		int pktRcvLoss</font></td>
       <td width="83%">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		number of lost packets, measured in the receiving side</font></td>
@@ -352,6 +368,14 @@ trace information. Its member attributes can be read directly by applications.</
 	<tr>
       <td>
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
+		int pktFlightSize</font></td>
+      <td width="83%">
+      <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
+		number packets on the flight</font></td>
+    </tr>
+	<tr>
+      <td>
+      <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		double msRTT</font></td>
       <td width="83%">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
@@ -364,6 +388,22 @@ trace information. Its member attributes can be read directly by applications.</
       <td width="83%">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		estimated bandwidth, in Mbps</font></td>
+    </tr>
+	<tr>
+      <td>
+      <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
+		int byteAvailSndBuf</font></td>
+      <td width="83%">
+      <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
+		available sending buffer size, in bytes</font></td>
+    </tr>
+	<tr>
+      <td>
+      <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
+		int byteAvailRcvBuf</font></td>
+      <td width="83%">
+      <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
+		available receiving buffer size, in bytes</font></td>
     </tr>
     </table>
 <H4><font face="Verdana" size="2"><a name="MEM"></a>UDT_MEM_ROUTINE</font></H4>

@@ -2,7 +2,7 @@
 
 <head>
 <meta http-equiv="Content-Language" content="en-us">
-<meta name="GENERATOR" content="Microsoft FrontPage 4.0">
+<meta name="GENERATOR" content="Microsoft FrontPage 6.0">
 <meta name="ProgId" content="FrontPage.Editor.Document">
 <meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
 <title>UDT Reference</title>
@@ -126,15 +126,17 @@ read and set up UDT options, respectively.</font></p>
 			<font face="Verdana" size="1">UDT_CC</font></td>
 			<td width="133">
 			<p style="margin-top: 1; margin-bottom: 1">
-			<font face="Verdana" size="1">CCC*</font></td>
+			<font face="Verdana" size="1">CCCFactory*</font><p style="margin-top: 1; margin-bottom: 1">
+			<font face="Verdana" size="1">CCC**</font></td>
 			<td width="323">
 			<p style="margin-top: 1; margin-bottom: 1">
-			<font face="Verdana" size="1">Rate control algorithm option</font></td>
+			<font face="Verdana" size="1">Congestion control algorithm option</font></td>
 			<td width="812">
 			<p style="margin-top: 1; margin-bottom: 1">
-			<font face="Verdana" size="1"><i>optval</i> is a pointer to a user 
-			defined congestion control class. Default is <font color="#008000">
-			NULL</font>.</font></td>
+			<font face="Verdana" size="1"><i>optval</i> is a pointer to a CCC 
+			Factory class. (for setsockopt)</font><p style="margin-top: 1; margin-bottom: 1">
+			<font face="Verdana" size="1"><i>optval</i> is a pointer of pointer 
+			to a CCC class instance. (for getsockopt)</font></td>
 		</tr>
 		<tr>
 			<td width="133">
