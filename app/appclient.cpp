@@ -58,6 +58,7 @@ int main(int argc, char* argv[])
 
    int size = 10000000;
    int handle = 0;
+   char* data = new char[size];
 
 #ifndef WIN32
    pthread_create(new pthread_t, NULL, monitor, &client);
@@ -67,7 +68,8 @@ int main(int argc, char* argv[])
 
    for (int i = 0; i < 1000; i ++)
    {
-      if (UDT_ERROR == UDT::send(client, new char[size], size, 0, &handle, DeleteBuf))
+      //if (UDT_ERROR == UDT::send(client, new char[size], size, 0, &handle, DeleteBuf))
+      if (UDT_ERROR == UDT::send(client, data, size, 0, &handle))
       {
          cout << "send: " << UDT::getlasterror().getErrorMessage() << endl;
          return 0;
@@ -75,6 +77,8 @@ int main(int argc, char* argv[])
    }
 
    UDT::close(client);
+
+   delete [] data;
 
    return 1;
 }
