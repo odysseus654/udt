@@ -39,7 +39,7 @@
 				LinkIncremental="2"
 				SuppressStartupBanner="TRUE"
 				AdditionalLibraryDirectories="../src"
-				DelayLoadDLLs="udt.dll"
+				DelayLoadDLLs=""
 				GenerateDebugInformation="TRUE"
 				ProgramDatabaseFile="$(outdir)/recvfile.pdb"
 				SubSystem="1"/>

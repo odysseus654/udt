@@ -78,6 +78,7 @@ int main(int argc, char* argv[])
 #ifndef WIN32
       pthread_t rcvthread;
       pthread_create(&rcvthread, NULL, recvdata, &recver);
+      pthread_detach(rcvthread);
 #else
       CreateThread(NULL, 0, recvdata, &recver, 0, NULL);
 #endif
@@ -116,8 +117,8 @@ DWORD WINAPI recvdata(LPVOID usocket)
    UDT::close(recver);
 
 #ifndef WIN32
-   pthread_exit(NULL);
+   return NULL;
 #else
-   ExitThread(0);
+   return 0;
 #endif
 }

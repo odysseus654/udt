@@ -45,7 +45,7 @@ A UDT packet is a 2-dimension vector of packet header and data.
 
 /*****************************************************************************
 written by 
-   Yunhong Gu [ygu@cs.uic.edu], last updated 07/07/2004
+   Yunhong Gu [ygu@cs.uic.edu], last updated 08/10/2004
 *****************************************************************************/
 
 
@@ -87,6 +87,7 @@ written by
 //              bits 16-31:   The ACK sequence number
 //              Control Info: The sequence number to which (but not include) all the previous packets have beed received
 //              Optional:     RTT
+//                            RTT Variance
 //                            advertised flow window size (number of packets)
 //                            estimated bandwidth (number of packets per second)
 //      011: Negative Acknowledgement (NAK)
@@ -183,7 +184,7 @@ void CPacket::pack(const __int32& pkttype, void* lparam, void* rparam, const __i
       #endif
 
       // data ACK seq. no. 
-      // optional: RTT (microsends), advertised flow window size (packets), and estimated link capacity (packets per second)
+      // optional: RTT (microsends), RTT variance (microseconds) advertised flow window size (packets), and estimated link capacity (packets per second)
       m_PacketVector[1].iov_base = (char *)rparam;
       m_PacketVector[1].iov_len = size;
 

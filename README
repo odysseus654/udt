@@ -26,7 +26,7 @@ CONTENT:
 ./src:     UDT source code 
 ./app:     Example programs 
 ./sim:     NS-2 module and simulation scripts 
-./doc:     UDT documentation 
+./doc:     UDT documentation (HTML) and Internet Draft 
 ./win:     Windows version of UDT 
 
 

@@ -113,8 +113,8 @@ DWORD WINAPI monitor(LPVOID s)
    }
 
 #ifndef WIN32
-   pthread_exit(NULL);
+   return NULL;
 #else
-   ExitThread(0);
+   return 0;
 #endif
 }

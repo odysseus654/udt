@@ -56,7 +56,7 @@ CChannel:	UDP Transport Channel
 CList:		Loss Lists and Irregular Packet List
 		CSndLossList
 		CRcvLossList
-		CIrregularLossPktList
+		CIrregularPktList
 CSndBuffer:	Sending Buffer Management 
 CRcvBuffer:	Receiving Buffer Management
 CUDTSocket:	UDT socket structure
@@ -66,7 +66,7 @@ CUDT: 		UDT
 
 /*****************************************************************************
 written by:
-   Yunhong Gu [ygu@cs.uic.edu], last updated 07/11/2004
+   Yunhong Gu [ygu@cs.uic.edu], last updated 09/01/2004
 *****************************************************************************/
 
 
@@ -554,8 +554,7 @@ public:
       // Functionality:
       //    Opne a UDP channel.
       // Parameters:
-      //    0) [in] ip: The IP address that UDP will use.
-      //    1) [in, out] port: port number that the UDP will be/is bound to.
+      //    0) [in] addr: The local address that UDP will use.
       // Returned value:
       //    None.
 
@@ -574,7 +573,7 @@ public:
       // Functionality:
       //    Receive data from the channel.
       // Parameters:
-      //    0) [in] buffer: pointer to the buffer to write received data.
+      //    0) [out] buffer: received data.
       //    1) [in] size: size of the expected data received.
       // Returned value:
       //    Actual size of data received.
@@ -584,7 +583,7 @@ public:
       // Functionality:
       //    Read the data from the channel but the data is not removed from UDP buffer.
       // Parameters:
-      //    0) [in] buffer: pointer to the buffer to write received data.
+      //    0) [out] buffer: previewed received data.
       //    1) [in] size: size of the expected data received.
       // Returned value:
       //    Actual size of data received.
@@ -686,11 +685,21 @@ public:
       // Functionality:
       //    Query the socket address that the channel is using.
       // Parameters:
-      //    0) [in] addr: pointer to store the returned socket address.
+      //    0) [out] addr: pointer to store the returned socket address.
       // Returned value:
       //    None.
 
    void getSockAddr(sockaddr* addr) const;
+
+      // Functionality:
+      //    Query the peer side socket address that the channel is connect to.
+      // Parameters:
+      //    0) [out] addr: pointer to store the returned socket address.
+      // Returned value:
+      //    None.
+
+   void getPeerAddr(sockaddr* addr) const;
+
 
 private:
    __int32 m_iIPversion;
@@ -703,6 +712,8 @@ private:
 
    __int32 m_iSndBufSize;		// UDP sending buffer size
    __int32 m_iRcvBufSize;		// UDP receiving buffer size
+
+   char* m_pcChannelBuf;		// buffer for temporally storage of in/out data
 
 private:
    void setChannelOpt();
@@ -783,7 +794,7 @@ private:
    __int32 m_iSize;			// size of the static array
    __int32 m_iLastInsertPos;		// position of last insert node
 
-   pthread_mutex_t m_ListLock;
+   pthread_mutex_t m_ListLock;		// used to synchronize list operation
 };
 
 
@@ -834,14 +845,14 @@ public:
       // Functionality:
       //    Get a encoded loss array for NAK report.
       // Parameters:
-      //    0) [in] array: pointer to the result array.
+      //    0) [out] array: the result list of seq. no. to be included in NAK.
       //    1) [out] physical length of the result array.
       //    2) [in] limit: maximum length of the array.
-      //    3) [in] interval: Time threshold from last NAK report.
+      //    3) [in] threshold: Time threshold from last NAK report.
       // Returned value:
       //    None.
 
-   void getLossArray(__int32* array, __int32& len, const __int32& limit, const __int32& interval);
+   void getLossArray(__int32* array, __int32& len, const __int32& limit, const __int32& threshold);
 
 private:
    __int32* m_piData1;			// sequence number starts
@@ -927,7 +938,7 @@ public:
       // Functionality:
       //    Find data position to pack a DATA packet from the furthest reading point.
       // Parameters:
-      //    0) [in] data: pointer to the pointer of the data position.
+      //    0) [out] data: the pointer to the data position.
       //    1) [in] len: Expected data length.
       // Returned value:
       //    Actual length of data read.
@@ -937,7 +948,7 @@ public:
       // Functionality:
       //    Find data position to pack a DATA packet for a retransmission.
       // Parameters:
-      //    0) [in] data: pointer to the pointer of the data position.
+      //    0) [out] data: the pointer to the data position.
       //    1) [in] offset: offset from the last ACK point.
       //    2) [in] len: Expected data length.
       // Returned value:
@@ -967,8 +978,8 @@ public:
       // Functionality:
       //    Query the progress of the buffer sending identified by handle.
       // Parameters:
-      //    1) [in]: handle
-      //    2) [in, out]: progress
+      //    1) [in] handle: descriptor of this overlapped IO
+      //    2) [out] progress: the current progress of the overlapped IO
       // Returned value:
       //    if the overlapped IO is completed.
 
@@ -985,7 +996,7 @@ public:
   static void releaseBuffer(char* buf, int);
 
 private:
-   pthread_mutex_t m_BufLock;
+   pthread_mutex_t m_BufLock;		// used to synchronize buffer operation
 
    struct Block
    {
@@ -1020,7 +1031,7 @@ public:
       // Functionality:
       //    Find a position in the buffer to receive next packet.
       // Parameters:
-      //    0) [in] data: pointer of pointer to the next data position.
+      //    0) [out] data: the pointer to the next data position.
       //    1) [in] offset: offset from last ACK point.
       //    2) [in] len: size of data to be written.
       // Returned value:
@@ -1052,7 +1063,7 @@ public:
       // Functionality:
       //    Read data from the buffer into user buffer.
       // Parameters:
-      //    0) [in] data: pointer to the user buffer.
+      //    0) [out] data: data read from protocol buffer.
       //    1) [in] len: size of data to be read.
       // Returned value:
       //    true if there is enough data to read, otherwise return false.
@@ -1100,7 +1111,8 @@ public:
       // Functionality:
       //    Query how many data has been continuously received (for reading).
       // Parameters:
-      //    None.      // Returned value:
+      //    None.
+      // Returned value:
       //    size of valid (continous) data for reading.
 
    __int32 getRcvDataSize() const;
@@ -1108,8 +1120,8 @@ public:
       // Functionality:
       //    Query the progress of the buffer sending identified by handle.
       // Parameters:
-      //    1) [in]: handle
-      //    2) [in, out]: progress
+      //    1) [in] handle: descriptor of this overlapped IO
+      //    2) [out] progress: the current progress of the overlapped IO
       // Returned value:
       //    if the overlapped IO is completed.
 
@@ -1135,14 +1147,8 @@ class CUDT;
 
 struct CUDTSocket
 {
-   CUDTSocket(): m_pSelfAddr(NULL), m_pPeerAddr(NULL), m_pQueuedSockets(NULL), m_pAcceptSockets(NULL) {}
-   ~CUDTSocket()
-   {
-      if (m_pSelfAddr) delete m_pSelfAddr;
-      if (m_pPeerAddr) delete m_pPeerAddr;
-      if (m_pQueuedSockets) delete m_pQueuedSockets;
-      if (m_pAcceptSockets) delete m_pAcceptSockets;
-   }
+   CUDTSocket();
+   ~CUDTSocket();
 
    enum UDTSTATUS {INIT = 1, OPENED, LISTENING, CONNECTED, CLOSED};
    UDTSTATUS m_Status;			// current socket state
@@ -1233,18 +1239,20 @@ public:
 private:
    map<UDTSOCKET, CUDTSocket*> m_Sockets;	// stores all the socket structures
 
-   pthread_mutex_t m_ControlLock;
+   pthread_mutex_t m_ControlLock;		// used to synchronize UDT API
 
-   pthread_mutex_t m_IDLock;
+   pthread_mutex_t m_IDLock;			// used to synchronize ID generation
    UDTSOCKET m_SocketID;			// seed to generate a new unique socket ID
 
-   pthread_cond_t m_AcceptCond;
-   pthread_mutex_t m_AcceptLock;
+   pthread_cond_t m_AcceptCond;			// used to block "accept" call
+   pthread_mutex_t m_AcceptLock;		// mutex associated to m_AcceptCond
 
 private:
    pthread_key_t m_TLSError;			// thread local error record (last error)
+   static void TLSDestroy(void* e) {delete (CUDTException*)e;}
 
 private:
+   CUDTSocket* locate(const UDTSOCKET u);
    CUDTSocket* locate(const UDTSOCKET u, const sockaddr* peer);
    void checkBrokenSockets();
    void removeSocket(const UDTSOCKET u);
@@ -1287,6 +1295,15 @@ public:
       //    None.
 
    virtual void onLoss(const __int32* losslist, const __int32& size) {}
+
+      // Functionality:
+      //    Callback function to be called when a timeout event occurs.
+      // Parameters:
+      //    None.
+      // Returned value:
+      //    None.
+
+   virtual void onTimeout() {}
 
       // Functionality:
       //    Callback function to be called when a data is sent.
@@ -1383,7 +1400,7 @@ public: //API
    static int recv(UDTSOCKET u, char* buf, int len, int flags = 0, int* handle = NULL, UDT_MEM_ROUTINE routine = NULL);
    static streampos sendfile(UDTSOCKET u, ifstream& ifs, const streampos& offset, streampos& size, const int& block = 367000);
    static streampos recvfile(UDTSOCKET u, ofstream& ofs, const streampos& offset, streampos& size, const int& block = 7340000);
-   static bool getoverlappedresult(UDTSOCKET u, int handle, int& progress, bool wait = false, void* result = NULL);
+   static bool getoverlappedresult(UDTSOCKET u, int handle, int& progress, bool wait = false);
    static int select(int nfds, ud_set* readfds, ud_set* writefds, ud_set* exceptfds, const timeval* timeout);
    static CUDTException& getlasterror();
    static int perfmon(UDTSOCKET u, CPerfMon* perf);
@@ -1450,7 +1467,7 @@ private:
       // Functionality:
       //    Request UDT to receive data to a memory block "data" with size of "len".
       // Parameters:
-      //    0) [in] data: The address of the application data to be received.
+      //    0) [out] data: data received.
       //    1) [in] len: The desired size of data to be received.
       //    2) [out] overlapped: A pointer to the returned overlapped IO handle.
       //    3) [in] unused.
@@ -1465,11 +1482,10 @@ private:
       //    0) [in] handle: the handle that indicates the submitted overlapped IO.
       //    1) [out] progess: how many data left to be sent/receive.
       //    2) [in] wait: wait for the IO finished or not.
-      //    3) [out] routine result
       // Returned value:
       //    if the overlapped IO is completed.
 
-   bool getOverlappedResult(const int& handle, __int32& progress, const bool& wait = false, void* result = NULL);
+   bool getOverlappedResult(const int& handle, __int32& progress, const bool& wait = false);
 
       // Functionality:
       //    Request UDT to send out a file described as "fd", starting from "offset", with size of "size".
@@ -1486,7 +1502,7 @@ private:
       // Functionality:
       //    Request UDT to receive data into a file described as "fd", starting from "offset", with expected size of "size".
       // Parameters:
-      //    0) [in] ofs: The output file stream.
+      //    0) [out] ofs: The output file stream.
       //    1) [in] offset: From where to write data;
       //    2) [in] size: How many data to be received.
       //    3) [in] block: size of block per write to disk
@@ -1545,6 +1561,9 @@ private: // Version
    const __int32 m_iVersion;			// UDT version, for compatibility use
 
 private: // Threads, data channel, and timing facility
+#ifndef WIN32
+   bool m_bSndThrStart;				// lazy snd thread creation
+#endif
    pthread_t m_SndThread;			// Sending thread
    pthread_t m_RcvThread;			// Receiving thread
    CChannel* m_pChannel;			// UDP channel
@@ -1566,7 +1585,6 @@ friend class CCC;
    __int32 m_iMSS;				// Maximum Segment Size
    bool m_bSynSending;				// Sending syncronization mode
    bool m_bSynRecving;				// Receiving syncronization mode
-   char __pad1[2];
    CCC* m_pCC;					// custom congestion control class
    __int32 m_iFlightFlagSize;			// Maximum number of packets in flight from the peer side
    __int32 m_iSndQueueLimit;			// Maximum length of the sending buffer queue
@@ -1588,11 +1606,8 @@ private: // Status
    bool m_bSndSlowStart;			// If UDT is during slow start phase (snd side flag)
    bool m_bRcvSlowStart;			// If UDT is during slow start phase (rcv side flag)
    bool m_bFreeze;				// freeze the data sending
-   char __pad2[2];
    __int32 m_iEXPCount;				// Expiration counter
    __int32 m_iBandwidth;			// Estimated bandwidth
-
-   pthread_mutex_t m_ConnectionLock;
 
 private: // connection setup
    pthread_t m_ListenThread;
@@ -1608,20 +1623,10 @@ private: // Sending related data
    CSndLossList* m_pSndLossList;		// Sender loss list
    CPktTimeWindow* m_pSndTimeWindow;		// Packet sending time window
 
-   pthread_cond_t m_SendDataCond;		
-   pthread_mutex_t m_SendDataLock;
-
-   pthread_cond_t m_SendBlockCond;
-   pthread_mutex_t m_SendBlockLock;
-
-   pthread_mutex_t m_AckLock;
-
    volatile unsigned __int64 m_ullInterval;	// Inter-packet time, in CPU clock cycles
    unsigned __int64 m_ullLastDecRate;		// inter-packet time when last decrease occurs
    unsigned __int64 m_ullTimeDiff;		// aggregate difference in inter-packet time
 
-   pthread_cond_t m_WindowCond;
-   pthread_mutex_t m_WindowLock;
    __int32 m_iFlowWindowSize;                   // Flow control window size
    __int32 m_iMaxFlowWindowSize;                // Maximum flow window size = flight flag size of the peer side
    volatile double m_dCongestionWindow;         // congestion window size
@@ -1632,7 +1637,6 @@ private: // Sending related data
 
    timeval m_LastSYNTime;			// the timestamp when last rate control occured
    bool m_bLoss;				// if there is any loss during last RC period
-   char __pad3[2];
 
    volatile __int32 m_iSndLastAck;		// Last ACK received
    __int32 m_iSndLastDataAck;			// The real last ACK that updates the sender buffer and loss list
@@ -1651,6 +1655,7 @@ private: // Receiving related data
    CPktTimeWindow* m_pRcvTimeWindow;		// Packet arrival time window
 
    __int32 m_iRTT;				// RTT
+   __int32 m_iRTTVar;				// RTT variance
 
    __int32 m_iRcvLastAck;			// Last sent ACK
    unsigned __int64 m_ullLastAckTime;		// Timestamp of last ACK
@@ -1659,14 +1664,7 @@ private: // Receiving related data
    __int32 m_iRcvCurrSeqNo;			// Largest received sequence number
    __int32 m_iNextExpect;			// Sequence number of next speculated packet to receive
 
-   pthread_cond_t m_RecvDataCond;
-   pthread_mutex_t m_RecvDataLock;
-
-   pthread_cond_t m_OverlappedRecvCond;
-   pthread_mutex_t m_OverlappedRecvLock;
-
    volatile bool m_bReadBuf;			// Application has called "recv" but has not finished
-   char __pad4[3];
    volatile char* m_pcTempData;			// Pointer to the buffer that application want to put received data into
    volatile __int32 m_iTempLen;			// Size of the "m_pcTempData"
 
@@ -1679,13 +1677,37 @@ private: // Receiving related data
    __int32 m_iFlowControlWindow;		// flow control window size to be advertised
 
 private: // Overlapped IO related
-   pthread_mutex_t m_HandleLock;
    __int32 m_iSndHandle;			// seed used to generate an overlapped sending handle
    __int32 m_iRcvHandle;			// seed used to generate an overlapped receiving handle
 
-private: // Thread-safe protectors
-   pthread_mutex_t m_SendLock;
-   pthread_mutex_t m_RecvLock;
+private: // synchronization: mutexes and conditions
+   pthread_mutex_t m_ConnectionLock;		// used to synchronize connection operation
+
+   pthread_cond_t m_SendDataCond;		// used to block sending when there is no data
+   pthread_mutex_t m_SendDataLock;		// lock associated to m_SendDataCond
+
+   pthread_cond_t m_SendBlockCond;		// used to block "send" call
+   pthread_mutex_t m_SendBlockLock;		// lock associated to m_SendBlockCond
+
+   pthread_mutex_t m_AckLock;			// used to protected sender's loss list when processing ACK
+
+   pthread_cond_t m_WindowCond;			// used to block sending when flow window is exceeded
+   pthread_mutex_t m_WindowLock;		// lock associated to m_WindowLock
+
+   pthread_cond_t m_RecvDataCond;		// used to block "recv" when there is no data
+   pthread_mutex_t m_RecvDataLock;		// lock associated to m_RecvDataCond
+
+   pthread_cond_t m_OverlappedRecvCond;		// used to block "recv" when overlapped receving is in progress
+   pthread_mutex_t m_OverlappedRecvLock;	// lock associated to m_OverlappedRecvCond
+
+   pthread_mutex_t m_HandleLock;		// used to generate unique send/recv handle
+
+   pthread_mutex_t m_SendLock;			// used to synchronize "send" call
+   pthread_mutex_t m_RecvLock;			// used to synchronize "recv" call
+
+   void initSynch();
+   void destroySynch();
+   void releaseSynch();
 
 private: // Thread handlers
    #ifndef WIN32

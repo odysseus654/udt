@@ -40,7 +40,7 @@
 				LinkIncremental="2"
 				SuppressStartupBanner="TRUE"
 				AdditionalLibraryDirectories="../src"
-				DelayLoadDLLs="udt.dll"
+				DelayLoadDLLs=""
 				GenerateDebugInformation="TRUE"
 				ProgramDatabaseFile="$(outdir)/appserver.pdb"
 				SubSystem="1"/>

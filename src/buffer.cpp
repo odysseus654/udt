@@ -47,7 +47,7 @@ The receiving buffer is a logically circular memeory block.
 
 /*****************************************************************************
 written by 
-   Yunhong Gu [ygu@cs.uic.edu], last updated 06/21/2004
+   Yunhong Gu [ygu@cs.uic.edu], last updated 09/03/2004
 *****************************************************************************/
 
 
@@ -88,6 +88,12 @@ CSndBuffer::~CSndBuffer()
       delete m_pBlock;
       m_pBlock = pb;
    }
+
+   #ifndef WIN32
+      pthread_mutex_destroy(&m_BufLock);
+   #else
+      CloseHandle(m_BufLock);
+   #endif
 }
 
 void CSndBuffer::addBuffer(const char* data, const __int32& len, const __int32& handle, const UDT_MEM_ROUTINE func)
@@ -225,15 +231,16 @@ __int32 CSndBuffer::getCurrBufSize() const
 
 bool CSndBuffer::getOverlappedResult(const int& handle, __int32& progress)
 {
-   if (handle > m_pBlock->m_iHandle)
-      return true;
+   CGuard bufferguard(m_BufLock);
 
-   if (handle < m_pLastBlock->m_iHandle)
-      throw CUDTException(5, 3, 0);
+   if ((NULL != m_pCurrAckBlk) && (handle == m_pCurrAckBlk->m_iHandle))
+   {
+      progress = m_iCurrAckPnt;
+      return false;
+   }
 
-   progress =(handle == m_pBlock->m_iHandle) ? m_iCurrAckPnt : 0;
-
-   return false;
+   progress = 0;
+   return true;
 }
 
 void CSndBuffer::releaseBuffer(char* buf, int)
@@ -606,12 +613,17 @@ __int32 CRcvBuffer::getAvailBufSize() const
 
 __int32 CRcvBuffer::getRcvDataSize() const
 {
-   return (m_iLastAckPos - m_iStartPos + m_iSize) % m_iSize;
+   return (m_iLastAckPos - m_iStartPos + m_iSize) % m_iSize + getCurUserBufSize();
 }
-
 
 bool CRcvBuffer::getOverlappedResult(const int& handle, __int32& progress)
 {
+   if ((NULL != m_pcUserBuf) && (handle == m_iHandle))
+   {
+      progress = m_iUserBufAck;
+      return false;
+   }
 
-   return false;
+   progress = 0;
+   return true;
 }

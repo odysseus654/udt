@@ -58,8 +58,7 @@ stream.</font></p>
 	<dt><font face="Verdana"><i><font size="2">timeout</font></i><font size="2">
 	</font></font> </dt>
 	<dd><font face="Verdana" size="2">[in] Maximum time for select to wait, 
-	provided in the form of a
-	<a href="ms-help://MS.VSCC/MS.MSDNVS/winsock/strucetc_8mlu.htm">TIMEVAL</a> 
+	provided in the form of a timeval
 	structure. Set the timeout parameter to NULL for blocking operation. </font>
 	</dd>
 </dl>
@@ -130,16 +129,16 @@ file to the remote node using UDT:</font></p>
 	tv.tv_sec = 1;<br>
 	tv.tv_usec = 0;<br>
 	<br>
-	UDZERO(&amp;readfds);<br>
-	UDSET(u, &amp;readfds);<br>
+	UD_ZERO(&amp;readfds);<br>
+	UD_SET(u, &amp;readfds);<br>
 	<br>
 	int res =
 	select(0, &amp;readfds, NULL, NULL, &amp;tv);<br>
 	<br>
-	if ((res != UDT_ERROR) &amp;&amp; (FD_ISSET(u, &amp;readfds)))<br>
+	if ((res != UDT_ERROR) &amp;&amp; (UD_ISSET(u, &amp;readfds)))<br>
 &nbsp;&nbsp; // read data from u.<br>
 	else<br>
-&nbsp;&nbsp; // timeout</font></td>
+&nbsp;&nbsp; // timeout or error</font></td>
   </tr>
 </table>
 <H4><font face="Verdana" size="2">See Also</font></H4>

@@ -2,7 +2,7 @@
 
 <head>
 <meta http-equiv="Content-Language" content="en-us">
-<meta name="GENERATOR" content="Microsoft FrontPage 6.0">
+<meta name="GENERATOR" content="Microsoft FrontPage 4.0">
 <meta name="ProgId" content="FrontPage.Editor.Document">
 <meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
 <title>UDT Reference</title>
@@ -37,7 +37,10 @@ overload the proper functions.</font></p>
 	__int32&amp; ackno) {}<br>
 &nbsp;&nbsp; virtual <b><font color="#228b22">void</font></b> <a href="#3">
 	onLoss</a>(<b><font color="#228b22">const</font></b> __int32* losslist, <b>
-	<font color="#228b22">const</font></b> __int32&amp; size) {}<br>
+	<font color="#228b22">const</font></b> __int32&amp; size) {}</font></p>
+    <p style="margin-top: 0; margin-bottom: 0">
+    <font size="1" face="Courier New">&nbsp;&nbsp; virtual void <a href="#13">onTimeout</a>()
+    {}<br>
 &nbsp;&nbsp; virtual <b><font color="#228b22">void</font></b> <a href="#4">
 	onPktSent</a>(<b><font color="#228b22">const</font></b> __int32&amp; seqno, <b>
 	<font color="#228b22">const</font></b> __int32&amp; size) {}<br>
@@ -81,8 +84,9 @@ sequence number.</font></p>
 sender detects a loss event, e.g., by duplicate ACK or explicit loss report. <i>
 losslist</i> is the packet sequence numbers of the lost packets and <i>size</i> 
 the length of the loss list.</font></p>
-<p><font face="Verdana" size="2">Most congestion control algorithms may need to 
-overload the two functions above.</font></p>
+<p><font face="Verdana" size="2"><a name="13"></a>void <b>onTimeout</b>()</font></p>
+<p><font face="Verdana" size="2">This callback function is called when a timeout
+event occurs if there is unacknowledged data in the sender side.</font></p>
 <p><font face="Verdana" size="2"><a name="4"></a>void <b>onPktSent</b>(<i>seqno</i>,
 <i>size</i>)</font></p>
 <p><font face="Verdana" size="2">This callback function is called when a data 

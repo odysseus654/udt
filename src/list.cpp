@@ -46,7 +46,7 @@ All the lists are static linked lists in ascending order of sequence numbers.
 
 /*****************************************************************************
 written by 
-   Yunhong Gu [ygu@cs.uic.edu], last updated 06/30/2004
+   Yunhong Gu [ygu@cs.uic.edu], last updated 08/01/2004
 *****************************************************************************/
 
 
@@ -145,6 +145,12 @@ CSndLossList::~CSndLossList()
    delete [] m_piData1;
    delete [] m_piData2;
    delete [] m_piNext;
+
+   #ifndef WIN32
+      pthread_mutex_destroy(&m_ListLock);
+   #else
+      CloseHandle(m_ListLock);
+   #endif
 }
 
 __int32 CSndLossList::insert(const __int32& seqno1, const __int32& seqno2)
@@ -452,6 +458,9 @@ __int32 CSndLossList::getLossLength()
 
 __int32 CSndLossList::getLostSeq()
 {
+   if (0 == m_iLength)
+     return -1;
+
    CGuard listguard(m_ListLock);
 
    if (0 == m_iLength)
@@ -523,6 +532,7 @@ CRcvLossList::~CRcvLossList()
    delete [] m_piData1;
    delete [] m_piData2;
    delete [] m_pLastFeedbackTime;
+   delete [] m_piCount;
    delete [] m_piNext;
    delete [] m_piPrior;
 }
@@ -743,7 +753,7 @@ __int32 CRcvLossList::getFirstLostSeq() const
    return m_piData1[m_iHead];
 }
 
-void CRcvLossList::getLossArray(__int32* array, __int32& len, const __int32& limit, const __int32& interval)
+void CRcvLossList::getLossArray(__int32* array, __int32& len, const __int32& limit, const __int32& threshold)
 {
    timeval currtime;
    gettimeofday(&currtime, 0);
@@ -754,7 +764,7 @@ void CRcvLossList::getLossArray(__int32* array, __int32& len, const __int32& lim
 
    while ((len < limit - 1) && (-1 != i))
    {
-      if ((currtime.tv_sec - m_pLastFeedbackTime[i].tv_sec) * 1000000 + currtime.tv_usec - m_pLastFeedbackTime[i].tv_usec > m_piCount[i] * interval)
+      if ((currtime.tv_sec - m_pLastFeedbackTime[i].tv_sec) * 1000000 + currtime.tv_usec - m_pLastFeedbackTime[i].tv_usec > m_piCount[i] * threshold)
       {
          array[len] = m_piData1[i];
          if (-1 != m_piData2[i])

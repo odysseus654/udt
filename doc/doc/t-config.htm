@@ -23,7 +23,10 @@ it is NOT required that you modify the default options. If the application has s
 the default options, just leave them alone.</font></p>
 <p><font face="Verdana" size="2">UDT_MSS is used to configure the packet size. 
 On most of time, the optimal UDT packet size is the network MTU size. The 
-default value is 1500 bytes. </font></p>
+default value is 1500 bytes. A UDT connection will choose the smaller value of 
+the MSS between the two peer sides. For example, if you want to set 9000-byte 
+MSS, you have to set this option at both sides, and the one of the value has to 
+be exactly equal to 9000, and the other must not be less than 9000.</font></p>
 <p><font face="Verdana" size="2">UDT uses a different semantics of 
 synchronization mode from traditional sockets. It can set the sending and 
 receiving synchronization independently, which allows more flexibility. However, 
@@ -31,8 +34,11 @@ UDT does not allow non-blocking operation on connection setup and close.</font><
 <p><font face="Verdana" size="2">The maximum flow window size UDT_FC is similar 
 to the maximum TCP window size. Flow control is something like the TCP window 
 control. The UDT_FC option sets up the maximum window size, or the 
-maximum number of unacknowledged packets. A sound value should be <i>bandwidth * (RTT + <font color="#008000">0.01</font>)</i> or greater.&nbsp; 
-A smaller value will limit the performance.</p>
+maximum number of unacknowledged packets. A sound value should be <i>bandwidth * (RTT + <font color="#008000">0.01</font>)</i> 
+/ <i>MSS</i> or greater.&nbsp; 
+A smaller value will limit the performance. Note that the UDT_FC is used to 
+limit the maximum flow window size of the peer side; that is, the setting should 
+be done at the receiving side in order to limit the sending side flow window.</p>
 <p>The UDT buffer size is used to limit the size of temporary storage of 
 sending/receiving data. The sending buffer size is only a limit. Memory is 
 allocated upon necessary. The receiving buffer is statically allocated and the 

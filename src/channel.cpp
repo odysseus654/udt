@@ -51,7 +51,7 @@ UDT packet definition: packet.h
 
 /*****************************************************************************
 written by 
-   Yunhong Gu [ygu@cs.uic.edu], last updated 06/16/2004
+   Yunhong Gu [ygu@cs.uic.edu], last updated 07/26/2004
 *****************************************************************************/
 
 #ifndef WIN32
@@ -99,6 +99,8 @@ m_iRcvBufSize(307200)
       if (0 != WSAStartup(wVersionRequested, &wsaData))
          throw CUDTException(1, 0, NET_ERROR);
    #endif
+
+   m_pcChannelBuf = new char [9000];
 }
 
 CChannel::CChannel(const __int32& version):
@@ -114,6 +116,8 @@ m_iRcvBufSize(307200)
       if (0 != WSAStartup(wVersionRequested, &wsaData))
          throw CUDTException(1, 0, NET_ERROR);
    #endif
+
+   m_pcChannelBuf = new char [9000];
 }
 
 CChannel::~CChannel()
@@ -121,6 +125,8 @@ CChannel::~CChannel()
    #ifdef WIN32
       WSACleanup();
    #endif
+
+   delete [] m_pcChannelBuf;
 }
 
 void CChannel::open(const sockaddr* addr)
@@ -245,11 +251,16 @@ __int32 CChannel::sendto(CPacket& packet, const sockaddr* addr) const
    // convert packet header into network order
    packet.m_nHeader = htonl(packet.m_nHeader);
 
-   char* buf = new char [sizeof(__int32) + packet.getLength()];
-   memcpy(buf, packet.getPacketVector()[0].iov_base, sizeof(__int32));
-   memcpy(buf + 4, packet.getPacketVector()[1].iov_base, packet.getLength());
+   char* buf;
+   if (sizeof(__int32) + packet.getLength() <= 9000)
+      buf = m_pcChannelBuf;
+   else
+      buf = new char [sizeof(__int32) + packet.getLength()];
 
-   socklen_t addrsize = sizeof(sockaddr);
+   memcpy(buf, packet.getPacketVector()[0].iov_base, sizeof(__int32));
+   memcpy(buf + sizeof(__int32), packet.getPacketVector()[1].iov_base, packet.getLength());
+
+   socklen_t addrsize = (4 == m_iIPversion) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
 
    int ret = ::sendto(m_iSocket, buf, sizeof(__int32) + packet.getLength(), 0, addr, addrsize);
 
@@ -258,7 +269,8 @@ __int32 CChannel::sendto(CPacket& packet, const sockaddr* addr) const
          ret = ::sendto(m_iSocket, buf, sizeof(__int32) + packet.getLength(), 0, addr, addrsize);
    #endif
 
-   delete [] buf;
+   if (sizeof(__int32) + packet.getLength() > 9000)
+      delete [] buf;
 
    // convert back into local host order
    packet.m_nHeader = ntohl(packet.m_nHeader);
@@ -271,8 +283,13 @@ __int32 CChannel::sendto(CPacket& packet, const sockaddr* addr) const
 
 __int32 CChannel::recvfrom(CPacket& packet, sockaddr* addr) const
 {
-   char* buf = new char [sizeof(__int32) + packet.getLength()];
-   socklen_t addrsize = sizeof(sockaddr);
+   char* buf;
+   if (sizeof(__int32) + packet.getLength() <= 9000)
+      buf = m_pcChannelBuf;
+   else
+      buf = new char [sizeof(__int32) + packet.getLength()];
+
+   socklen_t addrsize = (4 == m_iIPversion) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
 
    int ret = ::recvfrom(m_iSocket, buf, sizeof(__int32) + packet.getLength(), 0, addr, &addrsize);
 
@@ -304,7 +321,8 @@ __int32 CChannel::recvfrom(CPacket& packet, sockaddr* addr) const
       packet.setLength(ret);
    }
 
-   delete [] buf;
+   if (sizeof(__int32) + packet.getLength() > 9000)
+      delete [] buf;
 
    return ret;
 }
@@ -347,6 +365,18 @@ void CChannel::getSockAddr(sockaddr* addr) const
       namelen = sizeof(sockaddr_in6);
 
    getsockname(m_iSocket, addr, &namelen);
+}
+
+void CChannel::getPeerAddr(sockaddr* addr) const
+{
+   socklen_t namelen;
+
+   if (4 == m_iIPversion)
+      namelen = sizeof(sockaddr_in);
+   else
+      namelen = sizeof(sockaddr_in6);
+
+   getpeername(m_iSocket, addr, &namelen);
 }
 
 void CChannel::setChannelOpt()

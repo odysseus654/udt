@@ -2,7 +2,7 @@
 
 <head>
 <meta http-equiv="Content-Language" content="en-us">
-<meta name="GENERATOR" content="Microsoft FrontPage 6.0">
+<meta name="GENERATOR" content="Microsoft FrontPage 4.0">
 <meta name="ProgId" content="FrontPage.Editor.Document">
 <meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
 <title>UDT Reference</title>
@@ -48,7 +48,8 @@ socket descriptor, e.g., <u>inet_pton</u>, they are not wrapped by UDT API, and 
 applications should continue to use the original functions. For those socket APIs 
 or options not appropriate to UDT, e.g., SOCK_DGRAM option, they are simply not 
 available in UDT API.</font></p>
-<p><font face="Verdana" size="2">UDT methods are thread safe.</font></p>
+<p><font face="Verdana" size="2">UDT methods are thread safe. However, it does
+NOT support fork() operation and the manner after fork() is undefined.</font></p>
 <p><font face="Verdana" size="2">Any applications using UDT should use the 
 following header and one of the libraries, depending on the platform.</font></p>
 <h4>

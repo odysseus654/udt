@@ -47,12 +47,16 @@ int main(int argc, char* argv[])
    }
 
    ofstream ofs(argv[3]);
+   int recvsize; 
 
-   if (UDT_ERROR == UDT::recvfile(fhandle, ofs, 0, size))
+   if (UDT_ERROR == (recvsize = UDT::recvfile(fhandle, ofs, 0, size)))
    {
       cout << "recvfile: " << UDT::getlasterror().getErrorMessage() << endl;
       return 0;
    }
+
+   if (recvsize < size)
+      cout << "recvfile: received file size (" << recvsize << ") is less than expected ("<< size << ")." << endl; 
 
    UDT::close(fhandle);
 

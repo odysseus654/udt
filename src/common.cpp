@@ -52,7 +52,7 @@ method to catch and handle UDT errors and exceptions.
 
 /*****************************************************************************
 written by 
-   Yunhong Gu [ygu@cs.uic.edu], last updated 07/07/2004
+   Yunhong Gu [ygu@cs.uic.edu], last updated 08/05/2004
 *****************************************************************************/
 
 
@@ -652,6 +652,12 @@ const char* CUDTException::getErrorMessage()
            strcpy(m_pcMsg + strlen(m_pcMsg), "connection rejected");
 
            break;
+
+        case 3:
+           strcpy(m_pcMsg + strlen(m_pcMsg), ": ");
+           strcpy(m_pcMsg + strlen(m_pcMsg), "unable to create new threads");
+
+           break;
         
         default:
            break;
@@ -724,13 +730,13 @@ const char* CUDTException::getErrorMessage()
         {
         case 1:
            strcpy(m_pcMsg + strlen(m_pcMsg), ": ");
-           strcpy(m_pcMsg + strlen(m_pcMsg), "Cannot do this operation on BOUND UDT entity");
+           strcpy(m_pcMsg + strlen(m_pcMsg), "Cannot do this operation on a BOUND socket");
 
            break;
 
         case 2:
            strcpy(m_pcMsg + strlen(m_pcMsg), ": ");
-           strcpy(m_pcMsg + strlen(m_pcMsg), "Cannot do this operation on CONNECTED UDT entity");
+           strcpy(m_pcMsg + strlen(m_pcMsg), "Cannot do this operation on a CONNECTED socket");
 
            break;
 
@@ -748,7 +754,7 @@ const char* CUDTException::getErrorMessage()
 
         case 5:
            strcpy(m_pcMsg + strlen(m_pcMsg), ": ");
-           strcpy(m_pcMsg + strlen(m_pcMsg), "Cannot listen on unbound socket");
+           strcpy(m_pcMsg + strlen(m_pcMsg), "Cannot do this operation on an UNBOUND socket");
 
            break;
 
@@ -788,7 +794,7 @@ const char* CUDTException::getErrorMessage()
         break;
 
       default:
-        strcpy(m_pcMsg, "Undefined error");
+        strcpy(m_pcMsg, "Error");
    }
 
    // Adding "errno" information

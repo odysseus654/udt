@@ -19,7 +19,7 @@
 <h1 style="margin-bottom: 0"><font face="Verdana" size="4">getsockopt</font></h1>
 <h1 style="margin-top: 0"><font face="Verdana" size="4">setsockopt</font></h1>
 <p><font face="Verdana" size="2">The <b>getsockopt </b>and<b> setsockopt</b> methods 
-read or set up UDT options respectively.</font></p>
+read and set up UDT options, respectively.</font></p>
 <table border="1" cellpadding="0" cellspacing="0" style="border-collapse: collapse" width="100%" id="AutoNumber2" bgcolor="#C0C0C0" bordercolor="#C0C0C0">
   <tr>
     <td width="100%">
@@ -280,8 +280,8 @@ is returned and the specific error information can be retrieved by
 optName</i> with the value of <i>optval</i>. The parameter of <i>optlen</i> is 
 checked to verify the goodness of the option value. Not all options can be set 
 at any state of UDT.</font></P>
-<P><font face="Verdana" size="2">UDT_MSS, UDT_FC, and UDT_RC can only be set 
-before the listen or connect call.</font></P>
+<P><font face="Verdana" size="2">UDT_MSS can only be set before <b>bind</b>; UDT_FC, and UDT_RC can only be set 
+before the <b>listen</b> or <b>connect</b> call.</font></P>
 <P><font face="Verdana" size="2">The <b>getsockopt</b> method reads the current 
 option value. The value is written into the buffer pointed by <i>optval</i>, and 
 the length is returned in <i>optlen</i>..</font></P>
@@ -298,7 +298,7 @@ codes can be like:</font></P>
     <font face="Courier New" size="1">...</font></p>
     <p style="margin-top: 0; margin-bottom: 0">
     <font face="Courier New" size="1">bool block = false;</font></p>
-    <p><font face="Courier New" size="1">UDT::setsockopt(u, UDT_SNDSYN, 0, &amp;block, sizeof(bool));</font></td>
+    <p><font face="Courier New" size="1">UDT::setsockopt(u, 0, UDT_SNDSYN, &amp;block, sizeof(bool));</font></td>
   </tr>
 </table>
 <p></p>

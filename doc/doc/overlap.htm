@@ -2,7 +2,7 @@
 
 <head>
 <meta http-equiv="Content-Language" content="en-us">
-<meta name="GENERATOR" content="Microsoft FrontPage 6.0">
+<meta name="GENERATOR" content="Microsoft FrontPage 4.0">
 <meta name="ProgId" content="FrontPage.Editor.Document">
 <meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
 <title>UDT Reference</title>
@@ -28,9 +28,7 @@ the status of an overlapped IO.</font></p>
 &nbsp; const int&amp; <font color="#FFFFFF">handle</font>,<br>
 &nbsp; int&amp; <font color="#FFFFFF">progress</font>,<br>
 &nbsp; <a class="synParam" onclick="showTip(this)">const bool&amp; 
-	<font color="#FFFFFF">wait</font></a>,</font></p>
-	<p style="margin-top: 0; margin-bottom: 0">
-    <font face="Courier New" size="1">&nbsp; void* <font color="#FFFFFF">result</font><br>
+	<font color="#FFFFFF">wait</font></a><br>
 	);</font></p>
     </td>
   </tr>
@@ -40,22 +38,23 @@ the status of an overlapped IO.</font></p>
 	<dt><font face="Verdana" size="2"><i>u</i></font></dt>
 	<dd><font face="Verdana" size="2">[in] Handle to a connected socket.</font></dd>
 	<dt><font face="Verdana" size="2"><i>handle</i></font></dt>
-	<dd><font face="Verdana" size="2">[in] Handle to overlapped IO.</font></dd>
+	<dd><font face="Verdana" size="2">[in] Handle to the overlapped IO.</font></dd>
 	<dt><font face="Verdana" size="2"><i>progress</i></font></dt>
 	<dd><font face="Verdana" size="2">[out] amount of data sent or received.</font></dd>
 	<dt><font face="Verdana" size="2"><i>wait</i></font></dt>
 	<dd><font face="Verdana" size="2">[in] indication if the call should wait 
 	for the completion of the overlapped IO.</font></dd>
-	<dt><i><font face="Verdana" size="2">result</font></i></dt>
-	<dd><font face="Verdana" size="2">[out] pointer to the result of the 
-	associate routine of the IO.</font></dd>
 </dl>
 <h4><font face="Verdana" size="2">Return Values</font></h4>
-<p><font face="Verdana" size="2">If the overlapped IO is completed and no error 
-occurred, true is returned. Otherwise, false is returned and if there is no 
-error, progress indicates how many data is sent or received.</font></p>
-<p><font face="Verdana" size="2">The specific error information can be found by 
+<p><font face="Verdana" size="2">If <i>wait</i> is true, <font color="#008000">true</font> is returned 
+for a success call - the IO is completed; otherwise <font color="#008000">false</font> is
+returned if there are errors. The specific error information can be found by 
 <a href="error.htm">getlasterror</a>.</font></p>
+<p><font face="Verdana" size="2">If <i>wait</i> is false, <font color="#008000">true</font>
+is returned if the IO has been completed. If the IO is still in progress, <font color="#008000">false</font>
+is returned, and the number of bytes transferred is indicated in <i>progress</i>.
+A returned value of <font color="#008000">false</font> can also indicates
+errors, in which case the <i>progress</i> is set to -1.</font></p>
   <table border="1" cellpadding="0" cellspacing="0" style="border-collapse: collapse" id="table1" bordercolordark="#C0C0C0" bordercolorlight="#C0C0C0" width="100%">
     <tr>
       <th align="center" bgcolor="#C0C0C0" width="133">
@@ -68,7 +67,8 @@ error, progress indicates how many data is sent or received.</font></p>
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		5004</font></td>
       <td width="812">
-      <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">u 
+      <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
+		<i>u</i> 
 		is an invalid UDT socket.</font></td>
     </tr>
     <tr>
@@ -77,7 +77,7 @@ error, progress indicates how many data is sent or received.</font></p>
 		5003</font></td>
       <td width="812">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
-		no overlapped IO is associated with the give handle.</font></td>
+		no overlapped IO is associated with the given handle.</font></td>
     </tr>
     <tr>
       <td width="133">
@@ -90,9 +90,15 @@ error, progress indicates how many data is sent or received.</font></p>
     </table>
 <H4><font face="Verdana" size="2">Description</font></H4>
 <P><font face="Verdana" size="2">The <b>getoverlappedresult </b>method retrieves 
-the status of an overlapped IO associated with the handle. If wait is true, this 
+the status of an overlapped IO associated with the handle. If <i>wait</i> is true, this 
 method will wait until the IO is completed. Otherwise it returns immediately and 
-indicates the IO progress.</font></P>
+indicates the IO progress in <i>progress</i>.</font></P>
+<P><font face="Verdana" size="2">Note: In the current implementation, IO handle
+cannot be verified. If an invalid handle is passed to the call, true is always
+returned and the progress will be zero. That is, when this method returns, the
+value of progress is meaningless. On the other hand, if the method returns
+false, the value of progress should be check to see if there are errors or the
+IO is not completed.</font></P>
 <H4><font face="Verdana" size="2">See Also</font></H4>
 <P><font face="Verdana" size="2"><b>
 <a href="send.htm">send</a>, <a href="recv.htm">recv</a></b></font></P>
