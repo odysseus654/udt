@@ -15,7 +15,7 @@ CCFLAGS += -DTRACE
 CCFLAGS += -DNO_BUSY_WAITING
 #IMPOTANT: NO_BUSY_WAITING has NO effect when CUSTOM_CC is used!
 #CCFLAGS += -DCUSTOM_CC
-CCFLAGS += -DCAPI
+#CCFLAGS += -DCAPI
 
 ifeq ($(arch), IA32)
    CCFLAGS += -DIA32 #-mcpu=pentiumpro -march=pentiumpro -mmmx -msse

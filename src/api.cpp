@@ -1101,3 +1101,8 @@ int CUDT::perfmon(UDTSOCKET u, CPerfMon* perf)
    return UDT_ERROR;
 #endif
 }
+
+bool CUDT::isUSock(UDTSOCKET u)
+{
+   return (NULL != s_UDTUnited.lookup(u));
+}

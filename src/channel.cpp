@@ -91,23 +91,6 @@ m_iRcvBufSize(307200)
          throw CUDTException(1, 0, NET_ERROR);
    #endif
 
-   #ifdef CAPI
-      m_pHSysSockLib = dlopen(g_pcSysLibPath, RTLD_NOW);
-      if (NULL == m_pHSysSockLib)
-         throw CUDTException(1, 0, errno);
-
-      sys_socket = (int(*)(int, int, int))dlsym(m_pHSysSockLib, "socket");
-      sys_bind = (int(*)(int, const struct sockaddr*, unsigned int))dlsym(m_pHSysSockLib, "bind");
-      sys_connect = (int(*)(int, const struct sockaddr*, socklen_t))dlsym(m_pHSysSockLib, "connect");
-      sys_close = (int(*)(int))dlsym(m_pHSysSockLib, "close");
-      sys_send = (ssize_t(*)(int, const void*, unsigned int, int))dlsym(m_pHSysSockLib, "send");
-      sys_recv = (ssize_t(*)(int, void*, unsigned int, int))dlsym(m_pHSysSockLib, "recv");
-      sys_getpeername = (int(*)(int, struct sockaddr*, socklen_t*))dlsym(m_pHSysSockLib, "getpeername");
-      sys_getsockname = (int(*)(int, struct sockaddr*, socklen_t*))dlsym(m_pHSysSockLib, "getsockname");
-      sys_getsockopt = (int(*)(int, int, int, void*, socklen_t*))dlsym(m_pHSysSockLib, "getsockopt");
-      sys_setsockopt = (int(*)(int, int, int, const void*, socklen_t))dlsym(m_pHSysSockLib, "setsockopt");
-   #endif
-
    m_pcChannelBuf = new char [9000];
 }
 
@@ -125,23 +108,6 @@ m_iRcvBufSize(409600)
          throw CUDTException(1, 0, NET_ERROR);
    #endif
 
-   #ifdef CAPI
-      m_pHSysSockLib = dlopen(g_pcSysLibPath, RTLD_NOW);
-      if (NULL == m_pHSysSockLib)
-         throw CUDTException(1, 0, errno);
-
-      sys_socket = (int(*)(int, int, int))dlsym(m_pHSysSockLib, "socket");
-      sys_bind = (int(*)(int, const struct sockaddr*, unsigned int))dlsym(m_pHSysSockLib, "bind");
-      sys_connect = (int(*)(int, const struct sockaddr*, socklen_t))dlsym(m_pHSysSockLib, "connect");
-      sys_close = (int(*)(int))dlsym(m_pHSysSockLib, "close");
-      sys_send = (ssize_t(*)(int, const void*, unsigned int, int))dlsym(m_pHSysSockLib, "send");
-      sys_recv = (ssize_t(*)(int, void*, unsigned int, int))dlsym(m_pHSysSockLib, "recv");
-      sys_getpeername = (int(*)(int, struct sockaddr*, socklen_t*))dlsym(m_pHSysSockLib, "getpeername");
-      sys_getsockname = (int(*)(int, struct sockaddr*, socklen_t*))dlsym(m_pHSysSockLib, "getsockname");
-      sys_getsockopt = (int(*)(int, int, int, void*, socklen_t*))dlsym(m_pHSysSockLib, "getsockopt");
-      sys_setsockopt = (int(*)(int, int, int, const void*, socklen_t))dlsym(m_pHSysSockLib, "setsockopt");
-   #endif
-
    m_pcChannelBuf = new char [9000];
 }
 
@@ -149,10 +115,6 @@ CChannel::~CChannel()
 {
    #ifdef WIN32
       WSACleanup();
-   #endif
-
-   #ifdef CAPI
-      dlclose(m_pHSysSockLib);
    #endif
 
    delete [] m_pcChannelBuf;
@@ -168,9 +130,9 @@ void CChannel::open(const sockaddr* addr)
          m_iSocket = socket(AF_INET6, SOCK_DGRAM, 0);
    #else
       if (4 == m_iIPversion)
-         m_iSocket = (*sys_socket)(AF_INET, SOCK_DGRAM, 0);
+         m_iSocket = (*g_SysLib.socket)(AF_INET, SOCK_DGRAM, 0);
       else
-         m_iSocket = (*sys_socket)(AF_INET6, SOCK_DGRAM, 0);
+         m_iSocket = (*g_SysLib.socket)(AF_INET6, SOCK_DGRAM, 0);
    #endif
 
    if (m_iSocket < 0)
@@ -184,7 +146,7 @@ void CChannel::open(const sockaddr* addr)
          if (0 != bind(m_iSocket, addr, namelen))
             throw CUDTException(1, 1, NET_ERROR);
       #else
-         if (0 != (*sys_bind)(m_iSocket, addr, namelen))
+         if (0 != (*g_SysLib.bind)(m_iSocket, addr, namelen))
             throw CUDTException(1, 1, NET_ERROR);
       #endif
    }
@@ -205,7 +167,7 @@ void CChannel::disconnect() const
       #ifndef CAPI
          close(m_iSocket);
       #else
-         (*sys_close)(m_iSocket);
+         (*g_SysLib.close)(m_iSocket);
       #endif
    #else
       closesocket(m_iSocket);
@@ -218,7 +180,7 @@ void CChannel::connect(const sockaddr* addr)
       if (0 != ::connect(m_iSocket, addr, sizeof(sockaddr)))
          throw CUDTException(1, 4, NET_ERROR);
    #else
-      if (0 != (*sys_connect)(m_iSocket, addr, sizeof(sockaddr)))
+      if (0 != (*g_SysLib.connect)(m_iSocket, addr, sizeof(sockaddr)))
          throw CUDTException(1, 4, NET_ERROR);
    #endif
 }
@@ -228,7 +190,7 @@ __int32 CChannel::send(char* buffer, const __int32& size) const
    #ifndef CAPI
       return ::send(m_iSocket, buffer, size, 0);
    #else
-      return (*sys_send)(m_iSocket, buffer, size, 0);
+      return (*g_SysLib.send)(m_iSocket, buffer, size, 0);
    #endif
 }
 
@@ -237,7 +199,7 @@ __int32 CChannel::recv(char* buffer, const __int32& size) const
    #ifndef CAPI
       return ::recv(m_iSocket, buffer, size, 0);
    #else
-      return (*sys_recv)(m_iSocket, buffer, size, 0);
+      return (*g_SysLib.recv)(m_iSocket, buffer, size, 0);
    #endif
 }
 
@@ -246,7 +208,7 @@ __int32 CChannel::peek(char* buffer, const __int32& size) const
    #ifndef CAPI
       return ::recv(m_iSocket, buffer, size, MSG_PEEK);
    #else
-      return (*sys_recv)(m_iSocket, buffer, size, MSG_PEEK);
+      return (*g_SysLib.recv)(m_iSocket, buffer, size, MSG_PEEK);
    #endif
 }
 
@@ -396,7 +358,7 @@ __int32 CChannel::getSndBufSize()
    #ifndef CAPI
       getsockopt(m_iSocket, SOL_SOCKET, SO_SNDBUF, (char *)&m_iSndBufSize, &size);
    #else
-      (*sys_getsockopt)(m_iSocket, SOL_SOCKET, SO_SNDBUF, (char *)&m_iSndBufSize, &size);
+      (*g_SysLib.getsockopt)(m_iSocket, SOL_SOCKET, SO_SNDBUF, (char *)&m_iSndBufSize, &size);
    #endif
 
    return m_iSndBufSize;
@@ -409,7 +371,7 @@ __int32 CChannel::getRcvBufSize()
    #ifndef CAPI
       getsockopt(m_iSocket, SOL_SOCKET, SO_RCVBUF, (char *)&m_iRcvBufSize, &size);
    #else
-      (*sys_getsockopt)(m_iSocket, SOL_SOCKET, SO_RCVBUF, (char *)&m_iRcvBufSize, &size);
+      (*g_SysLib.getsockopt)(m_iSocket, SOL_SOCKET, SO_RCVBUF, (char *)&m_iRcvBufSize, &size);
    #endif
 
    return m_iRcvBufSize;
@@ -437,7 +399,7 @@ void CChannel::getSockAddr(sockaddr* addr) const
    #ifndef CAPI
       getsockname(m_iSocket, addr, &namelen);
    #else
-      (*sys_getsockname)(m_iSocket, addr, &namelen);
+      (*g_SysLib.getsockname)(m_iSocket, addr, &namelen);
    #endif
 }
 
@@ -453,7 +415,7 @@ void CChannel::getPeerAddr(sockaddr* addr) const
    #ifndef CAPI
       getpeername(m_iSocket, addr, &namelen);
    #else
-      (*sys_getpeername)(m_iSocket, addr, &namelen);
+      (*g_SysLib.getpeername)(m_iSocket, addr, &namelen);
    #endif
 }
 
@@ -465,8 +427,8 @@ void CChannel::setChannelOpt()
           (0 != setsockopt(m_iSocket, SOL_SOCKET, SO_SNDBUF, (char *)&m_iSndBufSize, sizeof(__int32))))
          throw CUDTException(1, 2, NET_ERROR);
    #else
-      if ((0 != (*sys_setsockopt)(m_iSocket, SOL_SOCKET, SO_RCVBUF, (char *)&m_iRcvBufSize, sizeof(__int32))) ||
-          (0 != (*sys_setsockopt)(m_iSocket, SOL_SOCKET, SO_SNDBUF, (char *)&m_iSndBufSize, sizeof(__int32))))
+      if ((0 != (*g_SysLib.setsockopt)(m_iSocket, SOL_SOCKET, SO_RCVBUF, (char *)&m_iRcvBufSize, sizeof(__int32))) ||
+          (0 != (*g_SysLib.setsockopt)(m_iSocket, SOL_SOCKET, SO_SNDBUF, (char *)&m_iSndBufSize, sizeof(__int32))))
          throw CUDTException(1, 2, NET_ERROR);
    #endif
 
@@ -496,7 +458,7 @@ void CChannel::setChannelOpt()
          if (setsockopt(m_iSocket, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv, sizeof(timeval)) < 0)
             throw CUDTException(1, 2, NET_ERROR);
       #else
-         if ((*sys_setsockopt)(m_iSocket, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv, sizeof(timeval)) < 0)
+         if ((*g_SysLib.setsockopt)(m_iSocket, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv, sizeof(timeval)) < 0)
             throw CUDTException(1, 2, NET_ERROR);
       #endif
    #endif

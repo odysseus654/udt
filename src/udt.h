@@ -128,7 +128,6 @@ typedef set<UDTSOCKET> ud_set;
 #define UD_SET(u, uset) ((uset)->insert(u))
 #define UD_ZERO(uset) ((uset)->clear())
 
-const char g_pcSysLibPath[] = "libc.so.6";
 
 ////////////////////////////////////////////////////////////////////////////////
 enum UDTOpt
@@ -739,19 +738,6 @@ private:
 
 private:
    void setChannelOpt();
-
-private:				// function pointers to the system socket library
-   void* m_pHSysSockLib;
-   int (*sys_socket)(int, int, int);
-   int (*sys_bind)(int, const struct sockaddr*, unsigned int);
-   int (*sys_connect)(int, const struct sockaddr*, socklen_t);
-   int (*sys_close)(int);
-   ssize_t (*sys_send)(int, const void*, unsigned int, int);
-   ssize_t (*sys_recv)(int, void*, unsigned int, int);
-   int (*sys_getpeername)(int, struct sockaddr*, socklen_t*);
-   int (*sys_getsockname)(int, struct sockaddr*, socklen_t*);
-   int (*sys_getsockopt)(int, int, int, void*, socklen_t*);
-   int (*sys_setsockopt)(int, int, int, const void*, socklen_t);
 };
 
 
@@ -1471,6 +1457,9 @@ public: //API
    static CUDTException& getlasterror();
    static int perfmon(UDTSOCKET u, CPerfMon* perf);
 
+public: // internal API
+   static bool isUSock(UDTSOCKET u);
+
 private:
       // Functionality: 
       //    initialize a UDT entity and bind to a local address.
@@ -1923,5 +1912,41 @@ UDT_API inline int perfmon(UDTSOCKET u, TRACEINFO* perf)
 
 }
 
+#ifdef CAPI
+class CSysLib
+{
+public:
+   CSysLib();
+   ~CSysLib();
+
+private:
+   void* m_pHSysSockLib;
+
+public:
+   int (*socket)(int, int, int);
+   int (*bind)(int, const struct sockaddr*, unsigned int);
+   int (*listen)(int, int);
+   int (*accept)(int, struct sockaddr*, socklen_t*);
+   int (*connect)(int, const struct sockaddr*, socklen_t);
+   int (*close)(int);
+   int (*shutdown)(int, int);
+   ssize_t (*send)(int, const void*, unsigned int, int);
+   ssize_t (*recv)(int, void*, unsigned int, int);
+   ssize_t (*write)(int, const void*, size_t);
+   ssize_t (*read)(int, void*, size_t);
+   int (*writev)(int, const struct iovec*, size_t);
+   int (*readv)(int, const struct iovec*, size_t);
+   ssize_t (*sendfile)(int, int, off_t*, size_t);
+   int (*getpeername)(int, struct sockaddr*, socklen_t*);
+   int (*getsockname)(int, struct sockaddr*, socklen_t*);
+   int (*getsockopt)(int, int, int, void*, socklen_t*);
+   int (*setsockopt)(int, int, int, const void*, socklen_t);
+   int (*fcntl)(int, int, ...);
+   int (*select)(int, fd_set*, fd_set*, fd_set*, struct timeval*);
+};
+
+extern const CSysLib g_SysLib;
+
 #endif
 
+#endif
