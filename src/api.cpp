@@ -1,40 +1,19 @@
 /*****************************************************************************
-Copyright © 2001 - 2004, The Board of Trustees of the University of Illinois.
+Copyright ? 2001 - 2005, The Board of Trustees of the University of Illinois.
 All Rights Reserved.
-
+                                                                                                                            
 UDP-based Data Transfer Library (UDT) version 2
-
+                                                                                                                            
 Laboratory for Advanced Computing (LAC)
 National Center for Data Mining (NCDM)
 University of Illinois at Chicago
 http://www.lac.uic.edu/
-
-Permission is hereby granted, free of charge, to any person obtaining a
-copy of this software (UDT) and associated documentation files (the
-"Software"), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to permit
-persons to whom the Software is furnished to do so, subject to the
-following conditions:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimers.
-
-Redistributions in binary form must reproduce the above copyright notice,
-this list of conditions and the following disclaimers in the documentation
-and/or other materials provided with the distribution.
-
-Neither the names of the University of Illinois, LAC/NCDM, nor the names
-of its contributors may be used to endorse or promote products derived
-from this Software without specific prior written permission.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-THE CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR
-OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
-ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-OTHER DEALINGS IN THE SOFTWARE.
+                                                                                                                            
+written by
+   Yunhong Gu [ygu@cs.uic.edu], last updated 01/10/2005
+                                                                                                                            
+modified by
+   <programmer's name, programmer's email, last updated mm/dd/yyyy>
 *****************************************************************************/
 
 /*****************************************************************************
@@ -43,10 +22,6 @@ This file contains the implementation of UDT API.
 reference: UDT programming manual and socket programming reference
 *****************************************************************************/
 
-/*****************************************************************************
-written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 09/03/2004
-*****************************************************************************/
 
 #ifndef WIN32
    #include <unistd.h>
@@ -365,9 +340,9 @@ __int32 CUDTUnited::listen(const UDTSOCKET u, const __int32& backlog)
       throw CUDTException(5, 5, 0);
 
    s->m_pUDT->listen();
-   s->m_Status = CUDTSocket::LISTENING;
    s->m_pQueuedSockets = new set<UDTSOCKET>;
    s->m_pAcceptSockets = new set<UDTSOCKET>;
+   s->m_Status = CUDTSocket::LISTENING;
 
    return 0;
 }
@@ -378,6 +353,10 @@ UDTSOCKET CUDTUnited::accept(const UDTSOCKET listen, sockaddr* addr, __int32* ad
 
    if (ls == NULL)
       throw CUDTException(5, 4, 0);
+
+   // the "listen" socket must be in LISTENING status
+   if (CUDTSocket::LISTENING != ls->m_Status)
+      throw CUDTException(5, 6, 0);
 
    // non-blocking receiving, no connection available
    if ((!ls->m_pUDT->m_bSynRecving) && (0 == ls->m_pQueuedSockets->size()))
@@ -397,10 +376,6 @@ UDTSOCKET CUDTUnited::accept(const UDTSOCKET listen, sockaddr* addr, __int32* ad
    #endif
 
    // !!only one conection can be set up at each time!!
-
-   // the "listen" socket must be in LISTENING status
-   if (CUDTSocket::LISTENING != ls->m_Status)
-      throw CUDTException(5, 6, 0);
 
    UDTSOCKET u;
 
@@ -473,13 +448,7 @@ __int32 CUDTUnited::close(const UDTSOCKET u)
    if (NULL == s)
       throw CUDTException(5, 4, 0);
 
-   // broadcast all "accpet" waiting
-   if (CUDTSocket::LISTENING == s->m_Status)
-      #ifndef WIN32
-         pthread_cond_broadcast(&m_AcceptCond);
-      #else
-         SetEvent(m_AcceptCond);
-      #endif
+   CUDTSocket::UDTSTATUS os = s->m_Status;
 
    // synchronize with garbage collection.
    #ifndef WIN32
@@ -493,6 +462,14 @@ __int32 CUDTUnited::close(const UDTSOCKET u)
    #else
       ReleaseMutex(m_ControlLock);
    #endif
+
+   // broadcast all "accpet" waiting
+   if (CUDTSocket::LISTENING == os)
+      #ifndef WIN32
+         pthread_cond_broadcast(&m_AcceptCond);
+      #else
+         SetEvent(m_AcceptCond);
+      #endif
 
    CUDT* udt = s->m_pUDT;
 

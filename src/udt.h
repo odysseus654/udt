@@ -1,40 +1,19 @@
-/******************************************************************************
-Copyright © 2001 - 2004, The Board of Trustees of the University of Illinois.
+/*****************************************************************************
+Copyright ? 2001 - 2005, The Board of Trustees of the University of Illinois.
 All Rights Reserved.
-
+                                                                                                                            
 UDP-based Data Transfer Library (UDT) version 2
-
+                                                                                                                            
 Laboratory for Advanced Computing (LAC)
 National Center for Data Mining (NCDM)
 University of Illinois at Chicago
 http://www.lac.uic.edu/
-
-Permission is hereby granted, free of charge, to any person obtaining a
-copy of this software (UDT) and associated documentation files (the
-"Software"), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to permit
-persons to whom the Software is furnished to do so, subject to the
-following conditions:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimers.
-
-Redistributions in binary form must reproduce the above copyright notice,
-this list of conditions and the following disclaimers in the documentation
-and/or other materials provided with the distribution.
-
-Neither the names of the University of Illinois, LAC/NCDM, nor the names
-of its contributors may be used to endorse or promote products derived
-from this Software without specific prior written permission.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-THE CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR
-OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
-ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-OTHER DEALINGS IN THE SOFTWARE.
+                                                                                                                            
+written by
+   Yunhong Gu [ygu@cs.uic.edu], last updated 01/10/2005
+                                                                                                                            
+modified by
+   <programmer's name, programmer's email, last updated mm/dd/yyyy>
 *****************************************************************************/
 
 /*****************************************************************************
@@ -64,10 +43,6 @@ CUDTUnited:	UDT global management
 CUDT: 		UDT
 *****************************************************************************/
 
-/*****************************************************************************
-written by:
-   Yunhong Gu [ygu@cs.uic.edu], last updated 11/03/2004
-*****************************************************************************/
 
 #ifndef _UDT_H_
 #define _UDT_H_
@@ -312,13 +287,22 @@ public:
    ~CPktTimeWindow();
 
       // Functionality:
+      //    Calculate the packes sendingl speed.
+      // Parameters:
+      //    0) None.
+      // Returned value:
+      //    Packet sending speed (packets per second).
+
+   __int32 getPktSndSpeed();
+
+      // Functionality:
       //    Calculate the packes arrival speed.
       // Parameters:
       //    0) None.
       // Returned value:
       //    Packet arrival speed (packets per second).
 
-   __int32 getPktSpeed() const;
+   __int32 getPktRcvSpeed() const;
 
       // Functionality:
       //    Check if the rtt is increasing or not.
@@ -339,13 +323,22 @@ public:
    __int32 getBandwidth() const;
 
       // Functionality:
+      //    Record time information of a packet sending.
+      // Parameters:
+      //    0) None.
+      // Returned value:
+      //    None.
+                                                                                                                            
+   void pktSent();
+
+      // Functionality:
       //    Record time information of an arrived packet.
       // Parameters:
       //    0) None.
       // Returned value:
       //    None.
 
-   void pktSnapShot();
+   void pktArrival();
 
       // Functionality:
       //    Record the recent RTT.
@@ -388,6 +381,12 @@ private:
    __int32 m_iPWSize;		// size of probe history window size
    __int32* m_piProbeWindow;	// record inter-packet time for probing packet pairs
    __int32 m_iProbeWindowPtr;	// position pointer to the probing window
+
+   bool m_bPktSndInt;		// packet sending is now interrupted
+   bool m_bPktSndRestart;	// restart a new statistical period
+   timeval m_LastSentTime;	// last packet sending time
+   __int32 m_iPktSent;		// number of packet sent in a certain period
+   __int32 m_iTotalSentTime;	// total time for packet sending in the same period above
 
    timeval m_LastArrTime;	// last packet arrival time
    timeval m_CurrArrTime;	// current packet arrival time

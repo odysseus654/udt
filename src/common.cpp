@@ -1,59 +1,36 @@
 /*****************************************************************************
-Copyright © 2001 - 2004, The Board of Trustees of the University of Illinois.
+Copyright ? 2001 - 2005, The Board of Trustees of the University of Illinois.
 All Rights Reserved.
-
+                                                                                                                            
 UDP-based Data Transfer Library (UDT) version 2
-
+                                                                                                                            
 Laboratory for Advanced Computing (LAC)
 National Center for Data Mining (NCDM)
 University of Illinois at Chicago
 http://www.lac.uic.edu/
-
-Permission is hereby granted, free of charge, to any person obtaining a
-copy of this software (UDT) and associated documentation files (the
-"Software"), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to permit
-persons to whom the Software is furnished to do so, subject to the
-following conditions:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimers.
-
-Redistributions in binary form must reproduce the above copyright notice,
-this list of conditions and the following disclaimers in the documentation
-and/or other materials provided with the distribution.
-
-Neither the names of the University of Illinois, LAC/NCDM, nor the names
-of its contributors may be used to endorse or promote products derived
-from this Software without specific prior written permission.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-THE CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR
-OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
-ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-OTHER DEALINGS IN THE SOFTWARE.
+                                                                                                                            
+written by
+   Yunhong Gu [ygu@cs.uic.edu], last updated 01/10/2005
+                                                                                                                            
+modified by
+   <programmer's name, programmer's email, last updated mm/dd/yyyy>
 *****************************************************************************/
 
 /*****************************************************************************
 This file contains implementation of UDT common routines of timer, 
-mutex facility, ACK window, and exception processing.
+mutex facility, ACK window, packet time window, and exception processing.
 
 CTimer is a high precision timing facility, which uses the CPU clock cycle 
 as the minimum time unit.
 CGuard is mutex facility that can automatically lock a method.
 CACKWindow is the window management of UDT ACK packet.
 (reference: UDT header definition: packet.h)
+CPktTimeWindow is used to record and process packet sending and arrival 
+timing information.
 CUDTException is used for UDT exception processing, which is the only 
 method to catch and handle UDT errors and exceptions.
 *****************************************************************************/
 
-/*****************************************************************************
-written by 
-   Yunhong Gu [ygu@cs.uic.edu], last updated 10/14/2004
-*****************************************************************************/
 
 #ifndef WIN32
    #include <unistd.h>
@@ -436,7 +413,20 @@ CPktTimeWindow::~CPktTimeWindow()
    delete [] m_piProbeWindow;
 }
 
-__int32 CPktTimeWindow::getPktSpeed() const
+__int32 CPktTimeWindow::getPktSndSpeed()
+{
+   __int32 speed;
+   if (m_iPktSent > 10)
+      speed = m_iPktSent * 1000000 / m_iTotalSentTime;
+   else
+      speed = 1000000;
+                                                                                                                            
+   m_bPktSndRestart = true;
+                                                                                                                            
+   return speed;
+}
+
+__int32 CPktTimeWindow::getPktRcvSpeed() const
 {
    // sorting
    __int32 temp;
@@ -524,7 +514,34 @@ __int32 CPktTimeWindow::getBandwidth() const
    return (__int32)ceil(1000000.0 / (double(sum) / double(count)));
 }
 
-void CPktTimeWindow::pktSnapShot()
+void CPktTimeWindow::pktSent()
+{
+   if (m_bPktSndRestart)
+   {
+      m_bPktSndRestart = false;
+                                                                                                                            
+      m_iPktSent = 0;
+      m_iTotalSentTime = 0;
+   }
+                                                                                                                            
+   if (m_bPktSndInt)
+   {
+      m_bPktSndInt = false;
+      gettimeofday(&m_LastSentTime, 0);
+   }
+   else
+   {
+      m_iPktSent ++;
+                                                                                                                            
+      timeval currtime;
+      gettimeofday(&currtime, 0);
+      m_iTotalSentTime += (currtime.tv_sec - m_LastSentTime.tv_sec) * 1000000 + currtime.tv_usec - m_LastSentTime.tv_usec;
+                                                                                                                            
+      m_LastSentTime = currtime;
+   }
+}
+
+void CPktTimeWindow::pktArrival()
 {
    gettimeofday(&m_CurrArrTime, 0);
    

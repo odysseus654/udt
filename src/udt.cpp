@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright © 2001 - 2004, The Board of Trustees of the University of Illinois.
+Copyright © 2001 - 2005, The Board of Trustees of the University of Illinois.
 All Rights Reserved.
 
 UDP-based Data Transfer Library (UDT) version 2
@@ -9,32 +9,11 @@ National Center for Data Mining (NCDM)
 University of Illinois at Chicago
 http://www.lac.uic.edu/
 
-Permission is hereby granted, free of charge, to any person obtaining a
-copy of this software (UDT) and associated documentation files (the
-"Software"), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to permit
-persons to whom the Software is furnished to do so, subject to the
-following conditions:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimers.
-
-Redistributions in binary form must reproduce the above copyright notice,
-this list of conditions and the following disclaimers in the documentation
-and/or other materials provided with the distribution.
-
-Neither the names of the University of Illinois, LAC/NCDM, nor the names
-of its contributors may be used to endorse or promote products derived
-from this Software without specific prior written permission.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-THE CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR
-OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
-ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-OTHER DEALINGS IN THE SOFTWARE.
+written by
+   Yunhong Gu [ygu@cs.uic.edu], last updated 01/10/2005
+                                                                                                                            
+modified by
+   <programmer's name, programmer's email, last updated mm/dd/yyyy>
 *****************************************************************************/
 
 /*****************************************************************************
@@ -46,10 +25,6 @@ UDT programming manual
 UDT protocol specification (draft-gg-udt-xx.txt)
 *****************************************************************************/
 
-/*****************************************************************************
-written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 10/23/2004
-*****************************************************************************/
 
 #ifndef WIN32
    #include <unistd.h>
@@ -941,6 +916,9 @@ DWORD WINAPI CUDT::sndHandler(LPVOID sender)
                #endif
             }
 
+            // the waiting time should not be counted in. clear the time diff to zero.
+            self->m_ullTimeDiff = 0;
+
             continue;
          }
 
@@ -955,7 +933,7 @@ DWORD WINAPI CUDT::sndHandler(LPVOID sender)
       datapkt.setLength(payload);
       *(self->m_pChannel) << datapkt;
 
-      self->m_pSndTimeWindow->pktSnapShot();
+      self->m_pSndTimeWindow->pktSent();
 
       #ifdef CUSTOM_CC
          if (NULL != self->m_pCC)
@@ -986,6 +964,9 @@ DWORD WINAPI CUDT::sndHandler(LPVOID sender)
          self->m_pTimer->sleepto(targettime);
       #else
          self->m_pTimer->rdtsc(currtime);
+
+         if (currtime >= targettime)
+            continue;
 
          while (currtime + self->m_ullTimeDiff < targettime)
          {
@@ -1266,7 +1247,7 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
       }
 
       // update time/delay information
-      self->m_pRcvTimeWindow->pktSnapShot();
+      self->m_pRcvTimeWindow->pktArrival();
 
       // check if it is probing packet pair
       if (packet.m_iSeqNo % self->m_iProbeInterval < 2)
@@ -1437,7 +1418,7 @@ void CUDT::sendCtrl(const __int32& pkttype, void* lparam, void* rparam, const __
          data[1] = m_iRTT;
          data[2] = m_iRTTVar;
 
-         flowControl(m_pRcvTimeWindow->getPktSpeed());
+         flowControl(m_pRcvTimeWindow->getPktRcvSpeed());
          data[3] = m_iFlowControlWindow;
          if (data[3] > (__int32)(m_pRcvBuffer->getAvailBufSize() / m_iPayloadSize))
             data[3] = (__int32)(m_pRcvBuffer->getAvailBufSize() / m_iPayloadSize);
@@ -1898,7 +1879,7 @@ void CUDT::rateControl()
    }
 
    //correct the sending rate
-   unsigned __int64 realrate = (unsigned __int64)(1000000. / m_pSndTimeWindow->getPktSpeed() * m_ullCPUFrequency);
+   unsigned __int64 realrate = (unsigned __int64)(1000000. / m_pSndTimeWindow->getPktSndSpeed() * m_ullCPUFrequency);
    if (realrate >= 2 * m_ullInterval)
       m_ullInterval = realrate / 2;
 
@@ -1918,11 +1899,11 @@ void CUDT::flowControl(const __int32& recvrate)
       {
          // quick start
          m_bRcvSlowStart = false;
-         m_iFlowControlWindow = (__int32)((__int64)recvrate * (m_iRTT + m_iSYNInterval) / 1000000);
+         m_iFlowControlWindow = (__int32)((__int64)recvrate * (m_iRTT + m_iSYNInterval) / 1000000) + 16;
       }
    }
    else if (recvrate > 0)
-      m_iFlowControlWindow = (__int32)ceil(m_iFlowControlWindow * 0.875 + recvrate / 1000000.0 * (m_iRTT + m_iSYNInterval) * 0.125);
+      m_iFlowControlWindow = (__int32)ceil(m_iFlowControlWindow * 0.875 + recvrate / 1000000.0 * (m_iRTT + m_iSYNInterval) * 0.125) + 16;
 
    if (m_iFlowControlWindow > m_iFlightFlagSize)
    {
