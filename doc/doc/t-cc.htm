@@ -2,7 +2,7 @@
 
 <head>
 <meta http-equiv="Content-Language" content="en-us">
-<meta name="GENERATOR" content="Microsoft FrontPage 6.0">
+<meta name="GENERATOR" content="Microsoft FrontPage 4.0">
 <meta name="ProgId" content="FrontPage.Editor.Document">
 <meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
 <title>UDT Reference</title>
@@ -17,6 +17,9 @@
   </tr>
 </table>
 <h1><font face="Verdana" size="4">Add New Congestion Control Algorithm</font></h1>
+<p><font face="Verdana" size="2"><font color="#800000">STOP</font>: Make sure
+that you have uncommented the -DCUSTOM_CC compile option in ./src/Makefile.
+Otherwise your control algorithm will NOT be used.</font></p>
 <p><font face="Verdana" size="2">You can add your own congestion control 
 algorithm into UDT. It is as simple as to define several callback functions that 
 will be triggered on certain events, e.g, when an ACK is received.</font></p>

@@ -78,6 +78,8 @@ the system, UDT will yield to allow other applications to have a fair share of
 CPU time. However, if you wish to avoid this busy waiting, enable the -DNO_BUSY_WAITING 
 option in related ./src/Makefile. The latter choice will have slight performance 
 drop.</font></p>
+<p><font face="Verdana" size="2">3. If you need to configure congestion control
+algorithms, please uncomment the -DCUSTOM_CC compile option in ./src/Makefile.</font></p>
 <p>&nbsp;</p>
 
 </body>
