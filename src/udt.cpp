@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 01/26/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 01/27/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -734,6 +734,10 @@ void CUDT::close()
 
    // Inform the threads handler to stop.
    m_bClosing = true;
+   m_bBroken = true;
+                                                                                                                            
+   // Signal the sender and recver if they are waiting for data.
+   releaseSynch();
 
    // Wait for the threads to exit.
 
@@ -772,11 +776,6 @@ void CUDT::close()
          m_bConnected = false;
       }
    #endif
-
-   m_bBroken = true;
-
-   // Signal the sender and recver if they are waiting for data.
-   releaseSynch();
 
    // waiting all send and recv calls to stop
    CGuard sendguard(m_SendLock);
