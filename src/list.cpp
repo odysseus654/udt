@@ -14,6 +14,7 @@ written by
                                                                                                                             
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
+   <descrition of changes>
 *****************************************************************************/
 
 /*****************************************************************************
