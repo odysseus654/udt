@@ -48,7 +48,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 10/11/2004
+   Yunhong Gu [ygu@cs.uic.edu], last updated 10/14/2004
 *****************************************************************************/
 
 #ifndef WIN32
@@ -1098,12 +1098,14 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
          // Still no?! Register the application buffer.
          if (!self->m_bReadBuf)
          {
-            offset = self->m_pRcvBuffer->registerUserBuf(const_cast<char*>(self->m_pcTempData), const_cast<__int32&>(self->m_iTempLen), self->m_iRcvHandle);
+            offset = self->m_pRcvBuffer->registerUserBuf(const_cast<char*>(self->m_pcTempData), const_cast<__int32&>(self->m_iTempLen), self->m_iRcvHandle, self->m_iTempRoutine);
             // there is no seq. wrap for user buffer border. If it exceeds the max. seq., we just ignore it.
             self->m_iUserBufBorder = self->m_iRcvLastAck + (__int32)ceil(double(self->m_iTempLen - offset) / self->m_iPayloadSize);
          }
-         else
+
          // Otherwise, inform the blocked "recv"/"recvfile" call that the expected data has arrived.
+         // or returns immediately in non-blocking IO mode.
+         if (self->m_bReadBuf || !self->m_bSynRecving)
          {
             self->m_bReadBuf = false;
             #ifndef WIN32
@@ -2034,7 +2036,7 @@ __int32 CUDT::send(char* data, const __int32& len, __int32* overlapped, const UD
    return len;
 }
 
-__int32 CUDT::recv(char* data, const __int32& len, __int32* overlapped, UDT_MEM_ROUTINE)
+__int32 CUDT::recv(char* data, const __int32& len, __int32* overlapped, UDT_MEM_ROUTINE func)
 {
    CGuard recvguard(m_RecvLock);
 
@@ -2043,15 +2045,17 @@ __int32 CUDT::recv(char* data, const __int32& len, __int32* overlapped, UDT_MEM_
       throw CUDTException(2, 1, 0);
    else if (!m_bConnected)
       throw CUDTException(2, 2, 0);
+   else if ((m_bSynRecving || (NULL == overlapped)) && (0 < m_pRcvBuffer->getPendingQueueSize()))
+      throw CUDTException(6, 4, 0);
 
    if (len <= 0)
       return 0;
 
-   if (0 == m_pRcvBuffer->getRcvDataSize())
+   if ((NULL == overlapped) && (0 == m_pRcvBuffer->getRcvDataSize()))
    {
       if (!m_bSynRecving)
          throw CUDTException(6, 2, 0);
-      else if (NULL == overlapped)
+      else
       {
          #ifndef WIN32
             pthread_mutex_lock(&m_RecvDataLock);
@@ -2064,7 +2068,7 @@ __int32 CUDT::recv(char* data, const __int32& len, __int32* overlapped, UDT_MEM_
       }
    }
 
-   if ((NULL == overlapped) || m_bBroken)
+   if ((NULL == overlapped) || (m_bSynRecving && m_bBroken))
    {
       __int32 avail = m_pRcvBuffer->getRcvDataSize();
       if (len <= avail)
@@ -2074,7 +2078,12 @@ __int32 CUDT::recv(char* data, const __int32& len, __int32* overlapped, UDT_MEM_
       return avail;
    }
 
-   // overlapped IO: register the user buffer and wait here
+   // Overlapped IO begins.
+   if (!m_bSynRecving && m_bBroken)
+      throw CUDTException(2, 1, 0);
+   else if (m_iUDTBufSize <= m_pRcvBuffer->getPendingQueueSize())
+      throw CUDTException(6, 3, 0);
+
    #ifndef WIN32
       pthread_mutex_lock(&m_OverlappedRecvLock);
    #else
@@ -2096,6 +2105,7 @@ __int32 CUDT::recv(char* data, const __int32& len, __int32* overlapped, UDT_MEM_
 
    m_pcTempData = data;
    m_iTempLen = len;
+   m_iTempRoutine = func;
    m_bReadBuf = true;
 
    #ifndef WIN32
@@ -2124,10 +2134,12 @@ __int32 CUDT::recv(char* data, const __int32& len, __int32* overlapped, UDT_MEM_
    // check if the receiving is successful or the connection is broken
    __int32 avail;
    if (m_bBroken)
+   {
       avail = (len < m_pRcvBuffer->getRcvDataSize()) ? len : m_pRcvBuffer->getRcvDataSize();
 
-   // remove incompleted overlapped recv buffer
-   m_pRcvBuffer->removeUserBuf(*overlapped);
+      // remove incompleted overlapped recv buffer
+      m_pRcvBuffer->removeUserBuf();
+   }
 
    return avail;
 }

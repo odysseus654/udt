@@ -101,7 +101,7 @@ method will wait until the IO is completed. Otherwise it returns immediately and
 indicates the IO progress in <i>progress</i>.</font></P>
 <P><font face="Verdana" size="2">Note: In the current implementation, IO handle
 cannot be verified. If an invalid handle is passed to the call, true is always
-returned and the progress will be zero. That is, when this method returns, the
+returned and the progress will be zero. That is, when this method returns true, the
 value of progress is meaningless. On the other hand, if the method returns
 false, the value of progress should be check to see if there are errors or the
 IO is not completed.</font></P>

@@ -66,7 +66,7 @@ CUDT: 		UDT
 
 /*****************************************************************************
 written by:
-   Yunhong Gu [ygu@cs.uic.edu], last updated 10/11/2004
+   Yunhong Gu [ygu@cs.uic.edu], last updated 10/14/2004
 *****************************************************************************/
 
 
@@ -1088,25 +1088,16 @@ public:
       // Returned value:
       //    Size of data that has been received by now.
 
-   __int32 registerUserBuf(char* buf, const __int32& len, const __int32& handle);
+   __int32 registerUserBuf(char* buf, const __int32& len, const __int32& handle, const UDT_MEM_ROUTINE func);
 
       // Functionality:
       //    remove the user buffer from the protocol buffer.
       // Parameters:
-      //    0) [in] handle: descriptor of this overlapped receiving.
+      //    None
       // Returned value:
       //    None.
 
-   void removeUserBuf(const __int32& handle);
-
-      // Functionality:
-      //    Query how many data has been received into user buffer.
-      // Parameters:
-      //    None.
-      // Returned value:
-      //    Size of valid data in user buffer; or 0 if no user buffer presented.
-
-   __int32 getCurUserBufSize() const;
+   void removeUserBuf();
 
       // Functionality:
       //    Query how many buffer space left for data receiving.
@@ -1136,6 +1127,15 @@ public:
 
    bool getOverlappedResult(const int& handle, __int32& progress);
 
+      // Functionality:
+      //    Query the total size of overlapped recv buffers.
+      // Parameters:
+      //    None.
+      // Returned value:
+      //    Total size of the pending overlapped recv buffers.
+                                                                                                                            
+   __int32 getPendingQueueSize() const;
+
 private:
    char* m_pcData;			// pointer to the protocol buffer
    __int32 m_iSize;			// size of the protocol buffer
@@ -1149,7 +1149,24 @@ private:
    __int32 m_iUserBufAck;		// last ACKed position of the user buffer
    __int32 m_iHandle;			// unique handle to represet this IO request
    UDT_MEM_ROUTINE m_MemProcess;	// function to process user buffer after receiving
+
+   struct Block
+   {
+      char* m_pcData;                   // pointer to the overlapped recv buffer
+      __int32 m_iLength;                // length of the block
+                                                                                                                            
+      __int32 m_iHandle;                // a unique handle to represent this receiving request
+      UDT_MEM_ROUTINE m_pMemRoutine;    // function to process buffer after a complete receiving
+                                                                                                                            
+      Block* m_next;                    // next block
+   }  *m_pPendingBlock, *m_pLastBlock;
+
+   // m_pPendingBlock			// the list of pending overlapped recv buffers
+   // m_pLastBlock;			// the last block of pending buffers
+
+   __int32 m_iPendingSize;		// total size of pending recv buffers
 };
+
 
 //////////////////////////////////////////////////////////////////////////////
 class CUDT;
@@ -1266,6 +1283,7 @@ private:
    void checkBrokenSockets();
    void removeSocket(const UDTSOCKET u);
 };
+
 
 //////////////////////////////////////////////////////////////////////////////
 class CCC
@@ -1384,6 +1402,7 @@ protected:
    __int32 m_iACKPeriod;		// Periodical timer to send an ACK, in milliseconds 
    __int32 m_iACKInterval;		// How many packets to send one ACK, in packets
 };
+
 
 //////////////////////////////////////////////////////////////////////////////
 class UDT_API CUDT
@@ -1678,6 +1697,7 @@ private: // Receiving related data
    volatile bool m_bReadBuf;			// Application has called "recv" but has not finished
    volatile char* m_pcTempData;			// Pointer to the buffer that application want to put received data into
    volatile __int32 m_iTempLen;			// Size of the "m_pcTempData"
+   volatile UDT_MEM_ROUTINE m_iTempRoutine;	// pointer ot a routine function to process "m_pcTempData"
 
    __int32 m_iUserBufBorder;			// Sequence number of last packet that will fulfill a user buffer
 

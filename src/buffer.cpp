@@ -47,7 +47,7 @@ The receiving buffer is a logically circular memeory block.
 
 /*****************************************************************************
 written by 
-   Yunhong Gu [ygu@cs.uic.edu], last updated 10/11/2004
+   Yunhong Gu [ygu@cs.uic.edu], last updated 10/14/2004
 *****************************************************************************/
 
 
@@ -269,7 +269,11 @@ m_iSize(40960000),
 m_iStartPos(0),
 m_iLastAckPos(0),
 m_iMaxOffset(0),
-m_pcUserBuf(NULL)
+m_pcUserBuf(NULL),
+m_iUserBufSize(0),
+m_pPendingBlock(NULL),
+m_pLastBlock(NULL),
+m_iPendingSize(0)
 {
    m_pcData = new char [m_iSize];
 }
@@ -279,7 +283,11 @@ m_iSize(bufsize),
 m_iStartPos(0),
 m_iLastAckPos(0),
 m_iMaxOffset(0),
-m_pcUserBuf(NULL)
+m_pcUserBuf(NULL),
+m_iUserBufSize(0),
+m_pPendingBlock(NULL),
+m_pLastBlock(NULL),
+m_iPendingSize(0)
 {
    m_pcData = new char [m_iSize];
 }
@@ -287,6 +295,15 @@ m_pcUserBuf(NULL)
 CRcvBuffer::~CRcvBuffer()
 {
    delete [] m_pcData;
+
+   Block* p = m_pPendingBlock;
+
+   while (NULL != p)
+   {
+     m_pPendingBlock = m_pPendingBlock->m_next;
+     delete p;
+     p = m_pPendingBlock;
+   }
 }
 
 bool CRcvBuffer::nextDataPos(char** data, __int32 offset, const __int32& len)
@@ -531,7 +548,18 @@ __int32 CRcvBuffer::ackData(const __int32& len)
          // update protocol ACK pointer
          m_iLastAckPos += m_iUserBufAck + len - m_iUserBufSize;
          m_iMaxOffset -= m_iUserBufAck + len - m_iUserBufSize;
+
+         // the overlapped IO is completed, a pending buffer should be activated
          m_pcUserBuf = NULL;
+         m_iUserBufSize = 0;
+         if (NULL != m_pPendingBlock)
+         {
+            registerUserBuf(m_pPendingBlock->m_pcData, m_pPendingBlock->m_iLength, m_pPendingBlock->m_iHandle, m_pPendingBlock->m_pMemRoutine);
+            m_iPendingSize -= m_pPendingBlock->m_iLength;
+            m_pPendingBlock = m_pPendingBlock->m_next;
+            if (NULL == m_pPendingBlock)
+               m_pLastBlock = NULL;
+         }
 
          // returned value is 1 means user buffer is fulfilled
          ret = 1;
@@ -548,8 +576,29 @@ __int32 CRcvBuffer::ackData(const __int32& len)
    return ret;
 }
 
-__int32 CRcvBuffer::registerUserBuf(char* buf, const __int32& len, const __int32& handle)
+__int32 CRcvBuffer::registerUserBuf(char* buf, const __int32& len, const __int32& handle, const UDT_MEM_ROUTINE func)
 {
+   if (NULL != m_pcUserBuf)
+   {
+      // there is ongoing recv, new buffer is put into pending list.
+
+      Block *nb = new Block;
+      nb->m_pcData = buf;
+      nb->m_iLength = len;
+      nb->m_iHandle = handle;
+      nb->m_pMemRoutine = func;
+      nb->m_next = NULL;
+
+      if (NULL == m_pPendingBlock)
+         m_pLastBlock = m_pPendingBlock = nb;
+      else
+         m_pLastBlock->m_next = nb;
+
+      m_iPendingSize += len;
+
+      return 0;
+   }
+
    m_iUserBufAck = 0;
    m_iUserBufSize = len;
    m_pcUserBuf = buf;
@@ -602,18 +651,10 @@ __int32 CRcvBuffer::registerUserBuf(char* buf, const __int32& len, const __int32
    return m_iUserBufAck;
 }
 
-void CRcvBuffer::removeUserBuf(const __int32& handle)
+void CRcvBuffer::removeUserBuf()
 {
    m_pcUserBuf = NULL;
    m_iUserBufAck = 0;
-}
-
-__int32 CRcvBuffer::getCurUserBufSize() const
-{
-   if (NULL == m_pcUserBuf)
-      return 0;
-
-   return m_iUserBufAck;
 }
 
 __int32 CRcvBuffer::getAvailBufSize() const
@@ -633,7 +674,7 @@ __int32 CRcvBuffer::getAvailBufSize() const
 
 __int32 CRcvBuffer::getRcvDataSize() const
 {
-   return (m_iLastAckPos - m_iStartPos + m_iSize) % m_iSize + getCurUserBufSize();
+   return (m_iLastAckPos - m_iStartPos + m_iSize) % m_iSize;
 }
 
 bool CRcvBuffer::getOverlappedResult(const int& handle, __int32& progress)
@@ -645,5 +686,20 @@ bool CRcvBuffer::getOverlappedResult(const int& handle, __int32& progress)
    }
 
    progress = 0;
+
+   if (NULL != m_pPendingBlock)
+   {
+      __int32 end = (m_pLastBlock->m_iHandle >= m_pPendingBlock->m_iHandle) ? m_pLastBlock->m_iHandle : m_pLastBlock->m_iHandle + (1 << 30);
+      __int32 h = (h >= m_pPendingBlock->m_iHandle) ? h : h + (1 << 30);
+
+      if ((h >= m_pPendingBlock->m_iHandle) && (h <= end))
+         return false;
+   }
+
    return true;
+}
+
+__int32 CRcvBuffer::getPendingQueueSize() const
+{
+   return m_iPendingSize + m_iUserBufSize;
 }

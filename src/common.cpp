@@ -52,7 +52,7 @@ method to catch and handle UDT errors and exceptions.
 
 /*****************************************************************************
 written by 
-   Yunhong Gu [ygu@cs.uic.edu], last updated 09/23/2004
+   Yunhong Gu [ygu@cs.uic.edu], last updated 10/14/2004
 *****************************************************************************/
 
 
@@ -781,6 +781,18 @@ const char* CUDTException::getErrorMessage()
         case 2:
            strcpy(m_pcMsg + strlen(m_pcMsg), ": ");
            strcpy(m_pcMsg + strlen(m_pcMsg), "No data available for reading");
+
+           break;
+
+        case 3:
+           strcpy(m_pcMsg + strlen(m_pcMsg), ": ");
+           strcpy(m_pcMsg + strlen(m_pcMsg), "No buffer available for overlapped reading");
+
+           break;
+
+        case 4:
+           strcpy(m_pcMsg + strlen(m_pcMsg), ": ");
+           strcpy(m_pcMsg + strlen(m_pcMsg), "Non-blocking overlapped recv is on going");
 
            break;
 
