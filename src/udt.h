@@ -53,7 +53,7 @@ CUDT:           UDT
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 01/21/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 01/22/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -304,13 +304,13 @@ public:
    ~CPktTimeWindow();
 
       // Functionality:
-      //    Calculate the packes sendingl speed.
+      //    read the minimum packet sending interval.
       // Parameters:
       //    0) None.
       // Returned value:
-      //    Packet sending speed (packets per second).
+      //    minimum packet sending interval (microseconds).
 
-   __int32 getPktSndSpeed();
+   __int32 getMinPktSndInt() const;
 
       // Functionality:
       //    Calculate the packes arrival speed.
@@ -347,15 +347,6 @@ public:
       //    None.
 
    void onPktSent();
-
-      // Functionality:
-      //    Record the interruption of packet sending.
-      // Parameters:
-      //    0) None.
-      // Returned value:
-      //    None.
-
-   void onPktSndInt();
 
       // Functionality:
       //    Record time information of an arrived packet.
@@ -408,11 +399,8 @@ private:
    __int32* m_piProbeWindow;	// record inter-packet time for probing packet pairs
    __int32 m_iProbeWindowPtr;	// position pointer to the probing window
 
-   bool m_bPktSndInt;		// packet sending is now interrupted
-   bool m_bPktSndRestart;	// restart a new statistical period
    timeval m_LastSentTime;	// last packet sending time
-   __int32 m_iPktSent;		// number of packet sent in a certain period
-   __int32 m_iTotalSentTime;	// total time for packet sending in the same period above
+   __int32 m_iMinPktSndInt;	// Minimum packet sending interval
 
    timeval m_LastArrTime;	// last packet arrival time
    timeval m_CurrArrTime;	// current packet arrival time

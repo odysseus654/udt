@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 01/14/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 01/26/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -345,9 +345,6 @@ void CUDT::getOpt(UDTOpt optName, void* optval, __int32& optlen)
 void CUDT::open(const sockaddr* addr)
 {
    CGuard cg(m_ConnectionLock);
-
-   if (m_bOpened)
-      close();
 
    // Initial status
    m_bClosing = false;
@@ -737,10 +734,6 @@ void CUDT::close()
 
    // Inform the threads handler to stop.
    m_bClosing = true;
-   m_bBroken = true;
-
-   // Signal the sender and recver if they are waiting for data.
-   releaseSynch();
 
    // Wait for the threads to exit.
 
@@ -779,6 +772,11 @@ void CUDT::close()
          m_bConnected = false;
       }
    #endif
+
+   m_bBroken = true;
+
+   // Signal the sender and recver if they are waiting for data.
+   releaseSynch();
 
    // waiting all send and recv calls to stop
    CGuard sendguard(m_SendLock);
@@ -908,8 +906,6 @@ DWORD WINAPI CUDT::sndHandler(LPVOID sender)
                WaitForSingleObject(self->m_WindowCond, 1);
             #endif
 
-            self->m_pSndTimeWindow->onPktSndInt();
-
             #ifdef NO_BUSY_WAITING
                // the waiting time should not be counted in. clear the time diff to zero.
                self->m_ullTimeDiff = 0;
@@ -940,8 +936,6 @@ DWORD WINAPI CUDT::sndHandler(LPVOID sender)
                   ReleaseMutex(self->m_SendDataLock);
                #endif
             }
-
-            self->m_pSndTimeWindow->onPktSndInt();
 
             #ifdef NO_BUSY_WAITING
                // the waiting time should not be counted in. clear the time diff to zero.
@@ -1023,8 +1017,10 @@ DWORD WINAPI CUDT::sndHandler(LPVOID sender)
          self->m_pTimer->rdtsc(currtime);
          if (currtime >= targettime)
             self->m_ullTimeDiff += currtime - targettime;
-         else
+         else if (self->m_ullTimeDiff > targettime - currtime)
             self->m_ullTimeDiff -= targettime - currtime;
+         else
+            self->m_ullTimeDiff = 0;
       #endif
    }
 
@@ -1910,15 +1906,11 @@ void CUDT::rateControl()
          inc = 1.0/m_iMSS;
    }
 
-   //correct the sending rate
-   unsigned __int64 realrate = (unsigned __int64)(1000000. / m_pSndTimeWindow->getPktSndSpeed() * m_ullCPUFrequency);
-   if (realrate >= 2 * m_ullInterval)
-      m_ullInterval = realrate / 2;
-
    m_ullInterval = (unsigned __int64)((m_ullInterval * m_iSYNInterval * m_ullCPUFrequency) / (m_ullInterval * inc + m_iSYNInterval * m_ullCPUFrequency));
 
-   if (m_ullInterval < m_ullCPUFrequency)
-      m_ullInterval = m_ullCPUFrequency;
+   // correct the sending interval, which should not be less than the minimum sending interval of the system
+   if (m_ullInterval < (unsigned __int64)(m_ullCPUFrequency * m_pSndTimeWindow->getMinPktSndInt() * 0.9))
+      m_ullInterval = (unsigned __int64)(m_ullCPUFrequency * m_pSndTimeWindow->getMinPktSndInt() * 0.9);
 }
 
 void CUDT::flowControl(const __int32& recvrate)

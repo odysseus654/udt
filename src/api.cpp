@@ -32,7 +32,7 @@ reference: UDT programming manual and socket programming reference
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 01/21/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 01/26/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -487,7 +487,7 @@ __int32 CUDTUnited::close(const UDTSOCKET u)
       ReleaseMutex(m_ControlLock);
    #endif
 
-   // broadcast all "accpet" waiting
+   // broadcast all "accept" waiting
    if (CUDTSocket::LISTENING == os)
       #ifndef WIN32
          pthread_cond_broadcast(&(s->m_AcceptCond));
@@ -495,8 +495,10 @@ __int32 CUDTUnited::close(const UDTSOCKET u)
          SetEvent(s->m_AcceptCond);
       #endif
 
-   CUDT* udt = s->m_pUDT;
+   // garbage collection should not try to close this instance
+   s->m_TimeStamp.tv_sec = -1;
 
+   CUDT* udt = s->m_pUDT;
    udt->close();
 
    // a socket will not be immediated removed when it is closed
@@ -769,11 +771,11 @@ void CUDTUnited::checkBrokenSockets()
       }
       else
       {
-         // timeout, delete the socket
+         // if timeout, delete the socket
          timeval currtime;
          gettimeofday(&currtime, 0);
-         // timeout 1-2 seconds to destroy a socket with broken connection
-         if (currtime.tv_sec - i->second->m_TimeStamp.tv_sec >= 2)
+         // timeout 1-2 seconds to destroy a socket
+         if ((i->second->m_TimeStamp.tv_sec >= 0) && (currtime.tv_sec - i->second->m_TimeStamp.tv_sec >= 2))
             tbr.insert(i->second->m_Socket);
 
          // sockets cannot be removed here because it will invalidate the map iterator
