@@ -735,7 +735,7 @@ void CUDT::close()
    // Inform the threads handler to stop.
    m_bClosing = true;
    m_bBroken = true;
-                                                                                                                            
+
    // Signal the sender and recver if they are waiting for data.
    releaseSynch();
 
@@ -2149,6 +2149,10 @@ __int32 CUDT::recv(char* data, const __int32& len, __int32* overlapped, UDT_MEM_
    {
       // remove incompleted overlapped recv buffer
       m_pRcvBuffer->removeUserBuf();
+
+      // connection broken and and no data received, report error
+      if (0 == m_pRcvBuffer->getRcvDataSize())
+        throw CUDTException(2, 1, 0);
 
       return (len <= m_pRcvBuffer->getRcvDataSize()) ? len : m_pRcvBuffer->getRcvDataSize();
    }

@@ -563,6 +563,8 @@ __int32 CUDTUnited::select(ud_set* readfds, ud_set* writefds, ud_set* exceptfds,
 
    __int32 count = 0;
 
+   set<UDTSOCKET> rs, ws, es;
+
    do
    {
       CUDTSocket* s;
@@ -577,7 +579,10 @@ __int32 CUDTUnited::select(ud_set* readfds, ud_set* writefds, ud_set* exceptfds,
             if ((s->m_pUDT->m_bConnected && (s->m_pUDT->m_pRcvBuffer->getRcvDataSize() > 0))
                || (!s->m_pUDT->m_bListening && (s->m_pUDT->m_bBroken || !s->m_pUDT->m_bConnected))
                || (s->m_pUDT->m_bListening && (s->m_pQueuedSockets->size() > 0)))
+            {
+               rs.insert(*i);
                ++ count;
+            }
          }
 
       // query write sockets
@@ -588,7 +593,10 @@ __int32 CUDTUnited::select(ud_set* readfds, ud_set* writefds, ud_set* exceptfds,
                throw CUDTException(5, 4, 0);
 
             if (s->m_pUDT->m_bConnected && (s->m_pUDT->m_pSndBuffer->getCurrBufSize() < s->m_pUDT->m_iSndQueueLimit))
-               count ++;
+            {
+               ws.insert(*i);
+               ++ count;
+            }
          }
 
       // query expections on sockets
@@ -600,7 +608,8 @@ __int32 CUDTUnited::select(ud_set* readfds, ud_set* writefds, ud_set* exceptfds,
                throw CUDTException(5, 4, 0);
 
             // check connection request status
-               count ++;
+               es.insert(*i);
+               ++ count;
          }
       */
 
@@ -619,46 +628,14 @@ __int32 CUDTUnited::select(ud_set* readfds, ud_set* writefds, ud_set* exceptfds,
 
    if (0 < count)
    {
-      CUDTSocket* s;
-
-      count = 0;
-
-      // query read sockets
       if (NULL != readfds)
-         for (set<UDTSOCKET>::iterator i = readfds->begin(); i != readfds->end(); ++ i)
-         {
-            if (NULL == (s = locate(*i)))
-               throw CUDTException(5, 4, 0);
+         *readfds = rs;
 
-            if ((s->m_pUDT->m_bConnected && (s->m_pUDT->m_pRcvBuffer->getRcvDataSize() > 0))
-               || (!s->m_pUDT->m_bListening && (s->m_pUDT->m_bBroken || !s->m_pUDT->m_bConnected))
-               || (s->m_pUDT->m_bListening && (s->m_pQueuedSockets->size() > 0)))
-               ++ count;
-         }
-
-      // query write sockets
       if (NULL != writefds)
-         for (set<UDTSOCKET>::iterator i = writefds->begin(); i != writefds->end(); ++ i)
-         {
-            if (NULL == (s = locate(*i)))
-               throw CUDTException(5, 4, 0);
+         *writefds = ws;
 
-            if (s->m_pUDT->m_bConnected && (s->m_pUDT->m_pSndBuffer->getCurrBufSize() < s->m_pUDT->m_iSndQueueLimit))
-               count ++;
-         }
-
-      // query expections on sockets
-      /*
       if (NULL != exceptfds)
-         for (set<UDTSOCKET>::iterator i = exceptfds->begin(); i != exceptfds->end(); ++ i)
-         {
-            if (NULL == (s = locate(*i)))
-               throw CUDTException(5, 4, 0);
-
-            // check connection request status
-               count ++;
-         }
-      */
+         *exceptfds = es;
    }
 
    return count;
