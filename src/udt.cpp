@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 01/10/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 01/13/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -906,6 +906,13 @@ DWORD WINAPI CUDT::sndHandler(LPVOID sender)
                WaitForSingleObject(self->m_WindowCond, 1);
             #endif
 
+            self->m_pSndTimeWindow->onPktSndInt();
+
+            #ifdef NO_BUSY_WAITING
+               // the waiting time should not be counted in. clear the time diff to zero.
+               self->m_ullTimeDiff = 0;
+            #endif
+
             continue;
          }
 
@@ -932,8 +939,12 @@ DWORD WINAPI CUDT::sndHandler(LPVOID sender)
                #endif
             }
 
-            // the waiting time should not be counted in. clear the time diff to zero.
-            self->m_ullTimeDiff = 0;
+            self->m_pSndTimeWindow->onPktSndInt();
+
+            #ifdef NO_BUSY_WAITING
+               // the waiting time should not be counted in. clear the time diff to zero.
+               self->m_ullTimeDiff = 0;
+            #endif
 
             continue;
          }
@@ -949,7 +960,7 @@ DWORD WINAPI CUDT::sndHandler(LPVOID sender)
       datapkt.setLength(payload);
       *(self->m_pChannel) << datapkt;
 
-      self->m_pSndTimeWindow->pktSent();
+      self->m_pSndTimeWindow->onPktSent();
 
       #ifdef CUSTOM_CC
          if (NULL != self->m_pCC)
@@ -1263,7 +1274,7 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
       }
 
       // update time/delay information
-      self->m_pRcvTimeWindow->pktArrival();
+      self->m_pRcvTimeWindow->onPktArrival();
 
       // check if it is probing packet pair
       if (packet.m_iSeqNo % self->m_iProbeInterval < 2)

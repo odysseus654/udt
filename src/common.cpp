@@ -41,7 +41,7 @@ method to catch and handle UDT errors and exceptions.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 01/10/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 01/13/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -433,8 +433,8 @@ CPktTimeWindow::~CPktTimeWindow()
 __int32 CPktTimeWindow::getPktSndSpeed()
 {
    __int32 speed;
-   if (m_iPktSent > 10)
-      speed = m_iPktSent * 1000000 / m_iTotalSentTime;
+   if (m_iPktSent > 64)
+      speed = __int32(m_iPktSent * 1000. / (m_iTotalSentTime / 1000.));
    else
       speed = 1000000;
 
@@ -531,7 +531,7 @@ __int32 CPktTimeWindow::getBandwidth() const
    return (__int32)ceil(1000000.0 / (double(sum) / double(count)));
 }
 
-void CPktTimeWindow::pktSent()
+void CPktTimeWindow::onPktSent()
 {
    if (m_bPktSndRestart)
    {
@@ -558,7 +558,12 @@ void CPktTimeWindow::pktSent()
    }
 }
 
-void CPktTimeWindow::pktArrival()
+void CPktTimeWindow::onPktSndInt()
+{
+   m_bPktSndInt = true;
+}
+
+void CPktTimeWindow::onPktArrival()
 {
    gettimeofday(&m_CurrArrTime, 0);
    

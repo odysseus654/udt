@@ -53,7 +53,7 @@ CUDT:           UDT
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 01/10/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 01/13/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -346,7 +346,16 @@ public:
       // Returned value:
       //    None.
 
-   void pktSent();
+   void onPktSent();
+
+      // Functionality:
+      //    Record the interruption of packet sending.
+      // Parameters:
+      //    0) None.
+      // Returned value:
+      //    None.
+
+   void onPktSndInt();
 
       // Functionality:
       //    Record time information of an arrived packet.
@@ -355,7 +364,7 @@ public:
       // Returned value:
       //    None.
 
-   void pktArrival();
+   void onPktArrival();
 
       // Functionality:
       //    Record the recent RTT.
