@@ -1,0 +1,110 @@
+Copyright © 2001 - 2004, The Board of Trustees of the University of Illinois. 
+All Rights Reserved. 
+ 
+UDP-based Data Transfer (UDT) Library version 2 
+ 
+Laboratory for Advanced Computing (LAC) 
+National Center for Data Mining (NCDM) 
+University of Illinois at Chicago 
+http://www.lac.uic.edu/ 
+ 
+Permission is hereby granted, free of charge, to any person obtaining a 
+copy of this software (UDT) and associated documentation files (the "Software"), 
+to deal in the Software without restriction, including without limitation the 
+rights to use, copy, modify, merge, publish, distribute, sublicense, and/or 
+sell copies of the Software, and to permit persons to whom the Software is 
+furnished to do so, subject to the following conditions: 
+ 
+Redistributions of source code must retain the above copyright notice, this 
+list of conditions and the following disclaimers. 
+ 
+Redistributions in binary form must reproduce the above copyright notice, this 
+list of conditions and the following disclaimers in the documentation and/or 
+other materials provided with the distribution. 
+ 
+Neither the names of the University of Illinois, LAC/NCDM, nor the names of its 
+contributors may be used to endorse or promote products derived from this 
+Software without specific prior written permission. 
+ 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+SOFTWARE. 
+ 
+------------------------------------------------------------------------------- 
+Copyright © 2001 - 2004, el Bordo de Fideicomisarios de la Universidad de 
+Illinois. Reservados todos los derechos. 
+ 
+Transferencia de Datos UDP-basada la de Biblioteca (UDT) versión 2 
+ 
+Laboratorio para Informática Avanzada (LAC) 
+Centro Nacional para Datos que Extraen (NCDM) 
+Universidad de Illinois en Chicago 
+http://www.lac.uic.edu/ 
+ 
+El permiso es por este medio concedido, gratuitamente, a cualquier persona que 
+obtiene una copia de este software (UDT) y archivos de documentación asociados 
+(el "Software"), dar en el Software sin la restricción, incluso sin restricción 
+los derechos de usar, copiar, modificar, combinar, publicar, distribuya, 
+ublicencia, y/o venda copias del Software, y permitir a personas a quien el 
+Software es amueblado para hacer así, sujeto a las condiciones siguientes: 
+ 
+Las redistribuciones del código fuente deben retener el susodicho aviso de 
+copyright, esta lista de condiciones y el mentís siguiente. 
+ 
+Las redistribuciones en la forma binaria deben reproducir el susodicho aviso de 
+copyright, esta lista de condiciones y el mentís siguiente en la documentación 
+y/o otros materiales proveídos de la distribución. 
+ 
+Ni los nombres de la Universidad de Illinois, LAC/NCDM, ni los nombres de sus 
+donantes pueden ser usados para respaldar o promover productos sacados de este 
+Software sin permiso específico previo escrito. 
+ 
+EL SOFTWARE ES PROPORCIONADO "COMO ES", SIN GARANTÍA DE CUALQUIER CLASE, 
+EXPRESO O IMPLICADO, INCLUSO, PERO NO LIMITADO CON LAS GARANTÍAS DE VALOR  
+COMERCIAL, SALUD PARA UN OBJETIVO PARTICULAR Y NO INFRACCIÓN. EN NINGÚN CASO 
+VA A LOS DONANTES O SOSTENEDORES DE COPYRIGHT SER OBLIGADO DE CUALQUIER 
+RECLAMACIÓN, DAÑAN U OTRA RESPONSABILIDAD, SI EN UNA ACCIÓN DE CONTRATO, 
+AGRAVIO O POR OTRA PARTE, PROVINIENDO, DE O EN RELACIÓN AL SOFTWARE O EL USO O 
+OTRO TRATO EN EL SOFTWARE. 
+ 
+-------------------------------------------------------------------------------
+Garantissez les droits d'auteur le © 2001 - 2004, le comité directeur de 
+l'université de l'Illinois. Tous droits réservés. 
+ 
+Bibliothèque UDP-BASÉE Du Transfert De Données (UDT) version 2 
+ 
+Laboratoire pour le calcul avançé (LAC) 
+Centre national pour l'exploitation de données (NCDM) 
+Université de l'Illinois chez Chicago 
+http://www.lac.uic.edu/ 
+ 
+On accorde par ceci la permission, gratuitement, à toute personne obtenant une 
+copie de ce logiciel (UDT) et de dossiers associés de documentation (le 
+"logiciel"), à l'affaire dans le logiciel sans restriction, incluant sans 
+limitation les droites d'employer, copier, modifier, fusionner, éditer, 
+distribuer, le sublicense, et/ou les copies de vente du logiciel, et de 
+permettre les personnes à qui le logiciel est fourni pour faire ainsi, sujet 
+aux conditions suivantes: 
+ 
+Les redistributions du code source doivent maintenir la notification de 
+copyright ci-dessus, cette liste de conditions et les dénis suivants.  
+ 
+Les redistributions en forme binaire doivent reproduire la notification de 
+copyright ci-dessus, cette liste de conditions et les dénis suivants dans la 
+documentation et/ou d'autres matériaux équipés de distribution.  
+ 
+Ni les noms de l'université de l'Illinois, LAC/NCDM, ni les noms de ses 
+contribuants ne peuvent être employés pour approuver ou favoriser des produits 
+dérivés de ce logiciel sans permission écrite antérieure spécifique. 
+ 
+Le LOGICIEL EST FOURNI "COMME EST", SANS GARANTIE De la SORTE, EXPRÈS OU 
+IMPLICITE, INCLUANT MAIS NON LIMITÉE Aux GARANTIES De la VALEUR MARCHANDE, De 
+la FORME PHYSIQUE POUR Un BUT PARTICULIER ET Du NONINFRINGEMENT. DANS AUCUN CAS 
+LES CONTRIBUANTS OU LES SUPPORTS DE COPYRIGHT SERONT RESPONSABLES DE N'IMPORTE 
+QUELLE RÉCLAMATION, DOMMAGES OU AUTRE ÉLÉMENT DE PASSIF, DE SI DANS UNE ACTION 
+DU CONTRAT, TORT OU AUTREMENT, SURGISSANT, HORS OU EN LIAISON AVEC DU LOGICIEL 
+OU L'UTILISATION OU D'AUTRES RAPPORT D'AFFAIRES DANS LE LOGICIEL. 
