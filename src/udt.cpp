@@ -728,12 +728,6 @@ void CUDT::close()
       }
    }
 
-   // if the connection broken, an exception can be throwed.
-
-   // inform the peer side with a "shutdown" packet
-   if ((m_bConnected) && (!m_bShutdown))
-      sendCtrl(5);
-
    // Inform the threads handler to stop.
    m_bClosing = true;
    m_bBroken = true;
@@ -786,6 +780,10 @@ void CUDT::close()
    // Channel is to be destroyed.
    if (m_pChannel)
    {
+      // inform the peer side with a "shutdown" packet
+      if (!m_bShutdown)
+         sendCtrl(5);
+
       m_pChannel->disconnect();
       delete m_pChannel;
       m_pChannel = NULL;
@@ -1361,6 +1359,10 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
          pktcount ++;
       #endif
    }
+
+   // acknowledge those possible unacknowledged data, if there is any
+   if (0 != self->m_pRcvBuffer->getRcvDataSize())
+      self->sendCtrl(2);
 
    delete [] payload;
 
