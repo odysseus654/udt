@@ -38,7 +38,8 @@ Linux system, simply use "make".
 On UNIX systems, use: make -f Makefile.unix 
 On Windows systems, use the Visual Studio .NET project files in ./win directory. 
 
-For more compile options, please see UDT documenation: Installation.
+For more compile options (TRACE, NO_BUSY_WAITING, CUSTOM_CC, and CAPI), please 
+see UDT documenation: Installation.
 
 
 To use UDT in your application: 
@@ -56,3 +57,4 @@ http://lists.sourceforge.net/lists/listinfo/udt-general
 
 To query technical/research issues about the protocol: 
 write to: Yunhong Gu [gu@lac.uic.edu] 
+
