@@ -52,7 +52,7 @@ method to catch and handle UDT errors and exceptions.
 
 /*****************************************************************************
 written by 
-   Yunhong Gu [ygu@cs.uic.edu], last updated 08/05/2004
+   Yunhong Gu [ygu@cs.uic.edu], last updated 09/23/2004
 *****************************************************************************/
 
 
@@ -144,6 +144,11 @@ void CTimer::rdtsc(unsigned __int64 &x)
 
    #elif IA64
       __asm__ volatile ("mov %0=ar.itc" : "=r"(x) :: "memory");
+   #elif AMD64
+      unsigned __int32 lval, hval;
+      __asm__ volatile ("rdtsc" : "=a" (lval), "=d" (hval));
+      x = hval;
+      x = (x << 32) | lval;
    #else
       // use system call to read time clock for other archs
       timeval t;
@@ -162,7 +167,7 @@ unsigned __int64 CTimer::readCPUFrequency()
          return ccf / 1000000;
       else
          return 1;
-   #elif IA32
+   #elif IA32 || IA64 || AMD64
       // alternative: read /proc/cpuinfo
 
       unsigned __int64 t1, t2;
@@ -172,14 +177,6 @@ unsigned __int64 CTimer::readCPUFrequency()
       rdtsc(t2);
 
       // CPU clocks per microsecond
-      return (t2 - t1) / 100000;
-   #elif IA64
-      unsigned __int64 t1, t2;
-
-      rdtsc(t1);
-      usleep(100000);
-      rdtsc(t2);
-
       return (t2 - t1) / 100000;
    #else
       return 1;
@@ -230,6 +227,8 @@ void CTimer::sleepto(const unsigned __int64& nexttime)
          __asm__ volatile ("pause; rep; nop; nop; nop; nop; nop;");
       #elif IA64
          __asm__ volatile ("nop 0; nop 0; nop 0; nop 0; nop 0;");
+      #elif AMD64
+         __asm__ volatile ("nop; nop; nop; nop; nop;");
       #endif
 
       // TODO: use high precision timer if it is available
@@ -569,16 +568,14 @@ void CPktTimeWindow::probe2Arrival()
 
 
 //
-void CCC::init()
+CCC::CCC():
+// By default, the customized CC uses pure window based control and the initial cwnd size is 16 packets
+m_dPktSndPeriod(1.0),
+m_dCWndSize(16.0),
+m_bPeriodicalACK(false),
+m_iACKPeriod(10),
+m_iACKInterval(1)
 {
-   // By default, the customized CC uses pure window based control and the initial cwnd size is 16 packets
-
-   m_dPktSndPeriod = 1.0;
-   m_dCWndSize = 16.0;
-
-   m_bPeriodicalACK = false;
-   m_iACKPeriod = 10;
-   m_iACKInterval = 1;
 }
 
 void CCC::setACKTimer(const __int32& msINT)

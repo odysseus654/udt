@@ -66,7 +66,7 @@ CUDT: 		UDT
 
 /*****************************************************************************
 written by:
-   Yunhong Gu [ygu@cs.uic.edu], last updated 09/01/2004
+   Yunhong Gu [ygu@cs.uic.edu], last updated 09/23/2004
 *****************************************************************************/
 
 
@@ -1261,9 +1261,10 @@ private:
 //////////////////////////////////////////////////////////////////////////////
 class CCC
 {
+friend class CUDT;
+
 public:
-   CCC():m_pUDT(NULL) {}
-   CCC(CUDT* udt): m_pUDT(udt) {}
+   CCC();
    virtual ~CCC() {}
 
 public:
@@ -1275,7 +1276,7 @@ public:
       // Returned value:
       //    None.
 
-   virtual void init();
+   virtual void init() {}
 
       // Functionality:
       //    Callback function to be called when an ACK packet is received.
@@ -1364,8 +1365,8 @@ protected:
    void sendCustomMsg(CPacket& pkt) const;
 
 protected:
-friend class CUDT;
-   CUDT* m_pUDT;			// The UDT entity that this congestion control algorithm is bound to
+   UDTSOCKET m_UDT;			// The UDT entity that this congestion control algorithm is bound to
+   CUDT* m_pUDT;			// UDT class instance, internal use only
 
    double m_dPktSndPeriod;		// Packet sending period, in microseconds
    double m_dCWndSize;			// Congestion window size, in packets
@@ -1378,6 +1379,8 @@ friend class CUDT;
 //////////////////////////////////////////////////////////////////////////////
 class UDT_API CUDT
 {
+friend class CCC;
+
 private: // constructor and desctructor
    CUDT();
    CUDT(const CUDT& ancestor);
@@ -1581,7 +1584,6 @@ private: // Packet size and sequence number attributes
    const __int32 m_iMaxAckSeqNo;		// Maximum ACK sequence number
 
 private: // Options
-friend class CCC;
    __int32 m_iMSS;				// Maximum Segment Size
    bool m_bSynSending;				// Sending syncronization mode
    bool m_bSynRecving;				// Receiving syncronization mode

@@ -31,6 +31,10 @@ ifeq ($(arch), IA64)
    CCFLAGS += -DIA64
 endif
 
+ifeq ($(arch), AMD64)
+   CCFLAGS += -DAMD64
+endif
+
 OBJS = common.o list.o buffer.o packet.o channel.o udt.o api.o
 DIR = $(shell pwd)
 

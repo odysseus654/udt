@@ -51,7 +51,7 @@ UDT packet definition: packet.h
 
 /*****************************************************************************
 written by 
-   Yunhong Gu [ygu@cs.uic.edu], last updated 07/26/2004
+   Yunhong Gu [ygu@cs.uic.edu], last updated 09/29/2004
 *****************************************************************************/
 
 #ifndef WIN32
@@ -382,8 +382,9 @@ void CChannel::getPeerAddr(sockaddr* addr) const
 void CChannel::setChannelOpt()
 {
    // set sending and receiving buffer size
-   setsockopt(m_iSocket, SOL_SOCKET, SO_RCVBUF, (char *)&m_iRcvBufSize, sizeof(__int32));
-   setsockopt(m_iSocket, SOL_SOCKET, SO_SNDBUF, (char *)&m_iSndBufSize, sizeof(__int32));
+   if ((0 != setsockopt(m_iSocket, SOL_SOCKET, SO_RCVBUF, (char *)&m_iRcvBufSize, sizeof(__int32))) ||
+       (0 != setsockopt(m_iSocket, SOL_SOCKET, SO_SNDBUF, (char *)&m_iSndBufSize, sizeof(__int32))))
+      throw CUDTException(1, 2, NET_ERROR);
 
    timeval tv;
    tv.tv_sec = 0;

@@ -48,7 +48,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 09/03/2004
+   Yunhong Gu [ygu@cs.uic.edu], last updated 09/23/2004
 *****************************************************************************/
 
 #ifndef WIN32
@@ -223,6 +223,8 @@ void CUDT::setOpt(UDTOpt optName, const void* optval, const __int32& optlen)
          if (m_bOpened)
             throw CUDTException(5, 1, 0);
          m_pCC = (CCC *)optval;
+         m_pCC->m_UDT = m_SocketID;
+         m_pCC->m_pUDT = this;
       #endif
 
       break;

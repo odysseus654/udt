@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
    }
 
    ofstream ofs(argv[3]);
-   int recvsize; 
+   streampos recvsize; 
 
    if (UDT_ERROR == (recvsize = UDT::recvfile(fhandle, ofs, 0, size)))
    {
@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
    }
 
    if (recvsize < size)
-      cout << "recvfile: received file size (" << recvsize << ") is less than expected ("<< size << ")." << endl; 
+      cout << "recvfile: received file size (" << recvsize << ") is less than expected (" << size << ")." << endl; 
 
    UDT::close(fhandle);
 

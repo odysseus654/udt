@@ -17,7 +17,8 @@
   </tr>
 </table>
 <h1><font face="Verdana" size="4">Base Congestion Control Class Structure</font></h1>
-<p><font face="Verdana" size="2">The following class <b>CCC</b> is the base 
+<p><font face="Verdana" size="2">The following class <b>CCC</b>  (some details
+are omitted) is the base 
 class that a 3rd party congestion control algorithm should inherit from and 
 overload the proper functions.</font></p>
 <table border="1" cellpadding="0" cellspacing="0" style="border-collapse: collapse" width="100%" id="table1" bgcolor="#C0C0C0" bordercolor="#C0C0C0">
@@ -27,12 +28,12 @@ overload the proper functions.</font></p>
     <font size="1" face="Courier New">class CCC<br>
 	{<br>
 	<b><font color="#5f9ea0">public</font></b>:<br>
-&nbsp;&nbsp; CCC():m_pUDT(NULL) {}<br>
-&nbsp;&nbsp; CCC(CUDT* udt): m_pUDT(udt) {}<br>
+&nbsp;&nbsp; CCC();<br>
 &nbsp;&nbsp; virtual ~CCC() {}<br>
 	<br>
 	<b><font color="#5f9ea0">public</font></b>:<br>
-&nbsp;&nbsp; virtual <b><font color="#228b22">void</font></b> <a href="#1">init</a>();<br>
+&nbsp;&nbsp; virtual <b><font color="#228b22">void</font></b> <a href="#1">init</a>()
+    {}<br>
 &nbsp;&nbsp; virtual <b><font color="#228b22">void</font></b> <a href="#2">onACK</a>(<b><font color="#228b22">const</font></b> 
 	__int32&amp; ackno) {}<br>
 &nbsp;&nbsp; virtual <b><font color="#228b22">void</font></b> <a href="#3">
@@ -61,7 +62,7 @@ overload the proper functions.</font></p>
 	pkt) <b><font color="#228b22">const</font></b>;<br>
 	<br>
 	<b><font color="#5f9ea0">protected</font></b>:<br>
-&nbsp;&nbsp; CUDT* <a href="#10">m_pUDT</a>;<i><font color="#b22222"><br>
+&nbsp;&nbsp; UDTSOCKET <a href="#10">m_UDT</a>;<i><font color="#b22222"><br>
 	</font></i>&nbsp;&nbsp; <b><font color="#228b22">double</font></b>
 	<a href="#11">m_dPktSndPeriod</a>;<i><font color="#b22222"><br>
 	</font></i>&nbsp;&nbsp; <b><font color="#228b22">double</font></b>
@@ -118,11 +119,10 @@ timer-based acknowledging are exclusive. <i>pktINT</i> is the packet interval.</
 <p><font face="Verdana" size="2">The method can be used to send a user defined 
 control message. The control message <i>pkt</i> must conform to the packet 
 format defined in ./src/packet.cpp.</font></p>
-<p><font face="Verdana" size="2"><a name="10"></a>CUDT* <b>m_pUDT</b></font></p>
-<p><font face="Verdana" size="2">This is the UDT instance that utilizes this 
-congestion control algorithm. It should be initialized by using the CCC 
-constructor if necessary, otherwise, leave it as NULL. An inherited call can 
-access UDT member through this instance pointer.</font></p>
+<p><font face="Verdana" size="2"><a name="10"></a>UDTSOCKET <b>m_UDT</b></font></p>
+<p><font face="Verdana" size="2">This is the UDT socket that utilizes this 
+congestion control algorithm. It will be assigned when <a href="opt.htm">setsockopt</a> is
+called. This can be used to do performance monitoring (<a href="trace.htm">perfmon</a>).</font></p>
 <p><font face="Verdana" size="2"><a name="11"></a>double <b>m_dPktSndPeriod</b></font></p>
 <p><font face="Verdana" size="2">This is the packet sending period that should 
 be updated by a rate control algorithm. If a pure window based algorithm is 

@@ -2,7 +2,7 @@
 
 <head>
 <meta http-equiv="Content-Language" content="en-us">
-<meta name="GENERATOR" content="Microsoft FrontPage 6.0">
+<meta name="GENERATOR" content="Microsoft FrontPage 4.0">
 <meta name="ProgId" content="FrontPage.Editor.Document">
 <meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
 <title>UDT Reference</title>
@@ -152,216 +152,216 @@ and macros in traditional standard socket API.</font></p>
 <p><b><font size="2" face="Verdana"><a name="TRACEINFO"></a>TRACEINFO</font></b></p>
 <p><font face="Verdana" size="2">The TRACEINFO structure stores the performance 
 trace information. Its member attributes can be read directly by applications.</font></p>
-  <table border="1" cellpadding="0" cellspacing="0" style="border-collapse: collapse" id="table3" bordercolordark="#C0C0C0" bordercolorlight="#C0C0C0" width="100%">
+  <table border="1" cellpadding="0" cellspacing="0" style="border-collapse: collapse" id="table3" bordercolordark="#C0C0C0" bordercolorlight="#C0C0C0" width="100%" height="498">
     <tr>
-      <th align="center" bgcolor="#C0C0C0"><font face="Verdana" size="2">Members
+      <th align="center" bgcolor="#C0C0C0" height="16"><font face="Verdana" size="2">Members
 		</font></th>
-      <th bgcolor="#C0C0C0" width="83%"><font face="Verdana" size="2">Comments</font></th>
+      <th bgcolor="#C0C0C0" width="83%" height="16"><font face="Verdana" size="2">Comments</font></th>
     </tr>
 	<tr>
-      <td colspan="2">
+      <td colspan="2" height="15">
       <p style="margin-top: 1; margin-bottom: 1">
 		<font face="Verdana" size="1" color="#FF0000">The following attributes 
 		are aggregate values since the UDT socket is created.</font></td>
     </tr>
 	<tr>
-      <td>
+      <td height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		int64 msTimeStamp</font></td>
-      <td width="83%">
+      <td width="83%" height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		time elapsed since the UDT socket is created, in milliseconds</font></td>
     </tr>
 	<tr>
-      <td>
+      <td height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		int64 pktSentTotal</font></td>
-      <td width="83%">
+      <td width="83%" height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		total number of sent packets, including retransmissions</font></td>
     </tr>
 	<tr>
-      <td>
+      <td height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		int64 pktRecvTotal</font></td>
-      <td width="83%">
+      <td width="83%" height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		total number of received packets</font></td>
     </tr>
 	<tr>
-      <td>
+      <td height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		int pktLossTotal</font></td>
-      <td width="83%">
+      <td width="83%" height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		total number of lost packets, measured in the receiving side</font></td>
     </tr>
 	<tr>
-      <td>
+      <td height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		int pktRetransTotal</font></td>
-      <td width="83%">
+      <td width="83%" height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		total number of retransmitted packets, measured in the sending side</font></td>
     </tr>
 	<tr>
-      <td>
+      <td height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">int pktSentACKTotal</font></td>
-      <td width="83%">
+      <td width="83%" height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		total
 		number of sent ACK packets</font></td>
     </tr>
 	<tr>
-      <td>
+      <td height="15">
       <p style="margin-top: 1; margin-bottom: 1">
       <font face="Verdana" size="1">int pktRecvACKTotal</font></td>
-      <td width="83%">
+      <td width="83%" height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		total
 		number of received ACK packets&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 		</font></td>
     </tr>
 	<tr>
-      <td>
+      <td height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">int pktSentNAKTotal</font></td>
-      <td width="83%">
+      <td width="83%" height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		total
 		number of sent NAK packets</font></td>
     </tr>
 	<tr>
-      <td>
+      <td height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">int pktRecvNAKTotal</font></td>
-      <td width="83%">
+      <td width="83%" height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		total
 		number of received NAK packets</font></td>
     </tr>
 	<tr>
-      <td colspan="2">
+      <td colspan="2" height="13">
       <font face="Verdana" size="1" color="#FF0000">The following attributes are 
 		local values since the last time they are recorded.</font></td>
     </tr>
 	<tr>
-      <td>
+      <td height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		int64 pktSent</font></td>
-      <td width="83%">
+      <td width="83%" height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		number of sent packets, including retransmissions</font></td>
     </tr>
 	<tr>
-      <td>
+      <td height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		int64 pktRecv</font></td>
-      <td width="83%">
+      <td width="83%" height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		number of received packets</font></td>
     </tr>
 	<tr>
-      <td height="21">
+      <td height="1">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		int pktLoss</font></td>
-      <td width="83%" height="21">
+      <td width="83%" height="1">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		number of lost packets, measured in the receiving side</font></td>
     </tr>
 	<tr>
-      <td>
+      <td height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		int pktRetrans</font></td>
-      <td width="83%">
+      <td width="83%" height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		number of retransmitted packets, measured in the sending side</font></td>
     </tr>
 	<tr>
-      <td>
+      <td height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">int pktSentACK</font></td>
-      <td width="83%">
+      <td width="83%" height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		number of sent ACK packets</font></td>
     </tr>
 	<tr>
-      <td>
+      <td height="15">
       <p style="margin-top: 1; margin-bottom: 1">
       <font face="Verdana" size="1">int pktRecvACK</font></td>
-      <td width="83%">
+      <td width="83%" height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		number of received ACK packets&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 		</font></td>
     </tr>
 	<tr>
-      <td>
+      <td height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">int pktSentNAK</font></td>
-      <td width="83%">
+      <td width="83%" height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		number of sent NAK packets</font></td>
     </tr>
 	<tr>
-      <td>
+      <td height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">int pktRecvNAK</font></td>
-      <td width="83%">
+      <td width="83%" height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		number of received NAK packets</font></td>
     </tr>
 	<tr>
-      <td>
+      <td height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">double mbpsSendRate</font></td>
-      <td width="83%">
+      <td width="83%" height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		sending rate in Mbps</font></td>
     </tr>
 	<tr>
-      <td>
+      <td height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">double mbpsRecvRate</font></td>
-      <td width="83%">
+      <td width="83%" height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		receiving rate in Mbps</font></td>
     </tr>
 	<tr>
-      <td colspan="2">
+      <td colspan="2" height="13">
       <font face="Verdana" size="1" color="#FF0000">The following attributes are 
 		instant values at the time they are observed.</font></td>
       </tr>
 	<tr>
-      <td>
+      <td height="28">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		double usPktSndPeriod</font></td>
-      <td width="83%">
+      <td width="83%" height="28">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		packet sending period, in microseconds</font></td>
     </tr>
 	<tr>
-      <td>
+      <td height="15">
       <p style="margin-top: 1; margin-bottom: 1">
       <font face="Verdana" size="1">int pktFlowWindow</font></td>
-      <td width="83%">
+      <td width="83%" height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		flow window size, in number of packets&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 		</font></td>
     </tr>
 	<tr>
-      <td>
+      <td height="28">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		int pktCongestionWindow</font></td>
-      <td width="83%">
+      <td width="83%" height="28">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		congestion window size, in number of packets</font></td>
     </tr>
 	<tr>
-      <td>
+      <td height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		double msRTT</font></td>
-      <td width="83%">
+      <td width="83%" height="15">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		round trip time, in milliseconds</font></td>
     </tr>
 	<tr>
-      <td>
+      <td height="28">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		double mbpsBandwidth</font></td>
-      <td width="83%">
+      <td width="83%" height="28">
       <p style="margin-top: 1; margin-bottom: 1"><font face="Verdana" size="1">
 		estimated bandwidth, in Mbps</font></td>
     </tr>
@@ -370,7 +370,8 @@ trace information. Its member attributes can be read directly by applications.</
 <p><font face="Verdana" size="2">The UDT_MEM_ROUTINE is defined as 
 <font color="#0000FF">void (UDT_MEME_ROUTINE*)(char*, 
 int)</font> and it is used to automatically process the data buffer after an overlapped 
-IO is completed.</font></p>
+IO is completed. The first parameter is a pointer to the buffer to be processed,
+and the second parameter is the length of the buffer.</font></p>
 <H4><font face="Verdana" size="2">See Also</font></H4>
 <P>
 <b><font face="Verdana" size="2"><a href="function.htm">UDT Sockets Functions</a></font></b></P>

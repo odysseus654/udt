@@ -2,7 +2,7 @@
 
 <head>
 <meta http-equiv="Content-Language" content="en-us">
-<meta name="GENERATOR" content="Microsoft FrontPage 6.0">
+<meta name="GENERATOR" content="Microsoft FrontPage 4.0">
 <meta name="ProgId" content="FrontPage.Editor.Document">
 <meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
 <title>UDT Reference</title>
@@ -38,17 +38,13 @@
 <dl>
   <dt><i><font face="Verdana" size="2">u</font></i></dt>
 	<dd>
-	<dl>
-		<dt><font face="Verdana" size="2">[in] Descriptor identifying the socket 
-		to close.</font></dt>
-	</dl>
+    <font face="Verdana" size="2">[in] Descriptor identifying the socket 
+		to close.</font>
 	</dd>
 	<dt><i><font face="Verdana" size="2">how</font></i></dt>
 	<dd>
-	<dl>
-		<dt><font face="Verdana" size="2">[in] which functionality should be 
-		disabled.</font></dt>
-	</dl></dd>
+    <font face="Verdana" size="2">[in] which functionality should be 
+		disabled.</font></dd>
 </dl>
 <h4><font face="Verdana" size="2">Return Values</font></h4>
 <p><font face="Verdana" size="2">On success, 0 is returned; Otherwise, UDT_ERROR 
@@ -80,12 +76,13 @@ is returned and the specific error information can be retrieved by
     </tr>
     </table>
 <H4><font face="Verdana" size="2">Description</font></H4>
-<p><font face="Verdana" size="2">The shutdown method is used to gracefully close 
+<p><font face="Verdana" size="2">The <b> shutdown</b> method is used to gracefully close 
 a UDT socket connection.</font></p>
-<p></p>
-<p></p>
+<p><font face="Verdana" size="2">This method is only for compatibility purpose.
+It is has no effect for a UDT connection. In UDT, the graceful close is built in
+the <a href="close.htm">close</a> method.&nbsp;</font></p>
 <H4><font face="Verdana" size="2">See Also</font></H4>
-<P><b><font face="Verdana" size="2"><a href="socket.htm">socket</a></font></b></P>
+<P><b><font face="Verdana" size="2"><a href="socket.htm">socket</a>, <a href="close.htm">close</a></font></b></P>
 
 </body>
 

@@ -1,8 +1,30 @@
 #include <udt.h>
 
 // This is an example on how to add customized CC to UDT.
-// This is a very simple version of Scalable TCP.
 
+
+// This is a UDP blast (constant rate)
+class CUDPBlast: public CCC
+{
+public:
+   CUDPBlast(double mbpsRate): m_dRate(mbpsRate) {}
+
+   virtual void init()
+   {
+      int mss;
+      int size = sizeof(int);
+      UDT::getsockopt(m_UDT, 0, UDT_MSS, &mss, &size);
+      m_dPktSndPeriod = mss * 8.0 / m_dRate;
+      m_dCWndSize = 80000.0;
+   }
+
+private:
+   double m_dRate;		// sending rate in Mb/s
+};
+
+
+// This is a very simple version of Scalable TCP.
+// We did not implement slow start in this example
 class CScalableTCP: public CCC
 {
 public:
@@ -43,4 +65,3 @@ private:
    static const __int32 m_iMaxCWndSize = 100000;
 };
 
-// Note: We did not implement slow start in this example.
