@@ -98,6 +98,8 @@ m_iQuickStartPkts(16)
    m_iFlightFlagSize = 25600;
    m_iSndQueueLimit = 40960000;
    m_iUDTBufSize = 40960000;
+   m_Linger.l_onoff = 1;
+   m_Linger.l_linger = 1;
    m_iUDPSndBufSize = 65536;
    m_iUDPRcvBufSize = 4 * 1024 * 1024;
    m_iIPversion = 4;
@@ -143,6 +145,7 @@ m_iQuickStartPkts(ancestor.m_iQuickStartPkts)
    m_iFlightFlagSize = ancestor.m_iFlightFlagSize;
    m_iSndQueueLimit = ancestor.m_iSndQueueLimit;
    m_iUDTBufSize = ancestor.m_iUDTBufSize;
+   m_Linger = ancestor.m_Linger;
    m_iUDPSndBufSize = ancestor.m_iUDPSndBufSize;
    m_iUDPRcvBufSize = ancestor.m_iUDPRcvBufSize;
    m_iIPversion = ancestor.m_iIPversion;
@@ -349,10 +352,6 @@ void CUDT::open(const sockaddr* addr)
    m_bShutdown = false;
    m_bListening = false;
    m_iEXPCount = 1;
-
-   // linger
-   m_Linger.l_onoff = 1;
-   m_Linger.l_linger = 1;
 
    // Initial sequence number, loss, acknowledgement, etc.
    m_iPktSize = m_iMSS - 28;

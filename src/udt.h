@@ -1635,6 +1635,7 @@ private: // Options
    __int32 m_iFlightFlagSize;			// Maximum number of packets in flight from the peer side
    __int32 m_iSndQueueLimit;			// Maximum length of the sending buffer queue
    __int32 m_iUDTBufSize;			// UDT buffer size (for receiving)
+   linger m_Linger;				// linger information on close
    __int32 m_iUDPSndBufSize;			// UDP sending buffer size
    __int32 m_iUDPRcvBufSize;			// UDP receiving buffer size
    __int32 m_iIPversion;			// IP version
@@ -1690,8 +1691,6 @@ private: // Sending related data
    __int32 m_iLastDecSeq;			// Sequence number sent last decrease occurs
 
    __int32 m_iISN;				// Initial Sequence Number
-
-   linger m_Linger;				// linger information on close
 
 private: // Receiving related data
    CRcvBuffer* m_pRcvBuffer;			// Receiver buffer
