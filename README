@@ -42,18 +42,20 @@ Linux system, simply use "make".
 On UNIX systems, use: make -f Makefile.unix 
 On Windows systems, use the Visual Studio .NET project files in ./win directory. 
 
+For more compile options, please see UDT documenation: Installation.
+
 
 To use UDT in your application: 
 Read index.htm in ./doc. The documentation is in HTML format and requires your
-browser to support Java script.
+browser to support JavaScript.
 
 
 To report bugs, request new features, or make a contribution to the software: 
-visit http://sourceforge.net/projects/dataspace/ 
+visit http://sourceforge.net/projects/udt/ 
 
 
 Join the discussion mailing list: 
-http://lists.sourceforge.net/lists/listinfo/dataspace-sabul 
+http://lists.sourceforge.net/lists/listinfo/udt-general 
 
 
 To query technical/research issues about the protocol: 
