@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 01/13/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 01/14/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -166,6 +166,8 @@ CUDT::~CUDT()
    destroySynch();
 
    // destroy the data structures
+   if (m_pChannel)
+      delete m_pChannel;
    if (m_pSndBuffer)
       delete m_pSndBuffer;
    if (m_pRcvBuffer)
@@ -1195,7 +1197,10 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
          // sender: Insert all the packets sent after last received acknowledgement into the sender loss list.
          // recver: Send out a keep-alive packet
          if (((self->m_iSndCurrSeqNo + 1) % self->m_iMaxSeqNo) != self->m_iSndLastAck)
-            self->m_pSndLossList->insert(const_cast<__int32&>(self->m_iSndLastAck), self->m_iSndCurrSeqNo);
+         {
+            __int32 csn = self->m_iSndCurrSeqNo;
+            self->m_pSndLossList->insert(const_cast<__int32&>(self->m_iSndLastAck), csn);
+         }
          else
             self->sendCtrl(1);
 
