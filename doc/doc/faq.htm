@@ -2,7 +2,7 @@
 
 <head>
 <meta http-equiv="Content-Language" content="en-us">
-<meta name="GENERATOR" content="Microsoft FrontPage 6.0">
+<meta name="GENERATOR" content="Microsoft FrontPage 4.0">
 <meta name="ProgId" content="FrontPage.Editor.Document">
 <meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
 <title>UDT Reference</title>
@@ -107,7 +107,7 @@ modify the UDT options.<br>
 Finally, your applications affect the transfer speed. Any data 
 intensive applications can cost substantial CPU time in computing and memory 
 replication, which will affect UDT's performance. Try to test the throughput 
-with the example application in the UDT SDK.</font></p>
+with the example applications in the UDT SDK.</font></p>
 <h4><font face="Verdana" size="2"><a name="5"></a>4. Can you give me some hints 
 in tuning the performance?</font></h4>
 <p style="margin-top: 0; margin-bottom: 0"><font face="Verdana" size="2">Please 
@@ -137,7 +137,13 @@ different platforms even with different byte orders.</font></p>
 <h4><font face="Verdana" size="2"><a name="10"></a>8. Why can't the UDT connection 
 be set up? Why is the listen or connect call fails?</font></h4>
 <p style="margin-top: 0; margin-bottom: 0"><font face="Verdana" size="2">The 
-most likely reason is that at least one of the server or client sides has 
+most likely reason is that one of the machines is behind a firewall. You can
+change the firewall settings if you have the privilege or do something in the
+UDT program to bypass the firewall. Note that UDT has same semantics as TCP and
+generates UDP traffic in both directions.</font></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;</p>
+<p style="margin-top: 0; margin-bottom: 0"><font face="Verdana" size="2">Another
+reason is that at least one of the server or client sides has 
 multiple addresses, and UDT is bound to an address different from what you use 
 in the application. To solve the problem, explicitly set the IP address in bind 
 call.<br>
@@ -170,7 +176,9 @@ any UDT methods, when you will get a connection broken error.</font></p>
 bulk data?</font></h4>
 <p style="margin-top: 0; margin-bottom: 0"><font face="Verdana" size="2">No, UDT 
 can transfer a data buffer from one single byte to multiple tera-bytes, as 
-long as your system can provide enough resources. </font></p>
+long as your system can provide enough resources. However, UDT is indeed
+optimized for bulk data, and it may not have any better performance for message
+signaling applications.</font></p>
 <h4><font face="Verdana" size="2"><a name="16"></a>14. What's the relationship 
 between UDT and SABUL?</font></h4>
 <p style="margin-top: 0; margin-bottom: 0"><font face="Verdana" size="2">UDT 

@@ -57,7 +57,6 @@ written by
 
 #include "udt.h"
 
-
 CUDTSocket::CUDTSocket():
 m_pSelfAddr(NULL),
 m_pPeerAddr(NULL),

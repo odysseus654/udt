@@ -48,7 +48,6 @@ written by
    Yunhong Gu [ygu@cs.uic.edu], last updated 08/10/2004
 *****************************************************************************/
 
-
 //////////////////////////////////////////////////////////////////////////////
 //    0                   1                   2                   3
 //    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -129,9 +128,7 @@ written by
 //      For any single loss or consectutive loss less than 2 packets, use
 //      the original sequence numbers in the field.
 
-
 #include "udt.h"
-
 
 // Set up the aliases in the constructure
 CPacket::CPacket():

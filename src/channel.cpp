@@ -71,7 +71,6 @@ written by
 
 using namespace std;
 
-
 // For BSD/WIN32 compatability
 #ifdef BSD
    #define socklen_t int
@@ -84,7 +83,6 @@ using namespace std;
 #else
    #define NET_ERROR WSAGetLastError()
 #endif
-
 
 CChannel::CChannel():
 m_iIPversion(4),

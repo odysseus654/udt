@@ -55,7 +55,6 @@ written by
    Yunhong Gu [ygu@cs.uic.edu], last updated 10/14/2004
 *****************************************************************************/
 
-
 #ifndef WIN32
    #include <unistd.h>
    #include <cstring>
@@ -66,7 +65,7 @@ written by
    #include <ws2tcpip.h>
 #endif
 
-#include <math.h>
+#include <cmath>
 #include "udt.h"
 
 using namespace std;
@@ -821,7 +820,9 @@ const char* CUDTException::getErrorMessage()
    }
 
    // period
-   strcpy(m_pcMsg + strlen(m_pcMsg), ".");
+   #ifndef WIN32
+      strcpy(m_pcMsg + strlen(m_pcMsg), ".");
+   #endif
 
    return m_pcMsg;
 }

@@ -49,9 +49,7 @@ written by
    Yunhong Gu [ygu@cs.uic.edu], last updated 08/01/2004
 *****************************************************************************/
 
-
 #include "udt.h"
-
 
 // Definition of >, <, >=, and <= with sequence number wrap
 

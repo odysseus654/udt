@@ -69,10 +69,8 @@ written by:
    Yunhong Gu [ygu@cs.uic.edu], last updated 10/14/2004
 *****************************************************************************/
 
-
 #ifndef _UDT_H_
 #define _UDT_H_
-
 
 #ifndef WIN32
    #include <pthread.h>

@@ -50,7 +50,6 @@ written by
    Yunhong Gu [ygu@cs.uic.edu], last updated 10/14/2004
 *****************************************************************************/
 
-
 #include <cstring>
 #include "udt.h"
 
