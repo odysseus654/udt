@@ -2060,10 +2060,10 @@ __int32 CUDT::recv(char* data, const __int32& len, __int32* overlapped, UDT_MEM_
    CGuard recvguard(m_RecvLock);
 
    // throw an exception if not connected
-   if ((m_bBroken) && (0 == m_pRcvBuffer->getRcvDataSize()))
-      throw CUDTException(2, 1, 0);
-   else if (!m_bConnected)
+   if (!m_bConnected)
       throw CUDTException(2, 2, 0);
+   else if ((m_bBroken) && (0 == m_pRcvBuffer->getRcvDataSize()))
+      throw CUDTException(2, 1, 0);
    else if ((m_bSynRecving || (NULL == overlapped)) && (0 < m_pRcvBuffer->getPendingQueueSize()))
       throw CUDTException(6, 4, 0);
 

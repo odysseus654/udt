@@ -57,11 +57,10 @@ int main(int argc, char* argv[])
 
    int namelen;
    sockaddr_in their_addr;
+   UDTSOCKET recver;
 
    while (true)
    {
-      UDTSOCKET recver;
-
       if (INVALID_UDTSOCK == (recver = UDT::accept(serv, (sockaddr*)&their_addr, &namelen)))
       {
          cout << "accept: " << UDT::getlasterror().getErrorMessage() << endl;
@@ -77,10 +76,10 @@ int main(int argc, char* argv[])
 
 #ifndef WIN32
       pthread_t rcvthread;
-      pthread_create(&rcvthread, NULL, recvdata, &recver);
+      pthread_create(&rcvthread, NULL, recvdata, new UDTSOCKET(recver));
       pthread_detach(rcvthread);
 #else
-      CreateThread(NULL, 0, recvdata, &recver, 0, NULL);
+      CreateThread(NULL, 0, recvdata, new UDTSOCKET(recver), 0, NULL);
 #endif
    }
 
@@ -96,6 +95,7 @@ DWORD WINAPI recvdata(LPVOID usocket)
 #endif
 {
    UDTSOCKET recver = *(UDTSOCKET*)usocket;
+   delete (UDTSOCKET*)usocket;
 
    char* data;
    int size = 10000000;

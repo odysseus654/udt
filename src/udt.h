@@ -53,7 +53,7 @@ CUDT:           UDT
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 01/13/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 01/21/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -1218,6 +1218,9 @@ struct CUDTSocket
    set<UDTSOCKET>* m_pQueuedSockets;	// set of connections waiting for accept()
    set<UDTSOCKET>* m_pAcceptSockets;	// set of accept()ed connections
 
+   pthread_cond_t m_AcceptCond;		// used to block "accept" call
+   pthread_mutex_t m_AcceptLock;	// mutex associated to m_AcceptCond
+
    unsigned __int32 m_uiBackLog;	// maximum number of connections in queue
 };
 
@@ -1294,9 +1297,6 @@ private:
 
    pthread_mutex_t m_IDLock;			// used to synchronize ID generation
    UDTSOCKET m_SocketID;			// seed to generate a new unique socket ID
-
-   pthread_cond_t m_AcceptCond;			// used to block "accept" call
-   pthread_mutex_t m_AcceptLock;		// mutex associated to m_AcceptCond
 
 private:
    pthread_key_t m_TLSError;			// thread local error record (last error)

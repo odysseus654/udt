@@ -32,7 +32,7 @@ reference: UDT programming manual and socket programming reference
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 01/10/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 01/21/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -56,6 +56,13 @@ m_pUDT(NULL),
 m_pQueuedSockets(NULL),
 m_pAcceptSockets(NULL)
 {
+   #ifndef WIN32
+      pthread_mutex_init(&m_AcceptLock, NULL);
+      pthread_cond_init(&m_AcceptCond, NULL);
+   #else
+      m_AcceptLock = CreateMutex(NULL, false, NULL);
+      m_AcceptCond = CreateEvent(NULL, false, false, NULL);
+   #endif
 }
 
 CUDTSocket::~CUDTSocket()
@@ -79,6 +86,14 @@ CUDTSocket::~CUDTSocket()
       delete m_pQueuedSockets;
    if (m_pAcceptSockets)
       delete m_pAcceptSockets;
+
+   #ifndef WIN32
+      pthread_mutex_destroy(&m_AcceptLock);
+      pthread_cond_destroy(&m_AcceptCond);
+   #else
+      CloseHandle(m_AcceptLock);
+      CloseHandle(m_AcceptCond);
+   #endif
 }
 
 
@@ -88,13 +103,9 @@ m_SocketID(1 << 30)
    #ifndef WIN32
       pthread_mutex_init(&m_ControlLock, NULL);
       pthread_mutex_init(&m_IDLock, NULL);
-      pthread_mutex_init(&m_AcceptLock, NULL);
-      pthread_cond_init(&m_AcceptCond, NULL);
    #else
       m_ControlLock = CreateMutex(NULL, false, NULL);
       m_IDLock = CreateMutex(NULL, false, NULL);
-      m_AcceptLock = CreateMutex(NULL, false, NULL);
-      m_AcceptCond = CreateEvent(NULL, false, false, NULL);
    #endif
 
    #ifndef WIN32
@@ -109,13 +120,9 @@ CUDTUnited::~CUDTUnited()
    #ifndef WIN32
       pthread_mutex_destroy(&m_ControlLock);
       pthread_mutex_destroy(&m_IDLock);
-      pthread_mutex_destroy(&m_AcceptLock);
-      pthread_cond_destroy(&m_AcceptCond);
    #else
       CloseHandle(m_ControlLock);
       CloseHandle(m_IDLock);
-      CloseHandle(m_AcceptLock);
-      CloseHandle(m_AcceptCond);
    #endif
 
    #ifndef WIN32
@@ -285,9 +292,9 @@ void CUDTUnited::newConnection(const UDTSOCKET listen, const sockaddr* peer, CHa
 
    // wake up a waiting accept() call
    #ifndef WIN32
-      pthread_cond_signal(&m_AcceptCond);
+      pthread_cond_signal(&(ls->m_AcceptCond));
    #else
-      SetEvent(m_AcceptCond);
+      SetEvent(ls->m_AcceptCond);
    #endif
 }
 
@@ -380,16 +387,16 @@ UDTSOCKET CUDTUnited::accept(const UDTSOCKET listen, sockaddr* addr, __int32* ad
       throw CUDTException(6, 2, 0);
 
    #ifndef WIN32
-      pthread_mutex_lock(&m_AcceptLock);
+      pthread_mutex_lock(&(ls->m_AcceptLock));
       while ((ls->m_pQueuedSockets->size() == 0) && (CUDTSocket::LISTENING == ls->m_Status))
-         pthread_cond_wait(&m_AcceptCond, &m_AcceptLock);
-      pthread_mutex_unlock(&m_AcceptLock);
+         pthread_cond_wait(&(ls->m_AcceptCond), &(ls->m_AcceptLock));
+      pthread_mutex_unlock(&(ls->m_AcceptLock));
    #else
       while ((ls->m_pQueuedSockets->size() == 0) && (CUDTSocket::LISTENING == ls->m_Status))
-         WaitForSingleObject(m_AcceptCond, INFINITE);
+         WaitForSingleObject(ls->m_AcceptCond, INFINITE);
       // wake up other "accept" calls
       if (CUDTSocket::CLOSED == ls->m_Status)
-         SetEvent(m_AcceptCond);
+         SetEvent(ls->m_AcceptCond);
    #endif
 
    // !!only one conection can be set up at each time!!
@@ -483,9 +490,9 @@ __int32 CUDTUnited::close(const UDTSOCKET u)
    // broadcast all "accpet" waiting
    if (CUDTSocket::LISTENING == os)
       #ifndef WIN32
-         pthread_cond_broadcast(&m_AcceptCond);
+         pthread_cond_broadcast(&(s->m_AcceptCond));
       #else
-         SetEvent(m_AcceptCond);
+         SetEvent(s->m_AcceptCond);
       #endif
 
    CUDT* udt = s->m_pUDT;
