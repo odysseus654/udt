@@ -280,13 +280,13 @@ is returned and the specific error information can be retrieved by
 optName</i> with the value of <i>optval</i>. The parameter of <i>optlen</i> is 
 checked to verify the goodness of the option value. Not all options can be set 
 at any state of UDT.</font></P>
-<P><font face="Verdana" size="2">UDT_MSS can only be set before <b>bind</b>; UDT_FC, and UDT_RC can only be set 
+<P><font face="Verdana" size="2">UDT_MSS can only be set before <b>bind</b>;
+UDT_CC and UDT_FC can only be set 
 before the <b>listen</b> or <b>connect</b> call.</font></P>
 <P><font face="Verdana" size="2">The <b>getsockopt</b> method reads the current 
-option value. The value is written into the buffer pointed by <i>optval</i>, and 
-the length is returned in <i>optlen</i>..</font></P>
+option value. The value is written into the buffer pointed by <i>optval</i> and 
+the length is returned in <i>optlen</i>.</font></P>
 <H4><font face="Verdana" size="2">Examples</font></H4>
-<P>
 <P><font face="Verdana" size="2">To set data sending in non-blocking mode, the 
 codes can be like:</font></P>
 <table border="1" cellpadding="0" cellspacing="0" style="border-collapse: collapse" width="100%" id="AutoNumber2" bgcolor="#C0C0C0" bordercolor="#C0C0C0">
@@ -301,10 +301,6 @@ codes can be like:</font></P>
     <p><font face="Courier New" size="1">UDT::setsockopt(u, 0, UDT_SNDSYN, &amp;block, sizeof(bool));</font></td>
   </tr>
 </table>
-<p></p>
-<p></p>
-<p></p>
-<p></p>
 <H4><font face="Verdana" size="2">See Also</font></H4>
 <P><b><font face="Verdana" size="2"><a href="t-config.htm">Configure UDT Options</a></font></b></P>
 
