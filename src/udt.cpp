@@ -48,7 +48,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 10/15/2004
+   Yunhong Gu [ygu@cs.uic.edu], last updated 10/19/2004
 *****************************************************************************/
 
 #ifndef WIN32
@@ -760,8 +760,11 @@ void CUDT::close()
       if (m_bConnected)
       {
          m_pTimer->interrupt();
-         pthread_join(m_SndThread, NULL);
-         m_bSndThrStart = false;
+         if (m_bSndThrStart)
+         {
+            pthread_join(m_SndThread, NULL);
+            m_bSndThrStart = false;
+         }
          pthread_join(m_RcvThread, NULL);
          m_bConnected = false;
       }
@@ -774,8 +777,11 @@ void CUDT::close()
       if (m_bConnected)
       {
          m_pTimer->interrupt();
-         WaitForSingleObject(m_SndThread, INFINITE);
-         m_SndThread = NULL;
+         if (NULL != m_SndThread)
+         {
+            WaitForSingleObject(m_SndThread, INFINITE);
+            m_SndThread = NULL;
+         }
          WaitForSingleObject(m_RcvThread, INFINITE);
          m_bConnected = false;
       }
