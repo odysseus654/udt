@@ -1,7 +1,7 @@
 /*****************************************************************************
-DISCLAIMER: Some algorithms implemented using UDT/CCC in this file have been
-modified. These modifications may NOT necessarily reflect the view of the 
-algorithms' original authors.
+DISCLAIMER: The algorithms implemented using UDT/CCC in this file may be
+modified. These modifications may NOT necessarily reflect the view of
+the algorithms' original authors.
 
 Written by: Yunhong Gu <ygu@cs.uic.edu>, last updated on Mar 02, 2005.
 *****************************************************************************/
@@ -293,7 +293,6 @@ public:
       m_iSSRound = 1;
       m_iRTT = 1000000;
       m_iBaseRTT = 1000000;
-      m_iRTTCount = 0;
       gettimeofday(&m_LastCCTime, 0);
       m_iPktSent = 0;
       m_pAckWindow = new CACKWindow(100000);
@@ -310,10 +309,7 @@ public:
 
       int rtt = m_pAckWindow->acknowledge(seq, const_cast<int&>(seq));
       if (rtt > 0)
-      {
-         m_iRTT = (m_iRTT * m_iRTTCount + rtt) / (m_iRTTCount + 1);
-         m_iRTTCount ++;
-      }
+         m_iRTT = (m_iRTT * 15 + rtt) >> 4;
 
       timeval currtime;
       gettimeofday(&currtime, 0);
@@ -324,8 +320,6 @@ public:
       expected = m_dCWndSize * 1000.0 / m_iBaseRTT;
       actual = m_iPktSent / ((currtime.tv_sec - m_LastCCTime.tv_sec) * 1000.0 + (currtime.tv_usec - m_LastCCTime.tv_usec) / 1000.0);
       diff = expected - actual;
-
-//cout << expected << " " << actual << " " << diff << " " << m_iRTT << " " << m_iBaseRTT << " " << m_bSlowStart << endl;
 
       if (m_bSlowStart)
       {
@@ -346,11 +340,9 @@ public:
       }
 
       gettimeofday(&m_LastCCTime, 0);
-      //if (m_iBaseRTT > m_iRTT)
-      if ((m_iBaseRTT > m_iRTT) && (m_iRTTCount > 100000))
-         m_iBaseRTT = m_iRTT;
-      m_iRTTCount = 0;
       m_iPktSent = 0;
+      if (m_iBaseRTT > m_iRTT)
+         m_iBaseRTT = m_iRTT;
    }
 
    virtual void onPktSent(const CPacket* pkt)
@@ -368,7 +360,6 @@ protected:
 
    int m_iRTT;
    int m_iBaseRTT;
-   int m_iRTTCount;
    timeval m_LastCCTime;
 
    int m_iPktSent;
@@ -427,10 +418,7 @@ public:
 
       int rtt = m_pAckWindow->acknowledge(ack, const_cast<int&>(ack));
       if (rtt > 0)
-      {
-         m_iRTT = (m_iRTT * m_iRTTCount + rtt) / (m_iRTTCount + 1);
-         m_iRTTCount ++;
-      }
+         m_iRTT = (m_iRTT * 7 + rtt) >> 3;
 
       timeval currtime;
       gettimeofday(&currtime, 0);
@@ -451,10 +439,9 @@ public:
       m_dOldWin = m_dCWndSize;
 
       gettimeofday(&m_LastCCTime, 0);
-      if ((m_iBaseRTT > m_iRTT) && (m_iRTTCount > 100000))
-         m_iBaseRTT = m_iRTT;
-      m_iRTTCount = 0;
       m_iPktSent = 0;
+      if (m_iBaseRTT > m_iRTT)
+         m_iBaseRTT = m_iRTT;
    }
 
 private:
@@ -471,7 +458,7 @@ private:
 
 /*****************************************************************************
 Reliable UDP Blast
-                                                                                                                            
+
 Note:
 The class demostrates the simplest control mechanism. The sending rate can
 be set at any time by using setRate().
@@ -618,27 +605,27 @@ void CGTP::rateAlloc()
 {
    if (0 == m_GTPSet.size())
       return;
-                                                                                                                            
+
    vector<CGTP*> GTPVec;
    copy(m_GTPSet.begin(), m_GTPSet.end(), GTPVec.begin());
    sort(GTPVec.begin(), GTPVec.end(), gtpcomp());
-                                                                                                                            
+
    int N = GTPVec.size();
    int n = 0;
    vector<CGTP*>::iterator i = GTPVec.begin();
    double availbw = (*(i + N - 1))->m_dBandwidth;
    double fairshare = availbw / N;
-                                                                                                                            
+
    while ((n < N) && ((*i)->m_dBandwidth < fairshare))
    {
       (*i)->m_dTargetRate = (*i)->m_dBandwidth;
       availbw -= (*i)->m_dTargetRate;
       fairshare = availbw / (N - n);
-                                                                                                                            
+
       ++ n;
       ++ i;
    }
-                                                                                                                            
+
    for (; i != GTPVec.end(); ++ i)
       (*i)->m_dTargetRate = fairshare;
 }
@@ -691,7 +678,7 @@ public:
 
    int sendReliableMsg(const char* data, const int& size)
    {
-      return send(m_TCPSocket, data, size, 0);
+      send(m_TCPSocket, data, size, 0);
    }
 
 
@@ -705,8 +692,6 @@ protected:
          recv(m_TCPSocket, data, 1500, 0);
          //process data
       }
-
-      return 0;
    }
 
 protected:
@@ -718,8 +703,6 @@ private:
    static void* TCPProcessing(void* self)
    {
       ((CReliableChannel*)self)->processRealiableMsg();
-
-      return NULL;
    }
 };
 

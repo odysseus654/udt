@@ -98,6 +98,8 @@ queue, and returns the associate socket descriptor. </font></p>
 <p><font face="Verdana" size="2">If there is no connections in the queue when 
 <b>accept</b> is called, a blocking socket will wait until a new connection is set up, 
 whereas a non-blocking socket will return immediately with an error.</font></p>
+<p><font face="Verdana" size="2">The accepted sockets will inherit all proper 
+attributes from the listening socket.</font></p>
 <P>
 <p></p>
 <H4><font face="Verdana" size="2">See Also</font></H4>
