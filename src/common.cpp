@@ -1,35 +1,51 @@
 /*****************************************************************************
 Copyright ? 2001 - 2005, The Board of Trustees of the University of Illinois.
 All Rights Reserved.
-                                                                                                                            
+
 UDP-based Data Transfer Library (UDT) version 2
-                                                                                                                            
+
 Laboratory for Advanced Computing (LAC)
 National Center for Data Mining (NCDM)
 University of Illinois at Chicago
 http://www.lac.uic.edu/
-                                                                                                                            
-written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 01/10/2005
-                                                                                                                            
-modified by
-   <programmer's name, programmer's email, last updated mm/dd/yyyy>
-   <descrition of changes>
+
+This library is free software; you can redistribute it and/or modify it
+under the terms of the GNU Lesser General Public License as published by
+the Free Software Foundation; either version 2.1 of the License, or (at
+your option) any later version.
+
+This library is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser
+General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public License
+along with this library; if not, write to the Free Software Foundation, Inc.,
+59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 *****************************************************************************/
 
 /*****************************************************************************
-This file contains implementation of UDT common routines of timer, 
+This file contains implementation of UDT common routines of timer,
 mutex facility, ACK window, packet time window, and exception processing.
 
-CTimer is a high precision timing facility, which uses the CPU clock cycle 
+CTimer is a high precision timing facility, which uses the CPU clock cycle
 as the minimum time unit.
 CGuard is mutex facility that can automatically lock a method.
 CACKWindow is the window management of UDT ACK packet.
 (reference: UDT header definition: packet.h)
-CPktTimeWindow is used to record and process packet sending and arrival 
+CPktTimeWindow is used to record and process packet sending and arrival
 timing information.
-CUDTException is used for UDT exception processing, which is the only 
+CUDTException is used for UDT exception processing, which is the only
 method to catch and handle UDT errors and exceptions.
+*****************************************************************************/
+
+/*****************************************************************************
+written by
+   Yunhong Gu [ygu@cs.uic.edu], last updated 01/10/2005
+
+modified by
+   <programmer's name, programmer's email, last updated mm/dd/yyyy>
+   <descrition of changes>
 *****************************************************************************/
 
 
@@ -421,9 +437,9 @@ __int32 CPktTimeWindow::getPktSndSpeed()
       speed = m_iPktSent * 1000000 / m_iTotalSentTime;
    else
       speed = 1000000;
-                                                                                                                            
+
    m_bPktSndRestart = true;
-                                                                                                                            
+
    return speed;
 }
 
@@ -520,11 +536,11 @@ void CPktTimeWindow::pktSent()
    if (m_bPktSndRestart)
    {
       m_bPktSndRestart = false;
-                                                                                                                            
+
       m_iPktSent = 0;
       m_iTotalSentTime = 0;
    }
-                                                                                                                            
+
    if (m_bPktSndInt)
    {
       m_bPktSndInt = false;
@@ -533,11 +549,11 @@ void CPktTimeWindow::pktSent()
    else
    {
       m_iPktSent ++;
-                                                                                                                            
+
       timeval currtime;
       gettimeofday(&currtime, 0);
       m_iTotalSentTime += (currtime.tv_sec - m_LastSentTime.tv_sec) * 1000000 + currtime.tv_usec - m_LastSentTime.tv_usec;
-                                                                                                                            
+
       m_LastSentTime = currtime;
    }
 }
