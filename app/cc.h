@@ -7,19 +7,11 @@
 class CUDPBlast: public CCC
 {
 public:
-   CUDPBlast(double mbpsRate): m_dRate(mbpsRate) {}
-
-   virtual void init()
+   CUDPBlast(double usPktSndPeriod)
    {
-      int mss;
-      int size = sizeof(int);
-      UDT::getsockopt(m_UDT, 0, UDT_MSS, &mss, &size);
-      m_dPktSndPeriod = mss * 8.0 / m_dRate;
+      m_dPktSndPeriod = usPktSndPeriod;
       m_dCWndSize = 80000.0;
    }
-
-private:
-   double m_dRate;		// sending rate in Mb/s
 };
 
 
