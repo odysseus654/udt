@@ -53,7 +53,7 @@ CUDT:           UDT
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 01/22/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 02/06/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -63,6 +63,10 @@ modified by
 
 #ifndef _UDT_H_
 #define _UDT_H_
+
+#ifdef CUSTOM_CC
+#undef NO_BUSY_WAITING
+#endif
 
 #ifndef WIN32
    #include <pthread.h>
@@ -1616,6 +1620,7 @@ private: // Threads, data channel, and timing facility
 
 private: // Timing intervals
    const __int32 m_iSYNInterval;                // Periodical Rate Control Interval, 10 microseconds
+   const __int32 m_iSelfClockInterval;		// ACK interval for self-clocking
 
 private: // Packet size and sequence number attributes
    __int32 m_iPktSize;				// Maximum/regular packet size, in bytes

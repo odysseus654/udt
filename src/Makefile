@@ -12,7 +12,8 @@ endif
 CCFLAGS = -fPIC -Wall -D$(os) -finline-functions
 
 CCFLAGS += -DTRACE
-#CCFLAGS += -DNO_BUSY_WAITING
+CCFLAGS += -DNO_BUSY_WAITING
+#IMPOTANT: NO_BUSY_WAITING has NO effect when CUSTOM_CC is used!
 #CCFLAGS += -DCUSTOM_CC
 
 ifeq ($(arch), IA32)

@@ -326,7 +326,7 @@ __int32 CUDTUnited::bind(const UDTSOCKET u, const sockaddr* name, const __int32&
    }
    else
    {
-      if (namelen != sizeof(sockaddr_in6));
+      if (namelen != sizeof(sockaddr_in6))
          throw CUDTException(5, 3, 0);
    }
 
@@ -439,7 +439,7 @@ __int32 CUDTUnited::connect(const UDTSOCKET u, const sockaddr* name, const __int
    }
    else
    {
-      if (namelen != sizeof(sockaddr_in6));
+      if (namelen != sizeof(sockaddr_in6))
          throw CUDTException(5, 3, 0);
    }
 

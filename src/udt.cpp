@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 01/27/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 02/07/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -70,6 +70,7 @@ CUDT::CUDT():
 //
 m_iVersion(2),
 m_iSYNInterval(10000),
+m_iSelfClockInterval(64),
 m_iMaxSeqNo(1 << 30),
 m_iSeqNoTH(1 << 29),
 m_iMaxAckSeqNo(1 << 16),
@@ -117,6 +118,7 @@ m_iQuickStartPkts(16)
 CUDT::CUDT(const CUDT& ancestor):
 m_iVersion(ancestor.m_iVersion),
 m_iSYNInterval(ancestor.m_iSYNInterval),
+m_iSelfClockInterval(ancestor.m_iSelfClockInterval),
 m_iMaxSeqNo(ancestor.m_iMaxSeqNo),
 m_iSeqNoTH(ancestor.m_iSeqNoTH),
 m_iMaxAckSeqNo(ancestor.m_iMaxAckSeqNo),
@@ -842,10 +844,11 @@ DWORD WINAPI CUDT::sndHandler(LPVOID sender)
    bool probe = false;
 
    unsigned __int64 entertime;
+   unsigned __int64 targettime;
    #ifdef NO_BUSY_WAITING
       unsigned __int64 currtime;
+      //__int32 burst = 0;
    #endif
-   unsigned __int64 targettime;
 
    #ifndef WIN32
       timeval now;
@@ -992,6 +995,8 @@ DWORD WINAPI CUDT::sndHandler(LPVOID sender)
 
          while (currtime + self->m_ullTimeDiff < targettime)
          {
+            //burst = 0;
+
             #ifndef WIN32
                gettimeofday(&now, 0);
                if (now.tv_usec < 990000)
@@ -1043,10 +1048,8 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
    bool nextslotfound;
    __int32 offset;
    __int32 loss;
-   #ifdef CUSTOM_CC
+   #if defined (CUSTOM_CC) || defined (NO_BUSY_WAITING)
       __int32 pktcount = 0;
-      const __int32 ackint = self->m_pCC->m_iACKInterval;
-      bool gotdata = false;
    #endif
 
    // time
@@ -1144,15 +1147,19 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
          self->m_pTimer->rdtsc(currtime);
          nextacktime = currtime + ullackint;
       }
-      #ifdef CUSTOM_CC
-         //send a "light" ACK
-         else if (gotdata && (0 == ++ pktcount % ackint))
+      //send a "light" ACK
+      #if defined (CUSTOM_CC)
+         else if ((self->m_pCC->m_iACKInterval > 0) && (0 == pktcount % self->m_pCC->m_iACKInterval))
          {
             self->sendCtrl(2, NULL, NULL, 2 * sizeof(__int32));
             pktcount = 0;
          }
-
-         gotdata = false;
+      #elif defined (NO_BUSY_WAITING)
+         else if (0 == pktcount % self->m_iSelfClockInterval)
+         {
+            self->sendCtrl(2, NULL, NULL, 2 * sizeof(__int32));
+            pktcount = 0;
+         }
       #endif
 
       if ((loss >= 0) && (currtime > nextnaktime))
@@ -1348,8 +1355,10 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
       #ifdef CUSTOM_CC
          if (NULL != self->m_pCC)
             self->m_pCC->onPktReceived(packet.m_iSeqNo, packet.getLength());
+      #endif
 
-         gotdata = true;
+      #if defined (CUSTOM_CC) || defined (NO_BUSY_WAITING)
+         pktcount ++;
       #endif
    }
 
@@ -1576,23 +1585,17 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
       #ifdef CUSTOM_CC
          if (NULL != m_pCC)
             m_pCC->onACK(*(__int32 *)ctrlpkt.m_pcData);
-
-         // process a lite ACK
-         if (ctrlpkt.getLength() == 2 * sizeof(__int32))
-         {
-            ack = *(__int32 *)ctrlpkt.m_pcData;
-            if (((ack > m_iSndLastAck) && (ack - m_iSndLastAck < m_iSeqNoTH)) || (ack < m_iSndLastAck - m_iSeqNoTH))
-               m_iSndLastAck = ack;
-
-            #ifndef WIN32
-               pthread_cond_signal(&m_WindowCond);
-            #else
-               SetEvent(m_WindowCond);
-            #endif
-
-            break;
-         }
       #endif
+
+      // process a lite ACK
+      if (ctrlpkt.getLength() == 2 * sizeof(__int32))
+      {
+         ack = *(__int32 *)ctrlpkt.m_pcData;
+         if (((ack > m_iSndLastAck) && (ack - m_iSndLastAck < m_iSeqNoTH)) || (ack < m_iSndLastAck - m_iSeqNoTH))
+            m_iSndLastAck = ack;
+
+         break;
+      }
 
       // read ACK seq. no.
       ack = ctrlpkt.getAckSeqNo();

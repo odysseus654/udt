@@ -4,13 +4,6 @@ All Rights Reserved.
 Please read the COPYRIGHT information in the current directory carefully. 
 
 ------------------------------------------------------------------------------- 
-NOTE to UDT 1.x user: 
-UDT 2.0 has exactly the same internal mechanisms as that of most recent UDT 1.x 
-release. However, the UDT 2.0 API is modified and is NOT compatible with UDT 
-1.x.
-------------------------------------------------------------------------------- 
-
-------------------------------------------------------------------------------- 
 NOTE for performance testing: 
 If you want to test UDT's performance, please read carefully the documentation 
 of UDT::setsockopt, UDT::perfmon, and the tutorial on how to tune UDT's 

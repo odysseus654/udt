@@ -2,6 +2,12 @@
 
 // This is an example on how to add customized CC to UDT.
 
+// NO UDT API SHOULD BE CALLED INSIDE CCC, EXCEPT PERFMON
+// init parameters can (only) be introduced by constructor
+
+// class CCC -> CUDPBlast, CHurricane
+// class CTCP: CVegas, CHS, CSTCP, CBiC, CFAST
+
 
 // This is a UDP blast (constant rate)
 class CUDPBlast: public CCC

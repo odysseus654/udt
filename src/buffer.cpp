@@ -681,7 +681,7 @@ bool CRcvBuffer::getOverlappedResult(const int& handle, __int32& progress)
    if (NULL != m_pPendingBlock)
    {
       __int32 end = (m_pLastBlock->m_iHandle >= m_pPendingBlock->m_iHandle) ? m_pLastBlock->m_iHandle : m_pLastBlock->m_iHandle + (1 << 30);
-      __int32 h = (h >= m_pPendingBlock->m_iHandle) ? h : h + (1 << 30);
+      __int32 h = (handle >= m_pPendingBlock->m_iHandle) ? handle : handle + (1 << 30);
 
       if ((h >= m_pPendingBlock->m_iHandle) && (h <= end))
          return false;
