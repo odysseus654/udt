@@ -53,7 +53,7 @@ CUDT:           UDT
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 02/16/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 02/28/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -162,7 +162,8 @@ struct UDT_API CPerfMon
    __int64 msTimeStamp;			// time since the UDT entity is started, in milliseconds
    __int64 pktSentTotal;                // total number of sent data packets, including retransmissions
    __int64 pktRecvTotal;                // total number of received packets
-   __int32 pktLossTotal;		// total number of lost packets
+   __int32 pktSndLossTotal;		// total number of lost packets (sender side)
+   __int32 pktRcvLossTotal;		// total number of lost packets (receiver side)
    __int32 pktRetransTotal;		// total number of retransmitted packets
    __int32 pktSentACKTotal;             // total number of sent ACK packets
    __int32 pktRecvACKTotal;             // total number of received ACK packets
@@ -172,7 +173,8 @@ struct UDT_API CPerfMon
    // local measurements
    __int64 pktSent;                     // number of sent data packets, including retransmissions
    __int64 pktRecv;                     // number of received packets
-   __int32 pktLoss;                     // number of lost packets
+   __int32 pktSndLoss;                  // number of lost packets (sender side)
+   __int32 pktRcvLoss;			// number of lost packets (receiverer side)
    __int32 pktRetrans;                  // number of retransmitted packets
    __int32 pktSentACK;			// number of sent ACK packets
    __int32 pktRecvACK;			// number of received ACK packets
@@ -185,8 +187,11 @@ struct UDT_API CPerfMon
    double usPktSndPeriod;               // packet sending period, in microseconds
    __int32 pktFlowWindow;               // flow window size, in number of packets
    __int32 pktCongestionWindow;         // congestion window size, in number of packets
+   __int32 pktFlightSize;               // number of packets on flight
    double msRTT;                        // RTT, in milliseconds
    double mbpsBandwidth;		// estimated bandwidth, in Mbps
+   __int32 byteAvailSndBuf;		// available UDT sender buffer size
+   __int32 byteAvailRcvBuf;		// available UDT receiver buffer size
 };
 
 
@@ -546,6 +551,15 @@ public:
       //    packet type filed (000 ~ 111).
 
    __int32 getType() const;
+
+      // Functionality:
+      //    Read the extended packet type.
+      // Parameters:
+      //    None.
+      // Returned value:
+      //    extended packet type filed (0x000 ~ 0xFFF).
+
+   __int32 getExtendedType() const;
 
       // Functionality:
       //    Read the ACK-2 seq. no.
@@ -1316,15 +1330,28 @@ public:
    virtual ~CCC() {}
 
 public:
+   static const __int32 m_iCCID = 0;
+
+public:
 
       // Functionality:
-      //    Callback function to be called at the start of a UDT connection.
+      //    Callback function to be called (only) at the start of a UDT connection.
+      //    note that this is different from CCC(), which is always called.
       // Parameters:
       //    None.
       // Returned value:
       //    None.
 
    virtual void init() {}
+
+      // Functionality:
+      //    Callback function to be called when a UDT connection is closed.
+      // Parameters:
+      //    None.
+      // Returned value:
+      //    None.
+
+   virtual void close() {}
 
       // Functionality:
       //    Callback function to be called when an ACK packet is received.
@@ -1362,7 +1389,7 @@ public:
       // Returned value:
       //    None.
 
-   virtual void onPktSent(const __int32& seqno, const __int32& size) {}
+   virtual void onPktSent(const CPacket* pkt) {}
 
       // Functionality:
       //    Callback function to be called when a data is received.
@@ -1372,7 +1399,7 @@ public:
       // Returned value:
       //    None.
 
-   virtual void onPktReceived(const __int32& seqno, const __int32& size) {}
+   virtual void onPktReceived(const CPacket* pkt) {}
 
       // Functionality:
       //    Callback function to Process a user defined packet.
@@ -1381,7 +1408,7 @@ public:
       // Returned value:
       //    None.
 
-   virtual void processCustomMsg(const CPacket& pkt) {}
+   virtual void processCustomMsg(const CPacket* pkt) {}
 
 protected:
 
@@ -1412,18 +1439,43 @@ protected:
 
    void sendCustomMsg(CPacket& pkt) const;
 
-protected:
-   UDTSOCKET m_UDT;			// The UDT entity that this congestion control algorithm is bound to
-   CUDT* m_pUDT;			// UDT class instance, internal use only
+      // Functionality:
+      //    retrieve performance information.
+      // Parameters:
+      //    None.
+      // Returned value:
+      //    Pointer to a performance info structure.
 
+   const CPerfMon* getPerfInfo();
+
+protected:
    double m_dPktSndPeriod;		// Packet sending period, in microseconds
    double m_dCWndSize;			// Congestion window size, in packets
 
-   bool m_bPeriodicalACK;		// send ACK periodically or every constant number of packet arrivals
+private:
+   UDTSOCKET m_UDT;                     // The UDT entity that this congestion control algorithm is bound to
+   CUDT* m_pUDT;                        // UDT class instance, internal use only
+
    __int32 m_iACKPeriod;		// Periodical timer to send an ACK, in milliseconds 
    __int32 m_iACKInterval;		// How many packets to send one ACK, in packets
+
+   CPerfMon m_PerfInfo;			// protocol statistics information
 };
 
+class CCCVirtualFactory
+{
+public:
+   virtual CCC* create() {return new CCC;}
+   virtual CCCVirtualFactory* clone() {return new CCCVirtualFactory;}
+};
+
+template <class T>
+class CCCFactory: public CCCVirtualFactory
+{
+public:
+   virtual CCC* create() {return new T;}
+   virtual CCCVirtualFactory* clone() {return new CCCFactory<T>;}
+};
 
 //////////////////////////////////////////////////////////////////////////////
 class UDT_API CUDT
@@ -1455,7 +1507,7 @@ public: //API
    static bool getoverlappedresult(UDTSOCKET u, int handle, int& progress, bool wait = false);
    static int select(int nfds, ud_set* readfds, ud_set* writefds, ud_set* exceptfds, const timeval* timeout);
    static CUDTException& getlasterror();
-   static int perfmon(UDTSOCKET u, CPerfMon* perf);
+   static int perfmon(UDTSOCKET u, CPerfMon* perf, bool clear = true);
 
 public: // internal API
    static bool isUSock(UDTSOCKET u);
@@ -1591,11 +1643,12 @@ private:
       // Functionality:
       //    read the performance data since last sample() call.
       // Parameters:
-      //    [in, out] perf: pointer to a CPerfMon structure to record the performance data.
+      //    0) [in, out] perf: pointer to a CPerfMon structure to record the performance data.
+      //    1) [in] clear: flag to decide if the local performance trace should be cleared.
       // Returned value:
       //    None.
 
-   void sample(CPerfMon* perf);
+   void sample(CPerfMon* perf, bool clear = true);
 
 private:
 friend class CUDTUnited;
@@ -1640,7 +1693,6 @@ private: // Options
    __int32 m_iMSS;				// Maximum Segment Size
    bool m_bSynSending;				// Sending syncronization mode
    bool m_bSynRecving;				// Receiving syncronization mode
-   CCC* m_pCC;					// custom congestion control class
    __int32 m_iFlightFlagSize;			// Maximum number of packets in flight from the peer side
    __int32 m_iSndQueueLimit;			// Maximum length of the sending buffer queue
    __int32 m_iUDTBufSize;			// UDT buffer size (for receiving)
@@ -1650,6 +1702,10 @@ private: // Options
    __int32 m_iIPversion;			// IP version
    const __int32 m_iProbeInterval;		// Number of regular packets between two probing packet pairs
    const __int32 m_iQuickStartPkts;		// Number of packets to be sent as a quick start
+
+private: // CCC
+   CCCVirtualFactory* m_pCCFactory;		// Factory class to create a specific CC instance
+   CCC* m_pCC;                                  // custom congestion control class
 
 private: // Status
    volatile bool m_bListening;			// If the UDT entit is listening to connection
@@ -1785,7 +1841,8 @@ private: // Trace
    timeval m_StartTime;				// timestamp when the UDT entity is started
    __int64 m_llSentTotal;			// total number of sent data packets, including retransmissions
    __int64 m_llRecvTotal;			// total number of received packets
-   __int32 m_iLossTotal;			// total number of lost packets
+   __int32 m_iSndLossTotal;			// total number of lost packets (sender side)
+   __int32 m_iRcvLossTotal;                     // total number of lost packets (receiver side)
    __int32 m_iRetransTotal;			// total number of retransmitted packets
    __int32 m_iSentACKTotal;			// total number of sent ACK packets
    __int32 m_iRecvACKTotal;			// total number of received ACK packets
@@ -1795,7 +1852,8 @@ private: // Trace
    timeval m_LastSampleTime;                    // last performance sample time
    __int64 m_llTraceSent;			// number of pakctes sent in the last trace interval
    __int64 m_llTraceRecv;			// number of pakctes received in the last trace interval
-   __int32 m_iTraceLoss;                        // number of lost packets in the last trace interval
+   __int32 m_iTraceSndLoss;                     // number of lost packets in the last trace interval (sender side)
+   __int32 m_iTraceRcvLoss;                     // number of lost packets in the last trace interval (receiver side)
    __int32 m_iTraceRetrans;                     // number of retransmitted packets in the last trace interval
    __int32 m_iSentACK;				// number of ACKs sent in the last trace interval
    __int32 m_iRecvACK;				// number of ACKs received in the last trace interval
@@ -1905,9 +1963,9 @@ UDT_API inline UDTERROR getlasterror()
    return CUDT::getlasterror();
 }
 
-UDT_API inline int perfmon(UDTSOCKET u, TRACEINFO* perf)
+UDT_API inline int perfmon(UDTSOCKET u, TRACEINFO* perf, bool clear = true)
 {
-   return CUDT::perfmon(u, perf);
+   return CUDT::perfmon(u, perf, clear);
 }
 
 }

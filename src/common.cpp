@@ -564,24 +564,20 @@ void CPktTimeWindow::probe2Arrival()
 
 //
 CCC::CCC():
-// By default, the customized CC uses pure window based control and the initial cwnd size is 16 packets
 m_dPktSndPeriod(1.0),
 m_dCWndSize(16.0),
-m_bPeriodicalACK(false),
 m_iACKPeriod(10),
-m_iACKInterval(1)
+m_iACKInterval(0)
 {
 }
 
 void CCC::setACKTimer(const __int32& msINT)
 {
-   m_bPeriodicalACK = true;
    m_iACKPeriod = msINT;
 }
 
 void CCC::setACKInterval(const __int32& pktINT)
 {
-   m_bPeriodicalACK = false;
    m_iACKInterval = pktINT;
 }
 
@@ -589,6 +585,14 @@ void CCC::sendCustomMsg(CPacket& pkt) const
 {
    if (NULL != m_pUDT)
       *m_pUDT->m_pChannel << pkt;
+}
+
+const CPerfMon* CCC::getPerfInfo()
+{
+   if (NULL != m_pUDT)
+      m_pUDT->sample(&m_PerfInfo, false);
+
+   return &m_PerfInfo;
 }
 
 //

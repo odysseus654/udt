@@ -26,8 +26,8 @@ int main(int argc, char* argv[])
 
    UDTSOCKET serv = UDT::socket(AF_INET, SOCK_STREAM, 0);
 
-   // for testing with customized CC 
-   //UDT::setsockopt(serv, 0, UDT_CC, new CScalableTCP, sizeof(CScalableTCP));
+   // for testing with customized CC
+   //UDT::setsockopt(serv, 0, UDT_CC, new CCCFactory<CUDPBlast>, sizeof(CCCFactory<CUDPBlast>));
 
    short port;
    if (2 == argc)

@@ -32,7 +32,7 @@ reference: UDT programming manual and socket programming reference
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 01/26/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 02/21/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -1080,14 +1080,14 @@ CUDTException& CUDT::getlasterror()
    return *s_UDTUnited.getError();
 }
 
-int CUDT::perfmon(UDTSOCKET u, CPerfMon* perf)
+int CUDT::perfmon(UDTSOCKET u, CPerfMon* perf, bool clear)
 {
 #ifdef TRACE
    try
    {
       CUDT* udt = s_UDTUnited.lookup(u);
 
-      udt->sample(perf);
+      udt->sample(perf, clear);
 
       return 0;
    }

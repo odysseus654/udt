@@ -98,9 +98,9 @@ modified by
 //   bit 4 - 15:
 //      This space is used for future expansion or user defined control packets. 
 //      Although a user defined packets can use this space freely, it is highly
-//      recommended that lower bit is chosen first, i.e., starting from 0xFFFF
-//      for bits 0 - 15. For example, if a customized protocol need to add two 
-//      new types of packets, 0xFFFF and 0xFFFE is recommended.
+//      recommended that lower bit is chosen first, i.e., starting from 0xFFF
+//      for bits 4 - 15. For example, if a customized protocol need to add two 
+//      new types of packets, 0xFFF and 0xFFE is recommended.
 //
 //    0                   1                   2                   3
 //    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -224,13 +224,22 @@ void CPacket::pack(const __int32& pkttype, void* lparam, void* rparam, const __i
 
       break;
 
-   case 7: //111 - Reserved and user defined control packets
-      #ifdef CUSTOM_CC
-         // add user defined packet processing here
-         // "lparam" can be used to store the rest type information for bit 4 - 15
-         // a new class can also be inherited from CPacket
-         // Type 0 - 6 packets SHOULD NOT be modified for other usage 
-      #endif
+   case 7: //111 - Reserved for user defined control packets
+      // for extended control packet
+      // "lparam" contains the extneded type information for bit 4 - 15
+      // "rparam" is the control information
+      m_nHeader |= (*(__int32 *)lparam) << 16;
+
+      if (NULL != rparam)
+      {
+         m_PacketVector[1].iov_base = (char *)rparam;
+         m_PacketVector[1].iov_len = size;
+      }
+      else
+      {
+         m_PacketVector[1].iov_base = (char *)&__pad;
+         m_PacketVector[1].iov_len = sizeof(__int32);
+      }
 
       break;
 
@@ -254,6 +263,12 @@ __int32 CPacket::getType() const
 {
    // read bit 1~3
    return (m_nHeader >> 28) & 0x00000007;
+}
+
+__int32 CPacket::getExtendedType() const
+{
+   // read bit 4~16
+   return (m_nHeader >> 16) & 0x00000FFF;
 }
 
 __int32 CPacket::getAckSeqNo() const

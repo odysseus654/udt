@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
    UDTSOCKET client = UDT::socket(AF_INET, SOCK_STREAM, 0);
 
    //for testing with custmized CC
-   //UDT::setsockopt(client, 0, UDT_CC, new CScalableTCP, sizeof(CScalableTCP));
+   //UDT::setsockopt(client, 0, UDT_CC, new CCCFactory<CUDPBlast>, sizeof(CCCFactory<CUDPBlast>));
 
 #ifdef WIN32
    UDT::setsockopt(client, 0, UDT_MSS, new int(1052), sizeof(int));
@@ -55,6 +55,13 @@ int main(int argc, char* argv[])
       cout << "connect: " << UDT::getlasterror().getErrorMessage() << endl;
       return 0;
    }
+
+   // using CC method
+   //CUDPBlast* cchandle = NULL;
+   //int temp;
+   //UDT::getsockopt(client, 0, UDT_CC, &cchandle, &temp);
+   //if (NULL != cchandle)
+   //   cchandle->setRate(500);
 
    int size = 10000000;
    int handle = 0;

@@ -30,7 +30,7 @@ UDT "C" socket API
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 02/16/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 02/17/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -57,7 +57,7 @@ CSysLib::CSysLib()
    m_pHSysSockLib = dlopen(g_pcSysLibPath, RTLD_NOW);
    if (NULL == m_pHSysSockLib)
    {
-      cerr << "UDT: cannot find " << g_pcSysLibPath << endl;
+      cerr << "UDT: cannot load " << g_pcSysLibPath << endl;
       exit(0);
    }
 
@@ -310,6 +310,8 @@ ssize_t sendfile(int out_fd, int in_fd, off_t *offset, size_t count)
 
 int select(int n, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout)
 {
+   // don't suppor select currently.
+
    cerr << "UDT: unable to execute select." << endl;
    exit(0);
 }

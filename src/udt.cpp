@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 02/07/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 02/28/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -95,7 +95,6 @@ m_iQuickStartPkts(16)
    m_iMSS = 1500;
    m_bSynSending = true;
    m_bSynRecving = true;
-   m_pCC = NULL;
    m_iFlightFlagSize = 25600;
    m_iSndQueueLimit = 40960000;
    m_iUDTBufSize = 40960000;
@@ -104,6 +103,13 @@ m_iQuickStartPkts(16)
    m_iUDPSndBufSize = 65536;
    m_iUDPRcvBufSize = 4 * 1024 * 1024;
    m_iIPversion = 4;
+
+   #ifdef CUSTOM_CC
+      m_pCCFactory = new CCCVirtualFactory;
+   #else
+      m_pCCFactory = NULL;
+   #endif
+   m_pCC = NULL;
 
    m_iRTT = 10 * m_iSYNInterval;
    m_iRTTVar = m_iRTT >> 1;
@@ -143,7 +149,6 @@ m_iQuickStartPkts(ancestor.m_iQuickStartPkts)
    m_iMSS = ancestor.m_iMSS;
    m_bSynSending = ancestor.m_bSynSending;
    m_bSynRecving = ancestor.m_bSynRecving;
-   m_pCC = ancestor.m_pCC;
    m_iFlightFlagSize = ancestor.m_iFlightFlagSize;
    m_iSndQueueLimit = ancestor.m_iSndQueueLimit;
    m_iUDTBufSize = ancestor.m_iUDTBufSize;
@@ -151,6 +156,13 @@ m_iQuickStartPkts(ancestor.m_iQuickStartPkts)
    m_iUDPSndBufSize = ancestor.m_iUDPSndBufSize;
    m_iUDPRcvBufSize = ancestor.m_iUDPRcvBufSize;
    m_iIPversion = ancestor.m_iIPversion;
+
+   #ifdef CUSTOM_CC
+      m_pCCFactory = ancestor.m_pCCFactory->clone();
+   #else
+      m_pCC = NULL;
+   #endif
+   m_pCC = NULL;
 
    m_iRTT = ancestor.m_iRTT;
    m_iRTTVar = ancestor.m_iRTTVar;
@@ -188,6 +200,10 @@ CUDT::~CUDT()
       delete m_pSndTimeWindow;
    if (m_pRcvTimeWindow)
       delete m_pRcvTimeWindow;
+   if (m_pCCFactory)
+      delete m_pCCFactory;
+   if (m_pCC)
+      delete m_pCC;
 }
 
 void CUDT::setOpt(UDTOpt optName, const void* optval, const __int32& optlen)
@@ -217,13 +233,13 @@ void CUDT::setOpt(UDTOpt optName, const void* optval, const __int32& optlen)
 
    case UDT_CC:
       #ifndef CUSTOM_CC
-         throw CUDTException(5, 1, 0);
+         throw CUDTException(5, 0, 0);
       #else
          if (m_bOpened)
             throw CUDTException(5, 1, 0);
-         m_pCC = (CCC *)optval;
-         m_pCC->m_UDT = m_SocketID;
-         m_pCC->m_pUDT = this;
+         if (NULL != m_pCCFactory)
+            delete m_pCCFactory;
+         m_pCCFactory = ((CCCVirtualFactory *)optval)->clone();
       #endif
 
       break;
@@ -301,10 +317,12 @@ void CUDT::getOpt(UDTOpt optName, void* optval, __int32& optlen)
 
    case UDT_CC:
       #ifndef CUSTOM_CC
-         throw CUDTException(5, 1, 0);
+         throw CUDTException(5, 0, 0);
       #else
-         (CCC *)optval = m_pCC;
-         optlen = sizeof(CCC);
+         if (!m_bOpened)
+            throw CUDTException(5, 5, 0);
+         *(CCC**)optval = m_pCC;
+         optlen = sizeof(CCC*);
       #endif
 
       break;
@@ -403,20 +421,19 @@ void CUDT::open(const sockaddr* addr)
    m_iMaxFlowWindowSize = m_iFlightFlagSize;
 
    #ifdef CUSTOM_CC
-      if (NULL != m_pCC)
-      {
-         m_pCC->init();
-         m_ullInterval = (unsigned __int64)(m_pCC->m_dPktSndPeriod * m_ullCPUFrequency);
-         m_dCongestionWindow = m_pCC->m_dCWndSize;
-      }
+      m_pCC = m_pCCFactory->create();
+      m_pCC->m_UDT = m_SocketID;
+      m_pCC->m_pUDT = this;
+      m_ullInterval = (unsigned __int64)(m_pCC->m_dPktSndPeriod * m_ullCPUFrequency);
+      m_dCongestionWindow = m_pCC->m_dCWndSize;
    #endif
 
    #ifdef TRACE
       // trace information
       gettimeofday(&m_StartTime, 0);
-      m_llSentTotal = m_llRecvTotal = m_iLossTotal = m_iRetransTotal = m_iSentACKTotal = m_iRecvACKTotal = m_iSentNAKTotal = m_iRecvNAKTotal = 0;
+      m_llSentTotal = m_llRecvTotal = m_iSndLossTotal = m_iRcvLossTotal = m_iRetransTotal = m_iSentACKTotal = m_iRecvACKTotal = m_iSentNAKTotal = m_iRecvNAKTotal = 0;
       gettimeofday(&m_LastSampleTime, 0);
-      m_llTraceSent = m_llTraceRecv = m_iTraceLoss = m_iTraceRetrans = m_iSentACK = m_iRecvACK = m_iSentNAK = m_iRecvNAK = 0;
+      m_llTraceSent = m_llTraceRecv = m_iTraceSndLoss = m_iTraceRcvLoss = m_iTraceRetrans = m_iSentACK = m_iRecvACK = m_iSentNAK = m_iRecvNAK = 0;
    #endif
 
    // Construct and open a channel
@@ -614,6 +631,10 @@ void CUDT::connect(const sockaddr* serv_addr)
    m_pACKWindow = new CACKWindow(4096);
    m_pRcvTimeWindow = new CPktTimeWindow(m_iQuickStartPkts, 16, 64);
 
+   #ifdef CUSTOM_CC
+      m_pCC->init();
+   #endif
+
    // Now I am also running, a little while after the Initiator was running.
    #ifndef WIN32
       m_bSndThrStart = false;
@@ -688,6 +709,10 @@ void CUDT::connect(const sockaddr* peer, const CHandShake* hs)
    m_pACKWindow = new CACKWindow(4096);
    m_pRcvTimeWindow = new CPktTimeWindow(m_iQuickStartPkts, 16, 64);
 
+   #ifdef CUSTOM_CC
+      m_pCC->init();
+   #endif
+
    // UDT is now running...
    #ifndef WIN32
       m_bSndThrStart = false;
@@ -727,6 +752,10 @@ void CUDT::close()
          gettimeofday(&t2, 0);
       }
    }
+
+   #ifdef CUSTOM_CC
+      m_pCC->close();
+   #endif
 
    // Inform the threads handler to stop.
    m_bClosing = true;
@@ -808,6 +837,10 @@ void CUDT::close()
       delete m_pSndTimeWindow;
    if (m_pRcvTimeWindow)
       delete m_pRcvTimeWindow;
+   if (m_pCCFactory)
+      delete m_pCCFactory;
+   if (m_pCC)
+      delete m_pCC;
 
    m_pSndBuffer = NULL;
    m_pRcvBuffer = NULL;
@@ -818,6 +851,8 @@ void CUDT::close()
    m_pACKWindow = NULL;
    m_pSndTimeWindow = NULL;
    m_pRcvTimeWindow = NULL;
+   m_pCCFactory = NULL;
+   m_pCC = NULL;
 
    // CLOSED.
    m_bOpened = false;
@@ -959,8 +994,7 @@ DWORD WINAPI CUDT::sndHandler(LPVOID sender)
       self->m_pSndTimeWindow->onPktSent();
 
       #ifdef CUSTOM_CC
-         if (NULL != self->m_pCC)
-            self->m_pCC->onPktSent(datapkt.m_iSeqNo, datapkt.getLength());
+         self->m_pCC->onPktSent(&datapkt);
       #endif
 
       #ifdef TRACE
@@ -1062,8 +1096,7 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
    // ACK, NAK, and EXP intervals, in clock cycles
    unsigned __int64 ullackint = ullsynint;
    #ifdef CUSTOM_CC
-      if ((NULL != self->m_pCC) && self->m_pCC->m_bPeriodicalACK)
-         ullackint = self->m_pCC->m_iACKPeriod * 1000 * self->m_ullCPUFrequency;
+      ullackint = self->m_pCC->m_iACKPeriod * 1000 * self->m_ullCPUFrequency;
    #endif
    unsigned __int64 ullnakint = (self->m_iRTT + 4 * self->m_iRTTVar) * self->m_ullCPUFrequency;
    unsigned __int64 ullexpint = (self->m_iRTT + 4 * self->m_iRTTVar) * self->m_ullCPUFrequency + ullsynint;
@@ -1088,12 +1121,9 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
       #endif
 
       #ifdef CUSTOM_CC
-         if (NULL != self->m_pCC)
-         {
-            // update CC parameters
-            self->m_ullInterval = (unsigned __int64)(self->m_pCC->m_dPktSndPeriod * self->m_ullCPUFrequency);
-            self->m_dCongestionWindow = self->m_pCC->m_dCWndSize;
-         }
+         // update CC parameters
+         self->m_ullInterval = (unsigned __int64)(self->m_pCC->m_dPktSndPeriod * self->m_ullCPUFrequency);
+         self->m_dCongestionWindow = self->m_pCC->m_dCWndSize;
       #endif
 
       // "recv"/"recvfile" is called, overlapped mode is activated, and not enough received data in the protocol buffer
@@ -1144,16 +1174,20 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
 
          self->m_pTimer->rdtsc(currtime);
          nextacktime = currtime + ullackint;
+
+         #if defined(CUSTOM_CC) || defined (NO_BUSY_WAITING)
+            pktcount = 0;
+         #endif
       }
       //send a "light" ACK
       #if defined (CUSTOM_CC)
-         else if ((self->m_pCC->m_iACKInterval > 0) && (0 == pktcount % self->m_pCC->m_iACKInterval))
+         else if ((self->m_pCC->m_iACKInterval > 0) && (self->m_pCC->m_iACKInterval <= pktcount))
          {
             self->sendCtrl(2, NULL, NULL, 2 * sizeof(__int32));
             pktcount = 0;
          }
       #elif defined (NO_BUSY_WAITING)
-         else if (0 == pktcount % self->m_iSelfClockInterval)
+         else if (self->m_iSelfClockInterval <= pktcount)
          {
             self->sendCtrl(2, NULL, NULL, 2 * sizeof(__int32));
             pktcount = 0;
@@ -1189,17 +1223,16 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
             continue;
          }
 
-         #ifdef CUSTOM_CC
-            if (NULL != self->m_pCC)
-               self->m_pCC->onTimeout();
-         #endif
-
          // sender: Insert all the packets sent after last received acknowledgement into the sender loss list.
          // recver: Send out a keep-alive packet
          if (((self->m_iSndCurrSeqNo + 1) % self->m_iMaxSeqNo) != self->m_iSndLastAck)
          {
             __int32 csn = self->m_iSndCurrSeqNo;
             self->m_pSndLossList->insert(const_cast<__int32&>(self->m_iSndLastAck), csn);
+
+            #ifdef CUSTOM_CC
+               self->m_pCC->onTimeout();
+            #endif
          }
          else
             self->sendCtrl(1);
@@ -1324,7 +1357,7 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
             self->sendCtrl(3, NULL, lossdata, (self->m_iRcvCurrSeqNo + 1 == packet.m_iSeqNo - 1) ? 1 : 2);
 
             #ifdef TRACE
-               ++ self->m_iTraceLoss;
+               self->m_iTraceRcvLoss += (packet.m_iSeqNo - self->m_iRcvCurrSeqNo - 1 + self->m_iMaxSeqNo) % self->m_iMaxSeqNo;
             #endif
          }
       }
@@ -1351,8 +1384,7 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
       }
 
       #ifdef CUSTOM_CC
-         if (NULL != self->m_pCC)
-            self->m_pCC->onPktReceived(packet.m_iSeqNo, packet.getLength());
+         self->m_pCC->onPktReceived(&packet);
       #endif
 
       #if defined (CUSTOM_CC) || defined (NO_BUSY_WAITING)
@@ -1390,7 +1422,7 @@ void CUDT::sendCtrl(const __int32& pkttype, void* lparam, void* rparam, const __
       else
          ack = m_pRcvLossList->getFirstLostSeq();
 
-      #ifdef CUSTOM_CC
+      #if defined (CUSTOM_CC) || defined (NO_BUSY_WAITING)
          // send out a lite ACK
          // to save time on buffer processing and bandwidth/AS measurement, a lite ACK only feeds back an ACK number
          if (size == 2 * sizeof(__int32))
@@ -1584,17 +1616,16 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
       {
       __int32 ack;
 
-      #ifdef CUSTOM_CC
-         if (NULL != m_pCC)
-            m_pCC->onACK(*(__int32 *)ctrlpkt.m_pcData);
-      #endif
-
       // process a lite ACK
       if (ctrlpkt.getLength() == 2 * sizeof(__int32))
       {
          ack = *(__int32 *)ctrlpkt.m_pcData;
          if (((ack > m_iSndLastAck) && (ack - m_iSndLastAck < m_iSeqNoTH)) || (ack < m_iSndLastAck - m_iSeqNoTH))
             m_iSndLastAck = ack;
+
+         #ifdef CUSTOM_CC
+            m_pCC->onACK(*(__int32 *)ctrlpkt.m_pcData);
+         #endif
 
          break;
       }
@@ -1603,8 +1634,7 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
       ack = ctrlpkt.getAckSeqNo();
 
       // send ACK acknowledgement
-      if (ctrlpkt.getLength() == 5 * sizeof(__int32))
-         sendCtrl(6, &ack);
+      sendCtrl(6, &ack);
 
       // Got data ACK
       ack = *(__int32 *)ctrlpkt.m_pcData;
@@ -1635,6 +1665,10 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
 
          break;
       }
+
+      #ifdef CUSTOM_CC
+         m_pCC->onACK(*(__int32 *)ctrlpkt.m_pcData);
+      #endif
 
       // update sending variables
       m_iSndLastDataAck = ack;
@@ -1752,8 +1786,10 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
          {
             m_bFreeze = true;
 
-            m_ullLastDecRate = m_ullInterval;
-            m_ullInterval = (unsigned __int64)ceil(m_ullInterval * 1.125);
+            #ifdef NOISY_LINK
+               m_ullLastDecRate = m_ullInterval;
+               m_ullInterval = (unsigned __int64)ceil(m_ullInterval * 1.125);
+            #endif
 
             m_iAvgNAKNum = (__int32)ceil((double)m_iAvgNAKNum * 0.875 + (double)m_iNAKCount * 0.125) + 1;
             m_iNAKCount = 1;
@@ -1771,8 +1807,7 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
             m_iLastDecSeq = m_iSndCurrSeqNo;
          }
       #else
-         if (NULL != m_pCC)
-            m_pCC->onLoss(losslist, ctrlpkt.getLength());
+         m_pCC->onLoss(losslist, ctrlpkt.getLength());
       #endif
 
       // decode loss list message and insert loss into the sender loss list
@@ -1783,7 +1818,7 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
             if (((losslist[i] & 0x7FFFFFFF) >= m_iSndLastAck) || ((losslist[i] & 0x7FFFFFFF) < m_iSndLastAck - m_iSeqNoTH))
             {
                #ifdef TRACE
-                  m_iTraceLoss += m_pSndLossList->insert(losslist[i] & 0x7FFFFFFF, losslist[i + 1]);
+                  m_iTraceSndLoss += m_pSndLossList->insert(losslist[i] & 0x7FFFFFFF, losslist[i + 1]);
                #else
                   m_pSndLossList->insert(losslist[i] & 0x7FFFFFFF, losslist[i + 1]);
                #endif
@@ -1793,7 +1828,7 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
          else if ((losslist[i] >= m_iSndLastAck) || (losslist[i] < m_iSndLastAck - m_iSeqNoTH))
          {
             #ifdef TRACE
-               m_iTraceLoss += m_pSndLossList->insert(losslist[i], losslist[i]);
+               m_iTraceSndLoss += m_pSndLossList->insert(losslist[i], losslist[i]);
             #else
                m_pSndLossList->insert(losslist[i], losslist[i]);
             #endif
@@ -1868,8 +1903,7 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
 
    case 7: //111 - reserved and user defined messages
       #ifdef CUSTOM_CC
-         if (NULL != m_pCC)
-            m_pCC->processCustomMsg(ctrlpkt);
+         m_pCC->processCustomMsg(&ctrlpkt);
       #endif
 
       break;
@@ -2421,7 +2455,7 @@ __int64 CUDT::recvfile(ofstream& ofs, const __int64& offset, const __int64& size
    return size;
 }
 
-void CUDT::sample(CPerfMon* perf)
+void CUDT::sample(CPerfMon* perf, bool clear)
 {
 #ifdef TRACE
    timeval currtime;
@@ -2431,7 +2465,8 @@ void CUDT::sample(CPerfMon* perf)
 
    m_llSentTotal += m_llTraceSent;
    m_llRecvTotal += m_llTraceRecv;
-   m_iLossTotal += m_iTraceLoss;
+   m_iSndLossTotal += m_iTraceSndLoss;
+   m_iRcvLossTotal += m_iTraceRcvLoss;
    m_iRetransTotal += m_iTraceRetrans;
    m_iSentACKTotal += m_iSentACK;
    m_iRecvACKTotal += m_iRecvACK;
@@ -2440,7 +2475,8 @@ void CUDT::sample(CPerfMon* perf)
 
    perf->pktSentTotal = m_llSentTotal;
    perf->pktRecvTotal = m_llRecvTotal;
-   perf->pktLossTotal = m_iLossTotal;
+   perf->pktSndLossTotal = m_iSndLossTotal;
+   perf->pktRcvLossTotal = m_iRcvLossTotal;
    perf->pktRetransTotal = m_iRetransTotal;
    perf->pktSentACKTotal = m_iSentACKTotal;
    perf->pktRecvACKTotal = m_iRecvACKTotal;
@@ -2449,7 +2485,8 @@ void CUDT::sample(CPerfMon* perf)
 
    perf->pktSent = m_llTraceSent;
    perf->pktRecv = m_llTraceRecv;
-   perf->pktLoss = m_iTraceLoss;
+   perf->pktSndLoss = m_iTraceSndLoss;
+   perf->pktRcvLoss = m_iTraceRcvLoss;
    perf->pktRetrans = m_iTraceRetrans;
    perf->pktSentACK = m_iSentACK;
    perf->pktRecvACK = m_iRecvACK;
@@ -2464,12 +2501,17 @@ void CUDT::sample(CPerfMon* perf)
    perf->usPktSndPeriod = m_ullInterval / double(m_ullCPUFrequency);
    perf->pktFlowWindow = m_iFlowWindowSize;
    perf->pktCongestionWindow = (__int32)m_dCongestionWindow;
+   perf->pktFlightSize = (m_iSndCurrSeqNo - m_iSndLastAck + 1 + m_iMaxSeqNo) % m_iMaxSeqNo;
    perf->msRTT = m_iRTT/1000.0;
    perf->mbpsBandwidth = m_iBandwidth * m_iPayloadSize * 8.0;
+   perf->byteAvailSndBuf = m_iSndQueueLimit - m_pSndBuffer->getCurrBufSize();
+   perf->byteAvailRcvBuf = m_pRcvBuffer->getAvailBufSize();
 
-   m_llTraceSent = m_llTraceRecv = m_iTraceLoss = m_iTraceRetrans = m_iSentACK = m_iRecvACK = m_iSentNAK = m_iRecvNAK = 0;
-
-   m_LastSampleTime = currtime;
+   if (clear)
+   {
+      m_llTraceSent = m_llTraceRecv = m_iTraceSndLoss = m_iTraceSndLoss = m_iTraceRetrans = m_iSentACK = m_iRecvACK = m_iSentNAK = m_iRecvNAK = 0;
+      m_LastSampleTime = currtime;
+   }
 #endif   
 }
 
