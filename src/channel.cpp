@@ -220,7 +220,8 @@ const CChannel& CChannel::operator<<(CPacket& packet) const
          *((__int32 *)packet.m_pcData + i) = htonl(*((__int32 *)packet.m_pcData + i));
 
    // convert packet header into network order
-   packet.m_nHeader = htonl(packet.m_nHeader);
+   packet.m_nHeader[0] = htonl(packet.m_nHeader[0]);
+   packet.m_nHeader[1] = htonl(packet.m_nHeader[1]);
 
    #ifdef UNIX
       while (0 == writev(m_iSocket, packet.getPacketVector(), 2)) {}
@@ -229,7 +230,9 @@ const CChannel& CChannel::operator<<(CPacket& packet) const
    #endif
 
    // convert back into local host order
-   packet.m_nHeader = ntohl(packet.m_nHeader);
+   packet.m_nHeader[0] = ntohl(packet.m_nHeader[0]);
+   packet.m_nHeader[1] = ntohl(packet.m_nHeader[1]);
+
    if (packet.getFlag())
       for (__int32 i = 0, n = packet.getLength() / sizeof(__int32); i < n; ++ i)
          *((__int32 *)packet.m_pcData + i) = ntohl(*((__int32 *)packet.m_pcData + i));
@@ -255,7 +258,8 @@ const CChannel& CChannel::operator>>(CPacket& packet) const
       return *this;
 
    // convert packet header into local host order
-   packet.m_nHeader = ntohl(packet.m_nHeader);
+   packet.m_nHeader[0] = ntohl(packet.m_nHeader[0]);
+   packet.m_nHeader[1] = ntohl(packet.m_nHeader[1]);
 
    // convert control information into local host order
    if (packet.getFlag())
@@ -273,7 +277,8 @@ __int32 CChannel::sendto(CPacket& packet, const sockaddr* addr) const
          *((__int32 *)packet.m_pcData + i) = htonl(*((__int32 *)packet.m_pcData + i));
 
    // convert packet header into network order
-   packet.m_nHeader = htonl(packet.m_nHeader);
+   packet.m_nHeader[0] = htonl(packet.m_nHeader[0]);
+   packet.m_nHeader[1] = htonl(packet.m_nHeader[1]);
 
    char* buf;
    if (CPacket::m_iPktHdrSize + packet.getLength() <= 9000)
@@ -297,7 +302,9 @@ __int32 CChannel::sendto(CPacket& packet, const sockaddr* addr) const
       delete [] buf;
 
    // convert back into local host order
-   packet.m_nHeader = ntohl(packet.m_nHeader);
+   packet.m_nHeader[0] = ntohl(packet.m_nHeader[0]);
+   packet.m_nHeader[1] = ntohl(packet.m_nHeader[1]);
+
    if (packet.getFlag())
       for (__int32 i = 0, n = packet.getLength() / sizeof(__int32); i < n; ++ i)
          *((__int32 *)packet.m_pcData + i) = ntohl(*((__int32 *)packet.m_pcData + i));
@@ -333,7 +340,9 @@ __int32 CChannel::recvfrom(CPacket& packet, sockaddr* addr) const
       memcpy(packet.getPacketVector()[1].iov_base, buf + CPacket::m_iPktHdrSize, ret - CPacket::m_iPktHdrSize);
 
       // convert back into local host order
-      packet.m_nHeader = ntohl(packet.m_nHeader);
+      packet.m_nHeader[0] = ntohl(packet.m_nHeader[0]);
+      packet.m_nHeader[1] = ntohl(packet.m_nHeader[1]);
+
       if (packet.getFlag())
          for (__int32 i = 0, n = packet.getLength() / sizeof(__int32); i < n; ++ i)
             *((__int32 *)packet.m_pcData + i) = ntohl(*((__int32 *)packet.m_pcData + i));

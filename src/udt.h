@@ -319,7 +319,7 @@ public:
       // Functionality:
       //    read the minimum packet sending interval.
       // Parameters:
-      //    0) None.
+      //    None.
       // Returned value:
       //    minimum packet sending interval (microseconds).
 
@@ -328,7 +328,7 @@ public:
       // Functionality:
       //    Calculate the packes arrival speed.
       // Parameters:
-      //    0) None.
+      //    None.
       // Returned value:
       //    Packet arrival speed (packets per second).
 
@@ -337,7 +337,7 @@ public:
       // Functionality:
       //    Check if the rtt is increasing or not.
       // Parameters:
-      //    0) None.
+      //    None.
       // Returned value:
       //    true is RTT is increasing, otherwise false.
 
@@ -346,7 +346,7 @@ public:
       // Functionality:
       //    Estimate the bandwidth.
       // Parameters:
-      //    0) None.
+      //    None.
       // Returned value:
       //    Estimated bandwidth (packets per second).
 
@@ -355,16 +355,16 @@ public:
       // Functionality:
       //    Record time information of a packet sending.
       // Parameters:
-      //    0) None.
+      //    0) currtime: time stamp of the packet sending.
       // Returned value:
       //    None.
 
-   void onPktSent();
+   void onPktSent(const timeval& currtime);
 
       // Functionality:
       //    Record time information of an arrived packet.
       // Parameters:
-      //    0) None.
+      //    None.
       // Returned value:
       //    None.
 
@@ -382,7 +382,7 @@ public:
       // Functionality:
       //    Record the arrival time of the first probing packet.
       // Parameters:
-      //    0) None.
+      //    None.
       // Returned value:
       //    None.
 
@@ -391,7 +391,7 @@ public:
       // Functionality:
       //    Record the arrival time of the second probing packet and the interval between packet pairs.
       // Parameters:
-      //    0) None.
+      //    None.
       // Returned value:
       //    None.
 
@@ -476,9 +476,10 @@ friend class CChannel;
 
 public:
    __int32& m_iSeqNo;		// alias: sequence number
+   __int32& m_iTimeStamp;	// alias: timestamp
    char*& m_pcData;		// alias: data/control information
 
-   const static __int32 m_iPktHdrSize = 4;
+   const static __int32 m_iPktHdrSize = 8;
 
 public:
    CPacket();
@@ -501,17 +502,6 @@ public:
       //    None.
 
    void setLength(const __int32& len);
-
-      // Functionality:
-      //    Pack a DATA packet.
-      // Parameters:
-      //    0) [in] seqno: sequence number of the packet.
-      //    1) [in] data: pointer to the payload.
-      //    2) [in] size: payload size.
-      // Returned value:
-      //    None.
-
-   void pack(const __int32& seqno, const char* data, const __int32& size);
 
       // Functionality:
       //    Pack a Control packet.
@@ -571,8 +561,8 @@ public:
    __int32 getAckSeqNo() const;
 
 private:
-   unsigned __int32 m_nHeader;	// The 32-bit header field
-   iovec m_PacketVector[2];	// The 2-demension vector of UDT packet [header, data]
+   unsigned __int32 m_nHeader[2];	// The 64-bit header field
+   iovec m_PacketVector[2];		// The 2-demension vector of UDT packet [header, data]
 
    __int32 __pad;
 };

@@ -987,11 +987,14 @@ DWORD WINAPI CUDT::sndHandler(LPVOID sender)
             probe = true;
       }
 
+      gettimeofday(&now, 0);
+      datapkt.m_iTimeStamp = (now.tv_sec - self->m_StartTime.tv_sec) * 1000000 + now.tv_usec - self->m_StartTime.tv_usec;
+
       // Now sending.
       datapkt.setLength(payload);
       *(self->m_pChannel) << datapkt;
 
-      self->m_pSndTimeWindow->onPktSent();
+      self->m_pSndTimeWindow->onPktSent(now);
 
       #ifdef CUSTOM_CC
          self->m_pCC->onPktSent(&datapkt);

@@ -509,10 +509,8 @@ __int32 CPktTimeWindow::getBandwidth() const
    return (__int32)ceil(1000000.0 / (double(sum) / double(count)));
 }
 
-void CPktTimeWindow::onPktSent()
+void CPktTimeWindow::onPktSent(const timeval& currtime)
 {
-   timeval currtime;
-   gettimeofday(&currtime, 0);
    __int32 interval = (currtime.tv_sec - m_LastSentTime.tv_sec) * 1000000 + currtime.tv_usec - m_LastSentTime.tv_usec;
 
    if ((interval < m_iMinPktSndInt) && (interval > 0))
