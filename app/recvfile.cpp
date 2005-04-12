@@ -6,11 +6,10 @@
 #include <udt.h>
 
 using namespace std;
-using namespace UDT;
 
 int main(int argc, char* argv[])
 {
-   streampos size;
+   __int64 size;
 
    #ifdef BSD
       if ((argc != 5) || (0 == atoi(argv[2])) || (0 == (size = strtoll(argv[4], NULL, 10))))
@@ -40,16 +39,16 @@ int main(int argc, char* argv[])
    }
    memset(&(serv_addr.sin_zero), '\0', 8);
 
-   if (UDT_ERROR == UDT::connect(fhandle, (sockaddr*)&serv_addr, sizeof(serv_addr)))
+   if (UDT::ERROR == UDT::connect(fhandle, (sockaddr*)&serv_addr, sizeof(serv_addr)))
    {
       cout << "connect: " << UDT::getlasterror().getErrorMessage() << endl;
       return 0;
    }
 
    ofstream ofs(argv[3]);
-   streampos recvsize; 
+   __int64 recvsize; 
 
-   if (UDT_ERROR == (recvsize = UDT::recvfile(fhandle, ofs, 0, size)))
+   if (UDT::ERROR == (recvsize = UDT::recvfile(fhandle, ofs, 0, size)))
    {
       cout << "recvfile: " << UDT::getlasterror().getErrorMessage() << endl;
       return 0;

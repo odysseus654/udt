@@ -8,7 +8,6 @@
 #include "cc.h"
 
 using namespace std;
-using namespace UDT;
 
 #ifndef WIN32
 void* recvdata(void*);
@@ -41,7 +40,7 @@ int main(int argc, char* argv[])
    my_addr.sin_addr.s_addr = INADDR_ANY;
    memset(&(my_addr.sin_zero), '\0', 8);
 
-   if (UDT_ERROR == UDT::bind(serv, (sockaddr*)&my_addr, sizeof(my_addr)))
+   if (UDT::ERROR == UDT::bind(serv, (sockaddr*)&my_addr, sizeof(my_addr)))
    {
       cout << "bind: " << UDT::getlasterror().getErrorMessage() << endl;
       return 0;
@@ -49,7 +48,7 @@ int main(int argc, char* argv[])
 
    cout << "server is ready at port: " << port << endl;
 
-   if (UDT_ERROR == UDT::listen(serv, 10))
+   if (UDT::ERROR == UDT::listen(serv, 10))
    {
       cout << "listen: " << UDT::getlasterror().getErrorMessage() << endl;
       return 0;
@@ -61,7 +60,7 @@ int main(int argc, char* argv[])
 
    while (true)
    {
-      if (INVALID_UDTSOCK == (recver = UDT::accept(serv, (sockaddr*)&their_addr, &namelen)))
+      if (UDT::INVALID_SOCK == (recver = UDT::accept(serv, (sockaddr*)&their_addr, &namelen)))
       {
          cout << "accept: " << UDT::getlasterror().getErrorMessage() << endl;
          return 0;
@@ -105,7 +104,7 @@ DWORD WINAPI recvdata(LPVOID usocket)
 
    while (true)
    {
-      if (UDT_ERROR == UDT::recv(recver, data, size, 0, &handle, NULL))
+      if (UDT::ERROR == UDT::recv(recver, data, size, 0, &handle, NULL))
       {
          cout << "recv:" << UDT::getlasterror().getErrorMessage() << endl;
          break;

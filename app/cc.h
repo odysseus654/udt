@@ -37,6 +37,7 @@ public:
       m_dCWndSize = 2.0;
 
       setACKInterval(2);
+      setRTO(1000000);
    }
 
    virtual void onACK(const int& ack)
@@ -273,6 +274,77 @@ private:
    double m_dSSTargetWin;
 };
 
+/*****************************************************************************
+TCP Westwood
+reference:
+http://www.cs.ucla.edu/NRL/hpi/tcpw/
+*****************************************************************************/
+
+class CWestwood: public CTCP
+{
+public:
+   CWestwood(): m_dBWE(1), m_dLastBWE(1), m_dBWESample(1), m_dLastBWESample(1)
+   {
+      gettimeofday(&m_LastACKTime, 0);
+   }
+
+   virtual void onACK(const int& ack)
+   {
+      timeval currtime;
+      gettimeofday(&currtime, 0);
+
+      m_dBWESample = double(ack - m_iLastACK) / double((currtime.tv_sec - m_LastACKTime.tv_sec) * 1000.0 + (currtime.tv_usec - m_LastACKTime.tv_usec) / 1000.0);
+      m_dBWE = 19.0/21.0 * m_dLastBWE + 1.0/21.0 * (m_dBWESample + m_dLastBWESample);
+
+      m_LastACKTime = currtime;
+      m_dLastBWE = m_dBWE;
+      m_dLastBWESample = m_dBWESample;
+
+      if (ack == m_iLastACK)
+      {
+         if (3 == ++ m_iDupACKCount)
+         {
+            m_bSlowStart = false;
+
+            m_issthresh = int(ceil(getPerfInfo()->msRTT * m_dBWE));
+            if (m_issthresh < 2)
+            m_issthresh = 2;
+
+            m_dCWndSize = m_issthresh + 3;
+         }
+         else if (m_iDupACKCount > 3)
+            m_dCWndSize += 1.0;
+         else
+            ACKAction();
+      }
+      else
+      {
+         if (m_iDupACKCount >= 3)
+            m_dCWndSize = m_issthresh;
+
+         m_iLastACK = ack;
+         m_iDupACKCount = 1;
+
+         ACKAction();
+      }
+   }
+
+   virtual void onTimeout()
+   {
+      m_issthresh = int(ceil(getPerfInfo()->msRTT * m_dBWE));
+      if (m_issthresh < 2)
+         m_issthresh = 2;
+
+      m_bSlowStart = true;
+      m_dCWndSize = 2.0;
+   }
+
+private:
+   double m_dBWE, m_dLastBWE;
+   double m_dBWESample, m_dLastBWESample;
+   timeval m_LastACKTime;
+};
+
 
 /*****************************************************************************
 TCP Vegas
@@ -496,7 +568,7 @@ struct gtpcomp;
 
 class CGTP: public CCC
 {
-friend gtpcomp;
+friend struct gtpcomp;
 
 public:
    virtual void init()
@@ -583,7 +655,7 @@ private:
    double m_dRequestRate;
 
    timeval m_LastGCTime;
-   long long m_llLastRecvPkt;
+   __int64 m_llLastRecvPkt;
    int m_iLastRcvLoss;
    int m_iRTT;
 
@@ -658,7 +730,9 @@ public:
       if (-1 == (m_TCPSocket = accept(m_TCPSocket, NULL, NULL)))
          return -1;
 
-      pthread_create(&m_TCPThread, NULL, TCPProcessing, this);
+      #ifndef WIN32
+         pthread_create(&m_TCPThread, NULL, TCPProcessing, this);
+      #endif
 
       return 0;
    }
@@ -671,19 +745,21 @@ public:
       if (-1 == (connect(m_TCPSocket, addr, sizeof(sockaddr_in))))
          return -1;
 
-      pthread_create(&m_TCPThread, NULL, TCPProcessing, this);
+      #ifndef WIN32
+         pthread_create(&m_TCPThread, NULL, TCPProcessing, this);
+      #endif
 
       return 0;
    }
 
    int sendReliableMsg(const char* data, const int& size)
    {
-      send(m_TCPSocket, data, size, 0);
+      return send(m_TCPSocket, data, size, 0);
    }
 
 
 protected:
-   virtual int processRealiableMsg()
+   virtual void processRealiableMsg()
    {
       char data[1500];
 
@@ -703,6 +779,7 @@ private:
    static void* TCPProcessing(void* self)
    {
       ((CReliableChannel*)self)->processRealiableMsg();
+      return NULL;
    }
 };
 

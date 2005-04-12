@@ -8,7 +8,6 @@
 #include "cc.h"
 
 using namespace std;
-using namespace UDT;
 
 void DeleteBuf(char* buf, int) {delete [] buf;}
 
@@ -50,7 +49,7 @@ int main(int argc, char* argv[])
    memset(&(serv_addr.sin_zero), '\0', 8);
 
    // connect to the server, implict bind
-   if (UDT_ERROR == UDT::connect(client, (sockaddr*)&serv_addr, sizeof(serv_addr)))
+   if (UDT::ERROR == UDT::connect(client, (sockaddr*)&serv_addr, sizeof(serv_addr)))
    {
       cout << "connect: " << UDT::getlasterror().getErrorMessage() << endl;
       return 0;
@@ -75,8 +74,8 @@ int main(int argc, char* argv[])
 
    for (int i = 0; i < 1000; i ++)
    {
-      //if (UDT_ERROR == UDT::send(client, new char[size], size, 0, &handle, DeleteBuf))
-      if (UDT_ERROR == UDT::send(client, data, size, 0, &handle))
+      //if (UDT::ERROR == UDT::send(client, new char[size], size, 0, &handle, DeleteBuf))
+      if (UDT::ERROR == UDT::send(client, data, size, 0, &handle))
       {
          cout << "send: " << UDT::getlasterror().getErrorMessage() << endl;
          return 0;
@@ -98,7 +97,7 @@ DWORD WINAPI monitor(LPVOID s)
 {
    UDTSOCKET u = *(UDTSOCKET*)s;
 
-   TRACEINFO perf;
+   UDT::TRACEINFO perf;
 
    cout << "SendRate(Mb/s) RTT(ms) FlowWindow PktSndPeriod(us) RecvACK RecvNAK" << endl;
 
@@ -109,7 +108,7 @@ DWORD WINAPI monitor(LPVOID s)
 #else
       Sleep(1000);
 #endif
-      if (UDT_ERROR == UDT::perfmon(u, &perf))
+      if (UDT::ERROR == UDT::perfmon(u, &perf))
       {
          cout << "perfmon: " << UDT::getlasterror().getErrorMessage() << endl;
          break;

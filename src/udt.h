@@ -53,7 +53,7 @@ CUDT:           UDT
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 02/28/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 04/09/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -142,6 +142,8 @@ enum UDTOpt
    UDT_LINGER,		// waiting for unsent data when closing
    UDP_SNDBUF,		// UDP sending buffer size
    UDP_RCVBUF,		// UDP receiving buffer size
+   UDT_MAXMSG,		// maximum datagram message size
+   UDT_MSGTTL		// time-to-live of a datagram message
 };
 
 
@@ -266,6 +268,8 @@ public:
 private:
    pthread_mutex_t& m_Mutex;	// Alias name of the mutex to be protected
    __int32 m_iLocked;		// Locking status
+
+   void operator = (const CGuard&) {}
 };
 
 
@@ -565,6 +569,8 @@ private:
    iovec m_PacketVector[2];		// The 2-demension vector of UDT packet [header, data]
 
    __int32 __pad;
+
+   void operator = (const CPacket&) {}
 };
 
 
@@ -1236,10 +1242,11 @@ public:
       //    Create a new UDT socket.
       // Parameters:
       //    0) [in] af: IP version, IPv4 (AF_INET) or IPv6 (AF_INET6).
+      //    1) [in] type: socket type, SOCK_STREAM or SOCK_DGRAM
       // Returned value:
-      //    The new UDT socket ID, or INVALID_UDTSOCK.
+      //    The new UDT socket ID, or INVALID_SOCK.
 
-   UDTSOCKET newSocket(const __int32& af);
+   UDTSOCKET newSocket(const __int32& af, const __int32& type);
 
       // Functionality:
       //    Create a new UDT connection.
@@ -1311,7 +1318,7 @@ private:
 
 
 //////////////////////////////////////////////////////////////////////////////
-class CCC
+class UDT_API CCC
 {
 friend class CUDT;
 
@@ -1350,7 +1357,7 @@ public:
       // Returned value:
       //    None.
 
-   virtual void onACK(const __int32& ackno) {}
+   virtual void onACK(const __int32&) {}
 
       // Functionality:
       //    Callback function to be called when a loss report is received.
@@ -1360,7 +1367,7 @@ public:
       // Returned value:
       //    None.
 
-   virtual void onLoss(const __int32* losslist, const __int32& size) {}
+   virtual void onLoss(const __int32*, const __int32&) {}
 
       // Functionality:
       //    Callback function to be called when a timeout event occurs.
@@ -1379,7 +1386,7 @@ public:
       // Returned value:
       //    None.
 
-   virtual void onPktSent(const CPacket* pkt) {}
+   virtual void onPktSent(const CPacket*) {}
 
       // Functionality:
       //    Callback function to be called when a data is received.
@@ -1389,7 +1396,7 @@ public:
       // Returned value:
       //    None.
 
-   virtual void onPktReceived(const CPacket* pkt) {}
+   virtual void onPktReceived(const CPacket*) {}
 
       // Functionality:
       //    Callback function to Process a user defined packet.
@@ -1398,7 +1405,7 @@ public:
       // Returned value:
       //    None.
 
-   virtual void processCustomMsg(const CPacket* pkt) {}
+   virtual void processCustomMsg(const CPacket*) {}
 
 protected:
 
@@ -1409,7 +1416,7 @@ protected:
       // Returned value:
       //    None.
 
-   void setACKTimer(const __int32& msINT = 10);
+   void setACKTimer(const __int32& msINT);
 
       // Functionality:
       //    Set packet-based acknowldging and the number of packets to send an ACK.
@@ -1418,7 +1425,16 @@ protected:
       // Returned value:
       //    None.
 
-   void setACKInterval(const __int32& pktINT = 1);
+   void setACKInterval(const __int32& pktINT);
+
+      // Functionality:
+      //    Set RTO value.
+      // Parameters:
+      //    0) [in] msRTO: RTO in macroseconds.
+      // Returned value:
+      //    None.
+
+   void setRTO(const __int32& usRTO);
 
       // Functionality:
       //    Send a user defined control packet.
@@ -1448,24 +1464,25 @@ private:
 
    __int32 m_iACKPeriod;		// Periodical timer to send an ACK, in milliseconds 
    __int32 m_iACKInterval;		// How many packets to send one ACK, in packets
-
+   __int32 m_iRTO;			// RTO value
    CPerfMon m_PerfInfo;			// protocol statistics information
 };
 
 class CCCVirtualFactory
 {
 public:
-   virtual CCC* create() {return new CCC;}
-   virtual CCCVirtualFactory* clone() {return new CCCVirtualFactory;}
+   virtual CCC* create() = 0;
+   virtual CCCVirtualFactory* clone() = 0;
 };
 
-template <class T>
+template <class T> 
 class CCCFactory: public CCCVirtualFactory
 {
 public:
    virtual CCC* create() {return new T;}
    virtual CCCVirtualFactory* clone() {return new CCCFactory<T>;}
 };
+
 
 //////////////////////////////////////////////////////////////////////////////
 class UDT_API CUDT
@@ -1492,8 +1509,8 @@ public: //API
    static int shutdown(UDTSOCKET u, int how);
    static int send(UDTSOCKET u, const char* buf, int len, int flags = 0, int* handle = NULL, UDT_MEM_ROUTINE routine = NULL);
    static int recv(UDTSOCKET u, char* buf, int len, int flags = 0, int* handle = NULL, UDT_MEM_ROUTINE routine = NULL);
-   static streampos sendfile(UDTSOCKET u, ifstream& ifs, const streampos& offset, streampos& size, const int& block = 367000);
-   static streampos recvfile(UDTSOCKET u, ofstream& ofs, const streampos& offset, streampos& size, const int& block = 7340000);
+   static __int64 sendfile(UDTSOCKET u, ifstream& ifs, const __int64& offset, __int64& size, const int& block = 366000);
+   static __int64 recvfile(UDTSOCKET u, ofstream& ofs, const __int64& offset, __int64& size, const int& block = 7320000);
    static bool getoverlappedresult(UDTSOCKET u, int handle, int& progress, bool wait = false);
    static int select(int nfds, ud_set* readfds, ud_set* writefds, ud_set* exceptfds, const timeval* timeout);
    static CUDTException& getlasterror();
@@ -1594,7 +1611,7 @@ private:
       // Returned value:
       //    Actual size of data sent.
 
-   __int64 sendfile(ifstream& ifs, const __int64& offset, const __int64& size, const __int32& block = 367000);
+   __int64 sendfile(ifstream& ifs, const __int64& offset, const __int64& size, const __int32& block = 366000);
 
       // Functionality:
       //    Request UDT to receive data into a file described as "fd", starting from "offset", with expected size of "size".
@@ -1606,7 +1623,7 @@ private:
       // Returned value:
       //    Actual size of data received.
 
-   __int64 recvfile(ofstream& ofs, const __int64& offset, const __int64& size, const __int32& block = 7340000);
+   __int64 recvfile(ofstream& ofs, const __int64& offset, const __int64& size, const __int32& block = 7320000);
 
       // Functionality:
       //    Configure UDT options.
@@ -1646,14 +1663,15 @@ friend class CUDTUnited;
 
 public:
 #ifndef WIN32
-   const static UDTSOCKET INVALID_UDTSOCK = -1;	// invalid socket descriptor
+   const static UDTSOCKET INVALID_SOCK = -1;	// invalid socket descriptor
 #else
-   const static int INVALID_UDTSOCK = -1;
+   const static int INVALID_SOCK = -1;
 #endif
-   const static int UDT_ERROR = -1;		// socket api error returned value
+   const static int ERROR = -1;			// socket api error returned value
 
 private:
    UDTSOCKET m_SocketID;			// UDT socket number
+   __int32 m_iSockType;				// Type of the UDT connection (SOCK_STREAM or SOCK_DGRAM)
 
 private: // Version
    const __int32 m_iVersion;			// UDT version, for compatibility use
@@ -1689,6 +1707,8 @@ private: // Options
    linger m_Linger;				// linger information on close
    __int32 m_iUDPSndBufSize;			// UDP sending buffer size
    __int32 m_iUDPRcvBufSize;			// UDP receiving buffer size
+   __int32 m_iMaxMsg;				// Maximum message size of datagram UDT connection
+   __int32 m_iMsgTTL;				// time-to-live of a datagram message
    __int32 m_iIPversion;			// IP version
    const __int32 m_iProbeInterval;		// Number of regular packets between two probing packet pairs
    const __int32 m_iQuickStartPkts;		// Number of packets to be sent as a quick start
@@ -1855,13 +1875,13 @@ private: // Trace
 // Global UDT API
 namespace UDT
 {
-typedef CUDTException UDTERROR;
-typedef UDTOpt UDTOPT;
+typedef CUDTException ERRORINFO;
+typedef UDTOpt SOCKOPT;
 typedef CPerfMon TRACEINFO;
 typedef ud_set UDSET;
 
-UDT_API extern const UDTSOCKET INVALID_UDTSOCK;
-UDT_API extern const int UDT_ERROR;
+UDT_API extern const UDTSOCKET INVALID_SOCK;
+UDT_API extern const int ERROR;
 
 UDT_API inline UDTSOCKET socket(int af, int type = SOCK_STREAM, int protocol = 0)
 {
@@ -1903,12 +1923,12 @@ UDT_API inline int getsockname(UDTSOCKET u, struct sockaddr* name, int* namelen)
    return CUDT::getsockname(u, name, namelen);
 }
 
-UDT_API inline int getsockopt(UDTSOCKET u, int level, UDTOPT optname, void* optval, int* optlen)
+UDT_API inline int getsockopt(UDTSOCKET u, int level, SOCKOPT optname, void* optval, int* optlen)
 {
    return CUDT::getsockopt(u, level, optname, optval, optlen);
 }
 
-UDT_API inline int setsockopt(UDTSOCKET u, int level, UDTOPT optname, const void* optval, int optlen)
+UDT_API inline int setsockopt(UDTSOCKET u, int level, SOCKOPT optname, const void* optval, int optlen)
 {
    return CUDT::setsockopt(u, level, optname, optval, optlen);
 }
@@ -1928,12 +1948,12 @@ UDT_API inline int recv(UDTSOCKET u, char* buf, int len, int flags = 0, int* han
    return CUDT::recv(u, buf, len, flags, handle, routine);
 }
 
-UDT_API inline streampos sendfile(UDTSOCKET u, ifstream& ifs, const streampos& offset, streampos& size, const int& block = 367000)
+UDT_API inline __int64 sendfile(UDTSOCKET u, ifstream& ifs, const __int64& offset, __int64& size, const int& block = 366000)
 {
    return CUDT::sendfile(u, ifs, offset, size, block);
 }
 
-UDT_API inline streampos recvfile(UDTSOCKET u, ofstream& ofs, const streampos& offset, streampos& size, const int& block = 7340000)
+UDT_API inline __int64 recvfile(UDTSOCKET u, ofstream& ofs, const __int64& offset, __int64& size, const int& block = 7320000)
 {
    return CUDT::recvfile(u, ofs, offset, size, block);
 }
@@ -1948,7 +1968,7 @@ UDT_API inline int select(int nfds, UDSET* readfds, UDSET* writefds, UDSET* exce
    return CUDT::select(nfds, readfds, writefds, exceptfds, timeout);
 }
 
-UDT_API inline UDTERROR getlasterror()
+UDT_API inline ERRORINFO getlasterror()
 {
    return CUDT::getlasterror();
 }

@@ -38,7 +38,7 @@ UDT packet definition: packet.h
 
 /****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 02/16/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 04/12/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -176,11 +176,13 @@ void CChannel::disconnect() const
 
 void CChannel::connect(const sockaddr* addr)
 {
+   const __int32 addrlen = (4 == m_iIPversion) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
+
    #ifndef CAPI
-      if (0 != ::connect(m_iSocket, addr, sizeof(sockaddr)))
+      if (0 != ::connect(m_iSocket, addr, addrlen))
          throw CUDTException(1, 4, NET_ERROR);
    #else
-      if (0 != (*g_SysLib.connect)(m_iSocket, addr, sizeof(sockaddr)))
+      if (0 != (*g_SysLib.connect)(m_iSocket, addr, addrlen))
          throw CUDTException(1, 4, NET_ERROR);
    #endif
 }

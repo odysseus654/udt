@@ -41,7 +41,7 @@ method to catch and handle UDT errors and exceptions.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 01/22/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 04/10/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -565,7 +565,8 @@ CCC::CCC():
 m_dPktSndPeriod(1.0),
 m_dCWndSize(16.0),
 m_iACKPeriod(10),
-m_iACKInterval(0)
+m_iACKInterval(0),
+m_iRTO(-1)
 {
 }
 
@@ -577,6 +578,11 @@ void CCC::setACKTimer(const __int32& msINT)
 void CCC::setACKInterval(const __int32& pktINT)
 {
    m_iACKInterval = pktINT;
+}
+
+void CCC::setRTO(const __int32& usRTO)
+{
+   m_iRTO = usRTO;
 }
 
 void CCC::sendCustomMsg(CPacket& pkt) const

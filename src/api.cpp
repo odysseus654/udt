@@ -32,7 +32,7 @@ reference: UDT programming manual and socket programming reference
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 02/21/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 04/09/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -132,7 +132,7 @@ CUDTUnited::~CUDTUnited()
    #endif
 }
 
-UDTSOCKET CUDTUnited::newSocket(const __int32& af)
+UDTSOCKET CUDTUnited::newSocket(const __int32& af, const __int32& type)
 {
    // garbage collection before a new socket is created
    checkBrokenSockets();
@@ -156,6 +156,7 @@ UDTSOCKET CUDTUnited::newSocket(const __int32& af)
    ns->m_ListenSocket = 0;
    ns->m_pUDT = new CUDT;
    ns->m_pUDT->m_SocketID = ns->m_Socket;
+   ns->m_pUDT->m_iSockType = type;
    if (AF_INET == af)
    {
       ns->m_pUDT->m_iIPversion = ns->m_iIPversion = 4;
@@ -825,16 +826,16 @@ CUDTException* CUDTUnited::getError()
 
 
 //
-UDTSOCKET CUDT::socket(int af, int, int)
+UDTSOCKET CUDT::socket(int af, int type, int)
 {
    try
    {
-      return s_UDTUnited.newSocket(af);
+      return s_UDTUnited.newSocket(af, type);
    }
    catch (CUDTException e)
    {
       s_UDTUnited.setError(new CUDTException(e));
-      return INVALID_UDTSOCK;
+      return INVALID_SOCK;
    }
 }
 
@@ -847,7 +848,7 @@ int CUDT::bind(UDTSOCKET u, const sockaddr* name, int namelen)
    catch (CUDTException e)
    {
       s_UDTUnited.setError(new CUDTException(e));
-      return UDT_ERROR;
+      return ERROR;
    }
 }
 
@@ -860,7 +861,7 @@ int CUDT::listen(UDTSOCKET u, int backlog)
    catch (CUDTException e)
    {
       s_UDTUnited.setError(new CUDTException(e));
-      return UDT_ERROR;
+      return ERROR;
    }
 }
 
@@ -873,7 +874,7 @@ UDTSOCKET CUDT::accept(UDTSOCKET u, sockaddr* addr, int* addrlen)
    catch (CUDTException e)
    {
       s_UDTUnited.setError(new CUDTException(e));
-      return INVALID_UDTSOCK;
+      return INVALID_SOCK;
    }
 }
 
@@ -886,7 +887,7 @@ int CUDT::connect(UDTSOCKET u, const sockaddr* name, int namelen)
    catch (CUDTException e)
    {
       s_UDTUnited.setError(new CUDTException(e));
-      return UDT_ERROR;
+      return ERROR;
    }
 }
 
@@ -899,7 +900,7 @@ int CUDT::close(UDTSOCKET u)
    catch (CUDTException e)
    {
       s_UDTUnited.setError(new CUDTException(e));
-      return UDT_ERROR;
+      return ERROR;
    }
 }
 
@@ -912,7 +913,7 @@ int CUDT::getpeername(UDTSOCKET u, sockaddr* name, int* namelen)
    catch (CUDTException e)
    {
       s_UDTUnited.setError(new CUDTException(e));
-      return UDT_ERROR;
+      return ERROR;
    }
 }
 
@@ -925,7 +926,7 @@ int CUDT::getsockname(UDTSOCKET u, sockaddr* name, int* namelen)
    catch (CUDTException e)
    {
       s_UDTUnited.setError(new CUDTException(e));
-      return UDT_ERROR;
+      return ERROR;
    }
 }
 
@@ -942,7 +943,7 @@ int CUDT::getsockopt(UDTSOCKET u, int, UDTOpt optname, void* optval, int* optlen
    catch (CUDTException e)
    {
       s_UDTUnited.setError(new CUDTException(e));
-      return UDT_ERROR;
+      return ERROR;
    }
 }
 
@@ -959,11 +960,11 @@ int CUDT::setsockopt(UDTSOCKET u, int, UDTOpt optname, const void* optval, int o
    catch (CUDTException e)
    {
       s_UDTUnited.setError(new CUDTException(e));
-      return UDT_ERROR;
+      return ERROR;
    }
 }
 
-int CUDT::shutdown(UDTSOCKET u, int how)
+int CUDT::shutdown(UDTSOCKET u, int)
 {
    try
    {
@@ -974,7 +975,7 @@ int CUDT::shutdown(UDTSOCKET u, int how)
    catch (CUDTException e)
    {
       s_UDTUnited.setError(new CUDTException(e));
-      return UDT_ERROR;
+      return ERROR;
    }
 }
 
@@ -989,7 +990,7 @@ int CUDT::send(UDTSOCKET u, const char* buf, int len, int, int* handle, UDT_MEM_
    catch (CUDTException e)
    {
       s_UDTUnited.setError(new CUDTException(e));
-      return UDT_ERROR;
+      return ERROR;
    }
 }
 
@@ -1004,11 +1005,11 @@ int CUDT::recv(UDTSOCKET u, char* buf, int len, int, int* handle, UDT_MEM_ROUTIN
    catch (CUDTException e)
    {
       s_UDTUnited.setError(new CUDTException(e));
-      return UDT_ERROR;
+      return ERROR;
    }
 }
 
-streampos CUDT::sendfile(UDTSOCKET u, ifstream& ifs, const streampos& offset, streampos& size, const int& block)
+__int64 CUDT::sendfile(UDTSOCKET u, ifstream& ifs, const __int64& offset, __int64& size, const int& block)
 {
    try
    {
@@ -1019,11 +1020,11 @@ streampos CUDT::sendfile(UDTSOCKET u, ifstream& ifs, const streampos& offset, st
    catch (CUDTException e)
    {
       s_UDTUnited.setError(new CUDTException(e));
-      return UDT_ERROR;
+      return ERROR;
    }
 }
 
-streampos CUDT::recvfile(UDTSOCKET u, ofstream& ofs, const streampos& offset, streampos& size, const int& block)
+__int64 CUDT::recvfile(UDTSOCKET u, ofstream& ofs, const __int64& offset, __int64& size, const int& block)
 {
    try
    {
@@ -1034,7 +1035,7 @@ streampos CUDT::recvfile(UDTSOCKET u, ofstream& ofs, const streampos& offset, st
    catch (CUDTException e)
    {
       s_UDTUnited.setError(new CUDTException(e));
-      return UDT_ERROR;
+      return ERROR;
    }
 }
 
@@ -1061,7 +1062,7 @@ int CUDT::select(int, ud_set* readfds, ud_set* writefds, ud_set* exceptfds, cons
    if ((NULL == readfds) && (NULL == writefds) && (NULL == exceptfds))
    {
       s_UDTUnited.setError(new CUDTException(5, 3, 0));
-      return UDT_ERROR;
+      return ERROR;
    }
 
    try
@@ -1071,7 +1072,7 @@ int CUDT::select(int, ud_set* readfds, ud_set* writefds, ud_set* exceptfds, cons
    catch (CUDTException e)
    {
       s_UDTUnited.setError(new CUDTException(e));
-      return UDT_ERROR;
+      return ERROR;
    }
 }
 
@@ -1094,11 +1095,11 @@ int CUDT::perfmon(UDTSOCKET u, CPerfMon* perf, bool clear)
    catch (CUDTException e)
    {
       s_UDTUnited.setError(new CUDTException(e));
-      return UDT_ERROR;
+      return ERROR;
    }
 #else
    s_UDTUnited.setError(new CUDTException(5, 0, 0));
-   return UDT_ERROR;
+   return ERROR;
 #endif
 }
 

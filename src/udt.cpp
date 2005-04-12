@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 02/28/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 04/12/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -61,8 +61,8 @@ modified by
 using namespace std;
 
 CUDTUnited CUDT::s_UDTUnited; 
-const UDTSOCKET UDT::INVALID_UDTSOCK = CUDT::INVALID_UDTSOCK;
-const int UDT::UDT_ERROR = CUDT::UDT_ERROR;
+const UDTSOCKET UDT::INVALID_SOCK = CUDT::INVALID_SOCK;
+const int UDT::ERROR = CUDT::ERROR;
 
 CUDT::CUDT():
 //
@@ -102,10 +102,13 @@ m_iQuickStartPkts(16)
    m_Linger.l_linger = 1;
    m_iUDPSndBufSize = 65536;
    m_iUDPRcvBufSize = 4 * 1024 * 1024;
+   m_iMaxMsg = 9000;
+   m_iMsgTTL = -1;
+   m_iSockType = SOCK_STREAM;
    m_iIPversion = 4;
 
    #ifdef CUSTOM_CC
-      m_pCCFactory = new CCCVirtualFactory;
+      m_pCCFactory = new CCCFactory<CCC>;
    #else
       m_pCCFactory = NULL;
    #endif
@@ -155,12 +158,15 @@ m_iQuickStartPkts(ancestor.m_iQuickStartPkts)
    m_Linger = ancestor.m_Linger;
    m_iUDPSndBufSize = ancestor.m_iUDPSndBufSize;
    m_iUDPRcvBufSize = ancestor.m_iUDPRcvBufSize;
+   m_iMaxMsg = ancestor.m_iMaxMsg;
+   m_iMsgTTL = ancestor.m_iMsgTTL;
+   m_iSockType = ancestor.m_iSockType;
    m_iIPversion = ancestor.m_iIPversion;
 
    #ifdef CUSTOM_CC
       m_pCCFactory = ancestor.m_pCCFactory->clone();
    #else
-      m_pCC = NULL;
+      m_pCCFactory = NULL;
    #endif
    m_pCC = NULL;
 
@@ -206,7 +212,7 @@ CUDT::~CUDT()
       delete m_pCC;
 }
 
-void CUDT::setOpt(UDTOpt optName, const void* optval, const __int32& optlen)
+void CUDT::setOpt(UDTOpt optName, const void* optval, const __int32&)
 {
    CGuard cg(m_ConnectionLock);
    CGuard sendguard(m_SendLock);
@@ -289,6 +295,20 @@ void CUDT::setOpt(UDTOpt optName, const void* optval, const __int32& optlen)
       m_iUDPRcvBufSize = *(__int32 *)optval;
       break;
 
+   case UDT_MAXMSG:
+      if (m_bOpened)
+         throw CUDTException(5, 1, 0);
+
+      m_iMaxMsg = *(__int32 *)optval;
+      break;
+
+   case UDT_MSGTTL:
+      if (m_bOpened)
+         throw CUDTException(5, 1, 0);
+
+      m_iMsgTTL = *(__int32 *)optval;
+      break;
+
    default:
       throw CUDTException(5, 0, 0);
    }
@@ -343,6 +363,9 @@ void CUDT::getOpt(UDTOpt optName, void* optval, __int32& optlen)
       break;
 
    case UDT_LINGER:
+      if (optlen < (__int32)(sizeof(linger)))
+         throw CUDTException(5, 3, 0);
+
       *(linger*)optval = m_Linger;
       optlen = sizeof(linger);
       break;
@@ -354,6 +377,16 @@ void CUDT::getOpt(UDTOpt optName, void* optval, __int32& optlen)
 
    case UDP_RCVBUF:
       *(__int32 *)optval = m_iUDPRcvBufSize;
+      optlen = sizeof(__int32);
+      break;
+
+   case UDT_MAXMSG:
+      *(__int32 *)optval = m_iMaxMsg;
+      optlen = sizeof(__int32);
+      break;
+
+   case UDT_MSGTTL:
+      *(__int32 *)optval = m_iMsgTTL;
       optlen = sizeof(__int32);
       break;
 
@@ -883,8 +916,8 @@ DWORD WINAPI CUDT::sndHandler(LPVOID sender)
       //__int32 burst = 0;
    #endif
 
+   timeval now;
    #ifndef WIN32
-      timeval now;
       timespec timeout;
    #endif
 
@@ -1256,6 +1289,11 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
 
          ullexpint = (self->m_iEXPCount * (self->m_iRTT + 4 * self->m_iRTTVar) + self->m_iSYNInterval) * self->m_ullCPUFrequency;
 
+         #ifdef CUSTOM_CC
+            if (self->m_pCC->m_iRTO > 0)
+               ullexpint = self->m_pCC->m_iRTO * self->m_ullCPUFrequency;
+         #endif
+
          self->m_pTimer->rdtsc(nextexptime);
          nextexptime += ullexpint;
       }
@@ -1288,6 +1326,10 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
       // Just heard from the peer, reset the expiration count.
       self->m_iEXPCount = 1;
       ullexpint = (self->m_iRTT + 4 * self->m_iRTTVar) * self->m_ullCPUFrequency + ullsynint;
+      #ifdef CUSTOM_CC
+         if (self->m_pCC->m_iRTO > 0)
+            ullexpint = self->m_pCC->m_iRTO * self->m_ullCPUFrequency;
+      #endif
       if (((self->m_iSndCurrSeqNo + 1) % self->m_iMaxSeqNo) == self->m_iSndLastAck)
       {
          self->m_pTimer->rdtsc(nextexptime);
@@ -1928,7 +1970,7 @@ void CUDT::rateControl()
       return;
    }
 
-   __int32 B = __int32(m_iBandwidth - 1000000.0 / m_ullInterval * m_ullCPUFrequency);
+   __int32 B = (__int32)(m_iBandwidth - 1000000.0 / m_ullInterval * m_ullCPUFrequency);
    if ((m_ullInterval > m_ullLastDecRate) && ((m_iBandwidth / 9) < B))
       B = m_iBandwidth / 9;
 

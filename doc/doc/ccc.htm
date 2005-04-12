@@ -2,7 +2,7 @@
 
 <head>
 <meta http-equiv="Content-Language" content="en-us">
-<meta name="GENERATOR" content="Microsoft FrontPage 6.0">
+<meta name="GENERATOR" content="Microsoft FrontPage 4.0">
 <meta name="ProgId" content="FrontPage.Editor.Document">
 <meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
 <title>UDT Reference</title>
@@ -39,7 +39,7 @@ overload the proper functions.</font></p>
 	<a href="#14">close</a>()
     {}<br>
 &nbsp;&nbsp; virtual <b><font color="#228b22">void</font></b> <a href="#2">onACK</a>(<b><font color="#228b22">const</font></b> 
-	int32 ack) {}<br>
+    int&amp; ack) {}<br>
 &nbsp;&nbsp; virtual <b><font color="#228b22">void</font></b> <a href="#3">
 	onLoss</a>(<b><font color="#228b22">const</font></b> int* losslist, <b>
 	<font color="#228b22">const</font></b> int&amp; size) {}</font></p>
@@ -59,10 +59,13 @@ overload the proper functions.</font></p>
 	<br>
 	<b><font color="#5f9ea0">protected</font></b>:<br>
 &nbsp;&nbsp; <b><font color="#228b22">void</font></b> <a href="#7">setACKTimer</a>(<b><font color="#228b22">const</font></b> 
-	int&amp; msINT = 10);<br>
+	int&amp; msINT);<br>
 &nbsp;&nbsp; <b><font color="#228b22">void</font></b> <a href="#8">
-	setACKInterval</a>(<b><font color="#228b22">const</font></b> int&amp; pktINT 
-	= 0);<br>
+	setACKInterval</a>(<b><font color="#228b22">const</font></b> int&amp; pktINT);</font></p>
+	<p style="margin-top: 0; margin-bottom: 0">
+    <font face="Courier New" size="1">&nbsp;&nbsp; <b><font color="#228b22">void</font></b> 
+    <a href="#15">setRTO</a>(<b><font color="#228b22">const</font></b> int&amp;
+    usRTO);<br>
 &nbsp;&nbsp; <b><font color="#228b22">void</font></b> <a href="#9">sendCustomMsg</a>(CPacket&amp; 
 	pkt) <b><font color="#228b22">const</font></b>;</font></p>
 	<p style="margin-top: 0; margin-bottom: 0">
@@ -126,6 +129,9 @@ exceed 1 millisecond.</font></p>
 packets to be received before an ACK is sent. This is the default acknowledging 
 method and by default every packet will be acknowledged. Packet-based and 
 timer-based acknowledging are exclusive. <i>pktINT</i> is the packet interval.</font></p>
+<p><font face="Verdana" size="2"><a name="15"></a>void <b>setRTO</b>(<i>usRTO</i>)</font></p>
+<p><font face="Verdana" size="2">This method is used to set timeout value. The
+value <i>usRTO</i> is measured by microseconds.</font></p>
 <p><font face="Verdana" size="2"><a name="9"></a>void <b>sendCustomMsg</b>(<i>pkt</i>)</font></p>
 <p><font face="Verdana" size="2">The method can be used to send a user defined 
 control message. The control message <i>pkt</i> must conform to the packet 
