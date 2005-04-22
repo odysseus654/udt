@@ -502,7 +502,7 @@ public:
       if (m_dNewWin > 2.0 * m_dCWndSize)
         m_dNewWin = 2.0 * m_dCWndSize;
 
-      m_iNumACK = (int)ceil(abs(m_dCWndSize / (m_dNewWin - m_dCWndSize)) / 2.0);
+      m_iNumACK = int(ceil(fabs(m_dCWndSize / (m_dNewWin - m_dCWndSize)) / 2.0));
       if (m_dNewWin > m_dCWndSize)
          m_iIncDec = 1;
       else
@@ -603,7 +603,7 @@ public:
       double realrate, lossrate = 0;
       realrate = (info->pktRecvTotal - m_llLastRecvPkt) * 1500 * 8.0 / interval;
       if (info->pktRecvTotal != m_llLastRecvPkt)
-         lossrate = (info->pktRcvLossTotal - m_iLastRcvLoss) / (info->pktRecvTotal - m_llLastRecvPkt);
+         lossrate = double(info->pktRcvLossTotal - m_iLastRcvLoss) / (info->pktRecvTotal - m_llLastRecvPkt);
 
       if (0 == lossrate)
          m_dRequestRate *= 1.02;

@@ -105,7 +105,7 @@ m_iQuickStartPkts(16)
    m_iMaxMsg = 9000;
    m_iMsgTTL = -1;
    m_iSockType = SOCK_STREAM;
-   m_iIPversion = 4;
+   m_iIPversion = AF_INET;
 
    #ifdef CUSTOM_CC
       m_pCCFactory = new CCCFactory<CCC>;
@@ -504,7 +504,7 @@ DWORD WINAPI CUDT::listenHandler(LPVOID listener)
    initpkt.pack(0, NULL, initdata, sizeof(CHandShake));
 
    sockaddr* addr;
-   if (4 == self->m_iIPversion)
+   if (AF_INET == self->m_iIPversion)
       addr = (sockaddr*)(new sockaddr_in);
    else
       addr = (sockaddr*)(new sockaddr_in6);
@@ -521,7 +521,7 @@ DWORD WINAPI CUDT::listenHandler(LPVOID listener)
          s_UDTUnited.newConnection(self->m_SocketID, addr, hs);
    }
 
-   if (4 == self->m_iIPversion)
+   if (AF_INET == self->m_iIPversion)
       delete (sockaddr_in*)addr;
    else
       delete (sockaddr_in6*)addr;
@@ -600,7 +600,7 @@ void CUDT::connect(const sockaddr* serv_addr)
    m_pChannel->sendto(initpkt, serv_addr);
 
    sockaddr* peer_addr;
-   if (4 == m_iIPversion)
+   if (AF_INET == m_iIPversion)
       peer_addr = (sockaddr*)(new sockaddr_in);
    else
       peer_addr = (sockaddr*)(new sockaddr_in6);
@@ -629,7 +629,7 @@ void CUDT::connect(const sockaddr* serv_addr)
 
    m_pChannel->connect(peer_addr);
 
-   if (4 == m_iIPversion)
+   if (AF_INET == m_iIPversion)
       delete (sockaddr_in*)peer_addr;
    else
       delete (sockaddr_in6*)peer_addr;
@@ -1517,6 +1517,10 @@ void CUDT::sendCtrl(const __int32& pkttype, void* lparam, void* rparam, const __
       }
       else if (ack == m_iRcvLastAck)
       {
+         #ifdef CUSTOM_CC
+            break;
+         #endif
+
          if ((currtime - m_ullLastAckTime) < ((m_iRTT + 4 * m_iRTTVar) * m_ullCPUFrequency))
             break;
       }
@@ -2324,7 +2328,7 @@ __int64 CUDT::sendfile(ifstream& ifs, const __int64& offset, const __int64& size
    // positioning...
    try
    {
-      ifs.seekg(offset);
+      ifs.seekg((streamoff)offset);
    }
    catch (...)
    {
@@ -2368,11 +2372,11 @@ __int64 CUDT::sendfile(ifstream& ifs, const __int64& offset, const __int64& size
    }
    if (size - unitsize * (count - 1) > 0)
    {
-      tempbuf = new char[size - unitsize * (count - 1)];
+      tempbuf = new char[__int32(size - unitsize * (count - 1))];
 
       try
       {
-         ifs.read(tempbuf, size - unitsize * (count - 1));
+         ifs.read(tempbuf, (streamsize)(size - unitsize * (count - 1)));
       }
       catch (...)
       {
@@ -2435,7 +2439,7 @@ __int64 CUDT::recvfile(ofstream& ofs, const __int64& offset, const __int64& size
    // positioning...
    try
    {
-      ofs.seekp(offset);
+      ofs.seekp((streamoff)offset);
    }
    catch (...)
    {
@@ -2549,8 +2553,21 @@ void CUDT::sample(CPerfMon* perf, bool clear)
    perf->pktFlightSize = (m_iSndCurrSeqNo - m_iSndLastAck + 1 + m_iMaxSeqNo) % m_iMaxSeqNo;
    perf->msRTT = m_iRTT/1000.0;
    perf->mbpsBandwidth = m_iBandwidth * m_iPayloadSize * 8.0;
-   perf->byteAvailSndBuf = m_iSndQueueLimit - m_pSndBuffer->getCurrBufSize();
-   perf->byteAvailRcvBuf = m_pRcvBuffer->getAvailBufSize();
+
+   #ifndef WIN32
+      if (0 == pthread_mutex_trylock(&m_ConnectionLock))
+   #else
+      if (WAIT_OBJECT_0 == WaitForSingleObject(m_ConnectionLock, 0))
+   #endif
+   {
+      perf->byteAvailSndBuf = (NULL == m_pSndBuffer) ? 0 : m_iSndQueueLimit - m_pSndBuffer->getCurrBufSize();
+      perf->byteAvailRcvBuf = (NULL == m_pRcvBuffer) ? 0 : m_pRcvBuffer->getAvailBufSize();
+   }
+   else
+   {
+      perf->byteAvailSndBuf = 0;
+      perf->byteAvailRcvBuf = 0;
+   }
 
    if (clear)
    {

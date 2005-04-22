@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
 
    UDT::close(serv);
 
-   ifstream ifs(argv[1]);
+   ifstream ifs(argv[1], ios::in | ios::binary);
 
    ifs.seekg(0, ios::end);
    __int64 size = ifs.tellg();

@@ -1487,6 +1487,7 @@ public:
 //////////////////////////////////////////////////////////////////////////////
 class UDT_API CUDT
 {
+friend class CUDTUnited;
 friend class CCC;
 
 private: // constructor and desctructor
@@ -1658,16 +1659,17 @@ private:
    void sample(CPerfMon* perf, bool clear = true);
 
 private:
-friend class CUDTUnited;
    static CUDTUnited s_UDTUnited;		// UDT global management base
 
 public:
 #ifndef WIN32
    const static UDTSOCKET INVALID_SOCK = -1;	// invalid socket descriptor
+   const static int ERROR = -1;                 // socket api error returned value
 #else
    const static int INVALID_SOCK = -1;
+   #undef ERROR
+   const static int ERROR = -1;
 #endif
-   const static int ERROR = -1;			// socket api error returned value
 
 private:
    UDTSOCKET m_SocketID;			// UDT socket number

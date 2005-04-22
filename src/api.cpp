@@ -67,7 +67,7 @@ m_pAcceptSockets(NULL)
 
 CUDTSocket::~CUDTSocket()
 {
-   if (4 == m_iIPversion)
+   if (AF_INET == m_iIPversion)
    {
       if (m_pSelfAddr)
          delete (sockaddr_in*)m_pSelfAddr;
@@ -157,16 +157,11 @@ UDTSOCKET CUDTUnited::newSocket(const __int32& af, const __int32& type)
    ns->m_pUDT = new CUDT;
    ns->m_pUDT->m_SocketID = ns->m_Socket;
    ns->m_pUDT->m_iSockType = type;
+   ns->m_pUDT->m_iIPversion = ns->m_iIPversion = af;
    if (AF_INET == af)
-   {
-      ns->m_pUDT->m_iIPversion = ns->m_iIPversion = 4;
       ns->m_pSelfAddr = (sockaddr*)(new sockaddr_in);
-   }
    else
-   {
-      ns->m_pUDT->m_iIPversion = ns->m_iIPversion = 6;
       ns->m_pSelfAddr = (sockaddr*)(new sockaddr_in6);
-   }
 
    // protect the m_Sockets structure.
    #ifndef WIN32
@@ -243,7 +238,7 @@ void CUDTUnited::newConnection(const UDTSOCKET listen, const sockaddr* peer, CHa
    ns->m_iIPversion = ls->m_iIPversion;
    ns->m_pUDT->m_SocketID = ns->m_Socket;
 
-   if (4 == ls->m_iIPversion)
+   if (AF_INET == ls->m_iIPversion)
    {
       ns->m_pSelfAddr = (sockaddr*)(new sockaddr_in);
       ns->m_pPeerAddr = (sockaddr*)(new sockaddr_in);
@@ -320,7 +315,7 @@ __int32 CUDTUnited::bind(const UDTSOCKET u, const sockaddr* name, const __int32&
       throw CUDTException(5, 4, 0);
 
    // check the size of SOCKADDR structure
-   if (4 == s->m_iIPversion)
+   if (AF_INET == s->m_iIPversion)
    {
       if (namelen != sizeof(sockaddr_in))
          throw CUDTException(5, 3, 0);
@@ -413,7 +408,7 @@ UDTSOCKET CUDTUnited::accept(const UDTSOCKET listen, sockaddr* addr, __int32* ad
       if (NULL == addrlen)
          throw CUDTException(5, 3, 0);
 
-      if (4 == locate(u)->m_iIPversion)
+      if (AF_INET == locate(u)->m_iIPversion)
          *addrlen = sizeof(sockaddr_in);
       else
          *addrlen = sizeof(sockaddr_in6);
@@ -433,7 +428,7 @@ __int32 CUDTUnited::connect(const UDTSOCKET u, const sockaddr* name, const __int
       throw CUDTException(5, 4, 0);
 
    // check the size of SOCKADDR structure
-   if (4 == s->m_iIPversion)
+   if (AF_INET == s->m_iIPversion)
    {
       if (namelen != sizeof(sockaddr_in))
          throw CUDTException(5, 3, 0);
@@ -457,7 +452,7 @@ __int32 CUDTUnited::connect(const UDTSOCKET u, const sockaddr* name, const __int
    s->m_pUDT->m_pChannel->getSockAddr(s->m_pSelfAddr);
 
    // record peer address
-   if (4 == s->m_iIPversion)
+   if (AF_INET == s->m_iIPversion)
       s->m_pPeerAddr = (sockaddr*)(new sockaddr_in);
    else
       s->m_pPeerAddr = (sockaddr*)(new sockaddr_in6);
@@ -520,7 +515,7 @@ __int32 CUDTUnited::getpeername(const UDTSOCKET u, sockaddr* name, __int32* name
    if (!s->m_pUDT->m_bConnected)
       throw CUDTException(2, 2, 0);
 
-   if (4 == s->m_iIPversion)
+   if (AF_INET == s->m_iIPversion)
       *namelen = sizeof(sockaddr_in);
    else
       *namelen = sizeof(sockaddr_in6);
@@ -538,7 +533,7 @@ __int32 CUDTUnited::getsockname(const UDTSOCKET u, sockaddr* name, __int32* name
    if (NULL == s)
       throw CUDTException(5, 4, 0);
 
-   if (4 == s->m_iIPversion)
+   if (AF_INET == s->m_iIPversion)
       *namelen = sizeof(sockaddr_in);
    else
       *namelen = sizeof(sockaddr_in6);
@@ -665,7 +660,7 @@ CUDTSocket* CUDTUnited::locate(const UDTSOCKET u, const sockaddr* peer)
    {
       map<UDTSOCKET, CUDTSocket*>::iterator k = m_Sockets.find(*j);
 
-      if (4 == i->second->m_iIPversion)
+      if (AF_INET == i->second->m_iIPversion)
       {
          // compare IPv4 address
          if ((((sockaddr_in*)peer)->sin_port == ((sockaddr_in*)k->second->m_pPeerAddr)->sin_port) && (((sockaddr_in*)peer)->sin_addr.s_addr == ((sockaddr_in*)k->second->m_pPeerAddr)->sin_addr.s_addr))
@@ -695,7 +690,7 @@ CUDTSocket* CUDTUnited::locate(const UDTSOCKET u, const sockaddr* peer)
    {
       map<UDTSOCKET, CUDTSocket*>::iterator k = m_Sockets.find(*j);
 
-      if (4 == i->second->m_iIPversion)
+      if (AF_INET == i->second->m_iIPversion)
       {
          // compare IPv4 address
          if ((((sockaddr_in*)peer)->sin_port == ((sockaddr_in*)k->second->m_pPeerAddr)->sin_port) && (((sockaddr_in*)peer)->sin_addr.s_addr == ((sockaddr_in*)k->second->m_pPeerAddr)->sin_addr.s_addr))
@@ -964,7 +959,7 @@ int CUDT::setsockopt(UDTSOCKET u, int, UDTOpt optname, const void* optval, int o
    }
 }
 
-int CUDT::shutdown(UDTSOCKET u, int)
+int CUDT::shutdown(UDTSOCKET, int)
 {
    try
    {

@@ -78,7 +78,7 @@ using namespace std;
 #endif
 
 CChannel::CChannel():
-m_iIPversion(4),
+m_iIPversion(AF_INET),
 m_iSndBufSize(102400),
 m_iRcvBufSize(307200)
 {
@@ -124,15 +124,9 @@ void CChannel::open(const sockaddr* addr)
 {
    // construct an socket
    #ifndef CAPI
-      if (4 == m_iIPversion)
-         m_iSocket = socket(AF_INET, SOCK_DGRAM, 0);
-      else
-         m_iSocket = socket(AF_INET6, SOCK_DGRAM, 0);
+      m_iSocket = socket(m_iIPversion, SOCK_DGRAM, 0);
    #else
-      if (4 == m_iIPversion)
-         m_iSocket = (*g_SysLib.socket)(AF_INET, SOCK_DGRAM, 0);
-      else
-         m_iSocket = (*g_SysLib.socket)(AF_INET6, SOCK_DGRAM, 0);
+      m_iSocket = (*g_SysLib.socket)(AF_INET, SOCK_DGRAM, 0);
    #endif
 
    if (m_iSocket < 0)
@@ -140,7 +134,7 @@ void CChannel::open(const sockaddr* addr)
 
    if (NULL != addr)
    {
-      socklen_t namelen = (4 == m_iIPversion) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
+      socklen_t namelen = (AF_INET == m_iIPversion) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
 
       #ifndef CAPI
          if (0 != bind(m_iSocket, addr, namelen))
@@ -176,7 +170,7 @@ void CChannel::disconnect() const
 
 void CChannel::connect(const sockaddr* addr)
 {
-   const __int32 addrlen = (4 == m_iIPversion) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
+   const __int32 addrlen = (AF_INET == m_iIPversion) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
 
    #ifndef CAPI
       if (0 != ::connect(m_iSocket, addr, addrlen))
@@ -291,7 +285,7 @@ __int32 CChannel::sendto(CPacket& packet, const sockaddr* addr) const
    memcpy(buf, packet.getPacketVector()[0].iov_base, CPacket::m_iPktHdrSize);
    memcpy(buf + CPacket::m_iPktHdrSize, packet.getPacketVector()[1].iov_base, packet.getLength());
 
-   socklen_t addrsize = (4 == m_iIPversion) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
+   socklen_t addrsize = (AF_INET == m_iIPversion) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
 
    int ret = ::sendto(m_iSocket, buf, CPacket::m_iPktHdrSize + packet.getLength(), 0, addr, addrsize);
 
@@ -322,7 +316,7 @@ __int32 CChannel::recvfrom(CPacket& packet, sockaddr* addr) const
    else
       buf = new char [CPacket::m_iPktHdrSize + packet.getLength()];
 
-   socklen_t addrsize = (4 == m_iIPversion) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
+   socklen_t addrsize = (AF_INET == m_iIPversion) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
 
    int ret = ::recvfrom(m_iSocket, buf, CPacket::m_iPktHdrSize + packet.getLength(), 0, addr, &addrsize);
 
@@ -400,12 +394,7 @@ void CChannel::setRcvBufSize(const __int32& size)
 
 void CChannel::getSockAddr(sockaddr* addr) const
 {
-   socklen_t namelen;
-
-   if (4 == m_iIPversion)
-      namelen = sizeof(sockaddr_in);
-   else
-      namelen = sizeof(sockaddr_in6);
+   socklen_t namelen = (AF_INET == m_iIPversion) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
 
    #ifndef CAPI
       getsockname(m_iSocket, addr, &namelen);
@@ -416,12 +405,7 @@ void CChannel::getSockAddr(sockaddr* addr) const
 
 void CChannel::getPeerAddr(sockaddr* addr) const
 {
-   socklen_t namelen;
-
-   if (4 == m_iIPversion)
-      namelen = sizeof(sockaddr_in);
-   else
-      namelen = sizeof(sockaddr_in6);
+   socklen_t namelen = (AF_INET == m_iIPversion) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
 
    #ifndef CAPI
       getpeername(m_iSocket, addr, &namelen);

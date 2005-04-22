@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
 
    sockaddr_in serv_addr;
    serv_addr.sin_family = AF_INET;
-   serv_addr.sin_port = htons(atoi(argv[2]));
+   serv_addr.sin_port = htons(short(atoi(argv[2])));
 #ifndef WIN32
    if (inet_pton(AF_INET, argv[1], &serv_addr.sin_addr) <= 0)
 #else

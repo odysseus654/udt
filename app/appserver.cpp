@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
 
    short port;
    if (2 == argc)
-      port = atoi(argv[1]);
+      port = short(atoi(argv[1]));
    else
       port = 9000;
 
@@ -66,8 +66,8 @@ int main(int argc, char* argv[])
          return 0;
       }
 
-      char ip[16];
 #ifndef WIN32
+      char ip[16];
       cout << "new connection: " << inet_ntop(AF_INET, &their_addr.sin_addr, ip, 16) << ":" << ntohs(their_addr.sin_port) << endl;
 #else
       cout << "new connection: " << inet_ntoa(their_addr.sin_addr) << ":" << ntohs(their_addr.sin_port) << endl;

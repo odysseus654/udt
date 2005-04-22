@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
 
    sockaddr_in serv_addr;
    serv_addr.sin_family = AF_INET;
-   serv_addr.sin_port = htons(atoi(argv[2]));
+   serv_addr.sin_port = htons(short(atoi(argv[2])));
 #ifndef WIN32
    if (inet_pton(AF_INET, argv[1], &serv_addr.sin_addr) <= 0)
 #else
@@ -45,7 +45,7 @@ int main(int argc, char* argv[])
       return 0;
    }
 
-   ofstream ofs(argv[3]);
+   ofstream ofs(argv[3], ios::out | ios::binary | ios::trunc);
    __int64 recvsize; 
 
    if (UDT::ERROR == (recvsize = UDT::recvfile(fhandle, ofs, 0, size)))

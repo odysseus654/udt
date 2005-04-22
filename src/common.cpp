@@ -72,15 +72,15 @@ using namespace std;
       {
          LARGE_INTEGER cc;
          QueryPerformanceCounter(&cc);
-         tv->tv_sec = cc.QuadPart / ccf.QuadPart;
-         tv->tv_usec = (cc.QuadPart % ccf.QuadPart) / (ccf.QuadPart / 1000000);
+         tv->tv_sec = (long)(cc.QuadPart / ccf.QuadPart);
+         tv->tv_usec = (long)((cc.QuadPart % ccf.QuadPart) / (ccf.QuadPart / 1000000));
       }
       else
       {
          unsigned __int64 ft;
          GetSystemTimeAsFileTime((FILETIME *)&ft);
-         tv->tv_sec = ft / 10000000;
-         tv->tv_usec = (ft % 10000000) / 10;
+         tv->tv_sec = (long)(ft / 10000000);
+         tv->tv_usec = (long)((ft % 10000000) / 10);
       }
 
       return 0;
