@@ -99,7 +99,7 @@ m_iQuickStartPkts(16)
    m_iSndQueueLimit = 40960000;
    m_iUDTBufSize = 40960000;
    m_Linger.l_onoff = 1;
-   m_Linger.l_linger = 1;
+   m_Linger.l_linger = 180;
    m_iUDPSndBufSize = 65536;
    m_iUDPRcvBufSize = 4 * 1024 * 1024;
    m_iMaxMsg = 9000;
@@ -1835,7 +1835,7 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
          {
             m_bFreeze = true;
 
-            #ifdef NOISY_LINK
+            #ifndef NOISY_LINK
                m_ullLastDecRate = m_ullInterval;
                m_ullInterval = (unsigned __int64)ceil(m_ullInterval * 1.125);
             #endif

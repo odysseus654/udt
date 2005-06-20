@@ -33,7 +33,7 @@ All the lists are static linked lists in ascending order of sequence numbers.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 01/21/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 06/19/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -416,6 +416,8 @@ void CSndLossList::remove(const __int32& seqno)
 
             m_iHead = loc;
          }
+         else
+            m_iHead = m_piNext[i];
       }
 
       // Remove all nodes prior to the new head
