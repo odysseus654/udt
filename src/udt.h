@@ -1014,7 +1014,7 @@ public:
       // Returned value:
       //    if the overlapped IO is completed.
 
-   bool getOverlappedResult(const int& handle, __int32& progress);
+   bool getOverlappedResult(const __int32& handle, __int32& progress);
 
       // Functionality:
       //    helper function to release the user buffer.
@@ -1024,7 +1024,7 @@ public:
       // Returned value:
       //    Current size of the data in the sending list
 
-  static void releaseBuffer(char* buf, int);
+  static void releaseBuffer(char* buf, __int32);
 
 private:
    pthread_mutex_t m_BufLock;		// used to synchronize buffer operation
@@ -1156,7 +1156,7 @@ public:
       // Returned value:
       //    if the overlapped IO is completed.
 
-   bool getOverlappedResult(const int& handle, __int32& progress);
+   bool getOverlappedResult(const __int32& handle, __int32& progress);
 
       // Functionality:
       //    Query the total size of overlapped recv buffers.
@@ -1275,8 +1275,8 @@ public:
    UDTSOCKET accept(const UDTSOCKET listen, sockaddr* addr, __int32* addrlen);
    __int32 connect(const UDTSOCKET u, const sockaddr* name, const __int32& namelen);
    __int32 close(const UDTSOCKET u);
-   __int32 getpeername(const UDTSOCKET u, sockaddr* name, int* namelen);
-   __int32 getsockname(const UDTSOCKET u, sockaddr* name, int* namelen);
+   __int32 getpeername(const UDTSOCKET u, sockaddr* name, __int32* namelen);
+   __int32 getsockname(const UDTSOCKET u, sockaddr* name, __int32* namelen);
    __int32 select(ud_set* readfds, ud_set* writefds, ud_set* exceptfds, const timeval* timeout);
 
       // Functionality:
@@ -1600,7 +1600,7 @@ private:
       // Returned value:
       //    if the overlapped IO is completed.
 
-   bool getOverlappedResult(const int& handle, __int32& progress, const bool& wait = false);
+   bool getOverlappedResult(const __int32& handle, __int32& progress, const bool& wait = false);
 
       // Functionality:
       //    Request UDT to send out a file described as "fd", starting from "offset", with size of "size".

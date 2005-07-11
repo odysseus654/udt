@@ -452,6 +452,9 @@ Reference:
 2. C. Jin, D. X. Wei and S. H. Low, FAST TCP for High-Speed Long-Distance 
    Networks, Internet Draft, draft-jwl-tcp-fast-01.txt,
    http://netlab.caltech.edu/pub/papers/draft-jwl-tcp-fast-01.txt
+
+Note:
+   Pricision of RTT measurement may make great difference in the throughput
 *****************************************************************************/
 
 class CFAST: public CVegas

@@ -1485,7 +1485,7 @@ void CUDT::sendCtrl(const __int32& pkttype, void* lparam, void* rparam, const __
       // There is new received packet to acknowledge, update related information.
       if (((ack > m_iRcvLastAck) && (ack - m_iRcvLastAck < m_iSeqNoTH)) || (ack < m_iRcvLastAck - m_iSeqNoTH))
       {
-         int acksize = (ack - m_iRcvLastAck + m_iMaxSeqNo) % m_iMaxSeqNo;
+         __int32 acksize = (ack - m_iRcvLastAck + m_iMaxSeqNo) % m_iMaxSeqNo;
          m_iRcvLastAck = ack;
 
          if (m_pRcvBuffer->ackData(acksize * m_iPayloadSize - m_pIrrPktList->currErrorSize(m_iRcvLastAck)))
@@ -1918,15 +1918,15 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
       break;
 
    case 1: //001 - Keep-alive
-      // The only purpose of keep-alive packet is to tell the peer is still alive
-      // nothing need to be done.
+      // The only purpose of keep-alive packet is to tell that the peer is still alive
+      // nothing needs to be done.
 
       break;
 
    case 0: //000 - Handshake
       if ((m_bInitiator) && (m_iPeerISN - 1 == m_iRcvCurrSeqNo) && (m_iISN == m_iSndLastAck))
       {
-         // The peer side has not received the handshake message, so it keeping query
+         // The peer side has not received the handshake message, so it keeps querying
          // resend the handshake packet
 
          CHandShake initdata;
@@ -1936,7 +1936,7 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
          sendCtrl(0, NULL, (char *)&initdata, sizeof(CHandShake));
       }
 
-      // I am not an initiator, so both the initiator and I must have received the message before I came here
+      // I am not an initiator, so both the initiator and I must had received the message before I came here
 
       break;
 
@@ -2248,7 +2248,7 @@ __int32 CUDT::recv(char* data, const __int32& len, __int32* overlapped, UDT_MEM_
    return len;
 }
 
-bool CUDT::getOverlappedResult(const int& handle, __int32& progress, const bool& wait)
+bool CUDT::getOverlappedResult(const __int32& handle, __int32& progress, const bool& wait)
 {
    // throw an exception if not connected
    if ((m_bBroken) && (0 == m_pRcvBuffer->getRcvDataSize()))
