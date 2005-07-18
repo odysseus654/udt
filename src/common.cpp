@@ -41,7 +41,7 @@ method to catch and handle UDT errors and exceptions.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 04/10/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 07/18/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -636,7 +636,7 @@ const char* CUDTException::getErrorMessage()
         break;
 
       case 1:
-        strcpy(m_pcMsg, "Couldn't set up network connection");
+        strcpy(m_pcMsg, "Connection setup failure");
 
         switch (m_iMinor)
         {
@@ -654,7 +654,7 @@ const char* CUDTException::getErrorMessage()
 
         case 3:
            strcpy(m_pcMsg + strlen(m_pcMsg), ": ");
-           strcpy(m_pcMsg + strlen(m_pcMsg), "unable to create new threads");
+           strcpy(m_pcMsg + strlen(m_pcMsg), "unable to create/configure UDP socket");
 
            break;
         
@@ -668,7 +668,7 @@ const char* CUDTException::getErrorMessage()
         switch (m_iMinor)
         {
         case 1:
-           strcpy(m_pcMsg, "Connection broken");
+           strcpy(m_pcMsg, "Connection was broken");
 
            break;
 
@@ -684,11 +684,28 @@ const char* CUDTException::getErrorMessage()
         break;
 
       case 3:
-        strcpy(m_pcMsg, "Memory exceptions occurs");
+        strcpy(m_pcMsg, "System resource failure");
+
+        switch (m_iMinor)
+        {
+        case 1:
+           strcpy(m_pcMsg, "unable to create new threads");
+
+           break;
+
+        case 2:
+           strcpy(m_pcMsg, "unable to allocate buffers");
+
+           break;
+
+        default:
+           break;
+        }
+
         break;
 
       case 4:
-        strcpy(m_pcMsg, "File exceptions occurs");
+        strcpy(m_pcMsg, "File system failure");
 
         switch (m_iMinor)
         {
@@ -770,31 +787,31 @@ const char* CUDTException::getErrorMessage()
         break;
 
      case 6:
-        strcpy(m_pcMsg, "Non-blocking call failed");
+        strcpy(m_pcMsg, "Non-blocking call failure");
 
         switch (m_iMinor)
         {
         case 1:
            strcpy(m_pcMsg + strlen(m_pcMsg), ": ");
-           strcpy(m_pcMsg + strlen(m_pcMsg), "No buffer available for sending");
+           strcpy(m_pcMsg + strlen(m_pcMsg), "no buffer available for sending");
 
            break;
 
         case 2:
            strcpy(m_pcMsg + strlen(m_pcMsg), ": ");
-           strcpy(m_pcMsg + strlen(m_pcMsg), "No data available for reading");
+           strcpy(m_pcMsg + strlen(m_pcMsg), "no data available for reading");
 
            break;
 
         case 3:
            strcpy(m_pcMsg + strlen(m_pcMsg), ": ");
-           strcpy(m_pcMsg + strlen(m_pcMsg), "No buffer available for overlapped reading");
+           strcpy(m_pcMsg + strlen(m_pcMsg), "no buffer available for overlapped reading");
 
            break;
 
         case 4:
            strcpy(m_pcMsg + strlen(m_pcMsg), ": ");
-           strcpy(m_pcMsg + strlen(m_pcMsg), "Non-blocking overlapped recv is on going");
+           strcpy(m_pcMsg + strlen(m_pcMsg), "non-blocking overlapped recv is on going");
 
            break;
 

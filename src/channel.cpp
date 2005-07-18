@@ -38,7 +38,7 @@ UDT packet definition: packet.h
 
 /****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 04/12/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 07/18/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -138,10 +138,10 @@ void CChannel::open(const sockaddr* addr)
 
       #ifndef CAPI
          if (0 != bind(m_iSocket, addr, namelen))
-            throw CUDTException(1, 1, NET_ERROR);
+            throw CUDTException(1, 3, NET_ERROR);
       #else
          if (0 != (*g_SysLib.bind)(m_iSocket, addr, namelen))
-            throw CUDTException(1, 1, NET_ERROR);
+            throw CUDTException(1, 3, NET_ERROR);
       #endif
    }
 
@@ -420,11 +420,11 @@ void CChannel::setChannelOpt()
    #ifndef CAPI
       if ((0 != setsockopt(m_iSocket, SOL_SOCKET, SO_RCVBUF, (char *)&m_iRcvBufSize, sizeof(__int32))) ||
           (0 != setsockopt(m_iSocket, SOL_SOCKET, SO_SNDBUF, (char *)&m_iSndBufSize, sizeof(__int32))))
-         throw CUDTException(1, 2, NET_ERROR);
+         throw CUDTException(1, 3, NET_ERROR);
    #else
       if ((0 != (*g_SysLib.setsockopt)(m_iSocket, SOL_SOCKET, SO_RCVBUF, (char *)&m_iRcvBufSize, sizeof(__int32))) ||
           (0 != (*g_SysLib.setsockopt)(m_iSocket, SOL_SOCKET, SO_SNDBUF, (char *)&m_iSndBufSize, sizeof(__int32))))
-         throw CUDTException(1, 2, NET_ERROR);
+         throw CUDTException(1, 3, NET_ERROR);
    #endif
 
    timeval tv;
@@ -442,19 +442,19 @@ void CChannel::setChannelOpt()
       // UNIX does not support SO_RCVTIMEO
       __int32 opts = fcntl(m_iSocket, F_GETFL);
       if (-1 == fcntl(m_iSocket, F_SETFL, opts | O_NONBLOCK))
-         throw CUDTException(1, 2, NET_ERROR);
+         throw CUDTException(1, 3, NET_ERROR);
    #elif WIN32
       DWORD ot = 1; //milliseconds
       if (setsockopt(m_iSocket, SOL_SOCKET, SO_RCVTIMEO, (char *)&ot, sizeof(DWORD)) < 0)
-         throw CUDTException(1, 2, NET_ERROR);
+         throw CUDTException(1, 3, NET_ERROR);
    #else
       // Set receiving time-out value
       #ifndef CAPI
          if (setsockopt(m_iSocket, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv, sizeof(timeval)) < 0)
-            throw CUDTException(1, 2, NET_ERROR);
+            throw CUDTException(1, 3, NET_ERROR);
       #else
          if ((*g_SysLib.setsockopt)(m_iSocket, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv, sizeof(timeval)) < 0)
-            throw CUDTException(1, 2, NET_ERROR);
+            throw CUDTException(1, 3, NET_ERROR);
       #endif
    #endif
 }

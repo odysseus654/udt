@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 04/12/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 07/18/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -672,11 +672,11 @@ void CUDT::connect(const sockaddr* serv_addr)
    #ifndef WIN32
       m_bSndThrStart = false;
       if (0 != pthread_create(&m_RcvThread, NULL, CUDT::rcvHandler, this))
-         throw CUDTException(1, 3, errno);
+         throw CUDTException(3, 1, errno);
    #else
       m_SndThread = NULL;
       if (NULL == (m_RcvThread = CreateThread(NULL, 0, CUDT::rcvHandler, this, 0, NULL)))
-         throw CUDTException(1, 3, GetLastError());
+         throw CUDTException(3, 1, GetLastError());
    #endif
 
    // And, I am connected too.
@@ -750,11 +750,11 @@ void CUDT::connect(const sockaddr* peer, const CHandShake* hs)
    #ifndef WIN32
       m_bSndThrStart = false;
       if (0 != pthread_create(&m_RcvThread, NULL, CUDT::rcvHandler, this))
-         throw CUDTException(1, 3, errno);
+         throw CUDTException(3, 1, errno);
    #else
       m_SndThread = NULL;
       if (NULL == (m_RcvThread = CreateThread(NULL, 0, CUDT::rcvHandler, this, 0, NULL)))
-         throw CUDTException(1, 3, GetLastError());
+         throw CUDTException(3, 1, GetLastError());
    #endif
 
    // And of course, it is connected.

@@ -34,7 +34,7 @@ The receiving buffer is a logically circular memeory block.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 01/10/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 07/11/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
