@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 07/18/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 07/30/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -2562,6 +2562,12 @@ void CUDT::sample(CPerfMon* perf, bool clear)
    {
       perf->byteAvailSndBuf = (NULL == m_pSndBuffer) ? 0 : m_iSndQueueLimit - m_pSndBuffer->getCurrBufSize();
       perf->byteAvailRcvBuf = (NULL == m_pRcvBuffer) ? 0 : m_pRcvBuffer->getAvailBufSize();
+
+      #ifndef WIN32
+         pthread_mutex_unlock(&m_ConnectionLock);
+      #else
+         ReleaseMutex(m_ConnectionLock);
+      #endif
    }
    else
    {
