@@ -1,6 +1,7 @@
 #ifndef WIN32
 #include <unistd.h>
 #include <cstdlib>
+#include <cstring>
 #include <arpa/inet.h>
 #endif
 #include <iostream>

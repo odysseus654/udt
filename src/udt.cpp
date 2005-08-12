@@ -1238,7 +1238,7 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
          self->m_pTimer->rdtsc(currtime);
          nextnaktime = currtime + ullnakint;
       }
-      else if ((currtime > nextexptime) && (0 == self->m_pSndLossList->getLossLength()))
+      else if (currtime > nextexptime)
       {
          // Haven't receive any information from the peer, is it dead?!
          // timeout: at least 16 expirations and must be greater than 3 seconds and be less than 30 seconds
