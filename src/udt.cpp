@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 07/30/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 10/24/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -1238,7 +1238,8 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
          self->m_pTimer->rdtsc(currtime);
          nextnaktime = currtime + ullnakint;
       }
-      else if (currtime > nextexptime)
+
+      if (currtime > nextexptime)
       {
          // Haven't receive any information from the peer, is it dead?!
          // timeout: at least 16 expirations and must be greater than 3 seconds and be less than 30 seconds
@@ -1474,6 +1475,10 @@ void CUDT::sendCtrl(const __int32& pkttype, void* lparam, void* rparam, const __
          {
             ctrlpkt.pack(2, NULL, &ack, 2 * sizeof(__int32));
             *m_pChannel << ctrlpkt;
+
+            #ifdef TRACE
+               ++ m_iSentACK;
+            #endif
                
             break;
          }
@@ -1674,6 +1679,10 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
 
          #ifdef CUSTOM_CC
             m_pCC->onACK(*(__int32 *)ctrlpkt.m_pcData);
+         #endif
+
+         #ifdef TRACE
+            ++ m_iRecvACK;
          #endif
 
          break;
@@ -2240,7 +2249,7 @@ __int32 CUDT::recv(char* data, const __int32& len, __int32* overlapped, UDT_MEM_
 
       // connection broken and and no data received, report error
       if (0 == m_pRcvBuffer->getRcvDataSize())
-        throw CUDTException(2, 1, 0);
+         throw CUDTException(2, 1, 0);
 
       return (len <= m_pRcvBuffer->getRcvDataSize()) ? len : m_pRcvBuffer->getRcvDataSize();
    }
