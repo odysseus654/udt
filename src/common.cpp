@@ -41,7 +41,7 @@ method to catch and handle UDT errors and exceptions.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 07/18/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 10/26/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -564,7 +564,7 @@ void CPktTimeWindow::probe2Arrival()
 CCC::CCC():
 m_dPktSndPeriod(1.0),
 m_dCWndSize(16.0),
-m_iACKPeriod(10),
+m_iACKPeriod(0),
 m_iACKInterval(0),
 m_iRTO(-1)
 {

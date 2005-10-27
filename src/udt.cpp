@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 10/24/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 10/26/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -1125,15 +1125,15 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
    unsigned __int64 nextacktime;
    unsigned __int64 nextnaktime;
    unsigned __int64 nextexptime;
+   #ifdef CUSTOM_CC
+      unsigned __int64 nextccacktime;
+   #endif
 
    // SYN interval, in clock cycles
    const unsigned __int64 ullsynint = self->m_iSYNInterval * self->m_ullCPUFrequency;
 
    // ACK, NAK, and EXP intervals, in clock cycles
    unsigned __int64 ullackint = ullsynint;
-   #ifdef CUSTOM_CC
-      ullackint = self->m_pCC->m_iACKPeriod * 1000 * self->m_ullCPUFrequency;
-   #endif
    unsigned __int64 ullnakint = (self->m_iRTT + 4 * self->m_iRTTVar) * self->m_ullCPUFrequency;
    unsigned __int64 ullexpint = (self->m_iRTT + 4 * self->m_iRTTVar) * self->m_ullCPUFrequency + ullsynint;
 
@@ -1144,6 +1144,10 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
    nextnaktime += ullnakint;
    self->m_pTimer->rdtsc(nextexptime);
    nextexptime += ullexpint;
+   #ifdef CUSTOM_CC
+      self->m_pTimer->rdtsc(nextccacktime);
+      nextccacktime += self->m_pCC->m_iACKPeriod * 1000 * self->m_ullCPUFrequency;
+   #endif
 
    while (!self->m_bClosing)
    {
@@ -1211,16 +1215,22 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
          self->m_pTimer->rdtsc(currtime);
          nextacktime = currtime + ullackint;
 
-         #if defined(CUSTOM_CC) || defined (NO_BUSY_WAITING)
+         #if defined (NO_BUSY_WAITING) && !defined (CUSTOM_CC)
             pktcount = 0;
          #endif
       }
+
       //send a "light" ACK
       #if defined (CUSTOM_CC)
-         else if ((self->m_pCC->m_iACKInterval > 0) && (self->m_pCC->m_iACKInterval <= pktcount))
+         if ((self->m_pCC->m_iACKInterval > 0) && (self->m_pCC->m_iACKInterval <= pktcount))
          {
             self->sendCtrl(2, NULL, NULL, 2 * sizeof(__int32));
             pktcount = 0;
+         }
+         if ((self->m_pCC->m_iACKPeriod > 0) && (currtime >= nextccacktime))
+         {
+            self->sendCtrl(2, NULL, NULL, 2 * sizeof(__int32));
+            nextccacktime += self->m_pCC->m_iACKPeriod * 1000 * self->m_ullCPUFrequency;
          }
       #elif defined (NO_BUSY_WAITING)
          else if (self->m_iSelfClockInterval <= pktcount)
@@ -1476,7 +1486,7 @@ void CUDT::sendCtrl(const __int32& pkttype, void* lparam, void* rparam, const __
             ctrlpkt.pack(2, NULL, &ack, 2 * sizeof(__int32));
             *m_pChannel << ctrlpkt;
 
-            #ifdef TRACE
+            #if defined (TRACE) && defined (CUSTOM_CC)
                ++ m_iSentACK;
             #endif
                
@@ -1558,7 +1568,7 @@ void CUDT::sendCtrl(const __int32& pkttype, void* lparam, void* rparam, const __
 
          m_pTimer->rdtsc(m_ullLastAckTime);
 
-         #ifdef TRACE
+         #if defined (TRACE) && !defined (CUSTOM_CC)
             ++ m_iSentACK;
          #endif
 
@@ -1670,23 +1680,25 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
       {
       __int32 ack;
 
-      // process a lite ACK
-      if (ctrlpkt.getLength() == 2 * sizeof(__int32))
-      {
-         ack = *(__int32 *)ctrlpkt.m_pcData;
-         if (((ack > m_iSndLastAck) && (ack - m_iSndLastAck < m_iSeqNoTH)) || (ack < m_iSndLastAck - m_iSeqNoTH))
-            m_iSndLastAck = ack;
+      #if defined (CUSTOM_CC) || defined (NO_BUSY_WAITING)
+         // process a lite ACK
+         if (ctrlpkt.getLength() == 2 * sizeof(__int32))
+         {
+            ack = *(__int32 *)ctrlpkt.m_pcData;
+            if (((ack > m_iSndLastAck) && (ack - m_iSndLastAck < m_iSeqNoTH)) || (ack < m_iSndLastAck - m_iSeqNoTH))
+               m_iSndLastAck = ack;
 
-         #ifdef CUSTOM_CC
-            m_pCC->onACK(*(__int32 *)ctrlpkt.m_pcData);
-         #endif
+            #ifdef CUSTOM_CC
+               m_pCC->onACK(*(__int32 *)ctrlpkt.m_pcData);
+            #endif
 
-         #ifdef TRACE
-            ++ m_iRecvACK;
-         #endif
+            #if defined (TRACE) && defined (CUSTOM_CC)
+               ++ m_iRecvACK;
+            #endif
 
-         break;
-      }
+            break;
+         }
+      #endif
 
       // read ACK seq. no.
       ack = ctrlpkt.getAckSeqNo();
@@ -1723,10 +1735,6 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
 
          break;
       }
-
-      #ifdef CUSTOM_CC
-         m_pCC->onACK(*(__int32 *)ctrlpkt.m_pcData);
-      #endif
 
       // update sending variables
       m_iSndLastDataAck = ack;
@@ -1786,7 +1794,7 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
       // Wake up the waiting sender and correct the sending rate
       m_pTimer->interrupt();
 
-      #ifdef TRACE
+      #if defined (TRACE) && !defined (CUSTOM_CC)
          ++ m_iRecvACK;
       #endif
 
