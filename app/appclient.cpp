@@ -3,6 +3,9 @@
 #include <cstdlib>
 #include <cstring>
 #include <netdb.h>
+#else
+#include <winsock2.h>
+#include <Ws2tcpip.h>
 #endif
 #include <iostream>
 #include <udt.h>
@@ -41,11 +44,15 @@ int main(int argc, char* argv[])
 
    UDTSOCKET client = UDT::socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 
-   //for testing with custmized CC
+   // UDT Options
    //UDT::setsockopt(client, 0, UDT_CC, new CCCFactory<CUDPBlast>, sizeof(CCCFactory<CUDPBlast>));
    //UDT::setsockopt(client, 0, UDT_MSS, new int(7500), sizeof(int));
    //UDT::setsockopt(client, 0, UDT_SNDBUF, new int(200000000), sizeof(int));
    //UDT::setsockopt(client, 0, UDP_SNDBUF, new int(100000000), sizeof(int));
+
+#ifdef WIN32
+   UDT::setsockopt(client, 0, UDT_MSS, new int(1052), sizeof(int));
+#endif
 
    // connect to the server, implict bind
    if (UDT::ERROR == UDT::connect(client, res->ai_addr, res->ai_addrlen))

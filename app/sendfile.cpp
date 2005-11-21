@@ -56,7 +56,6 @@ int main(int argc, char* argv[])
    UDT::close(serv);
 
 
-
    // aquiring file name information from client
    char file[1024];
    int len;

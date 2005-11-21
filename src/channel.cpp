@@ -82,15 +82,6 @@ m_iIPversion(AF_INET),
 m_iSndBufSize(102400),
 m_iRcvBufSize(409600)
 {
-   #ifdef WIN32
-      WORD wVersionRequested;
-      WSADATA wsaData;
-      wVersionRequested = MAKEWORD(2, 2);
-
-      if (0 != WSAStartup(wVersionRequested, &wsaData))
-         throw CUDTException(1, 0, NET_ERROR);
-   #endif
-
    m_pcChannelBuf = new char [9000];
 }
 
@@ -99,24 +90,11 @@ m_iIPversion(version),
 m_iSndBufSize(102400),
 m_iRcvBufSize(409600)
 {
-   #ifdef WIN32
-      WORD wVersionRequested;
-      WSADATA wsaData;
-      wVersionRequested = MAKEWORD(2, 2);
-
-      if (0 != WSAStartup(wVersionRequested, &wsaData))
-         throw CUDTException(1, 0, NET_ERROR);
-   #endif
-
    m_pcChannelBuf = new char [9000];
 }
 
 CChannel::~CChannel()
 {
-   #ifdef WIN32
-      WSACleanup();
-   #endif
-
    delete [] m_pcChannelBuf;
 }
 

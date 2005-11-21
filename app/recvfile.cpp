@@ -38,7 +38,6 @@ int main(int argc, char* argv[])
    }
 
 
-
    // send name information of the requested file
    int len = strlen(argv[3]);
 

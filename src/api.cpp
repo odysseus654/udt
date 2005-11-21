@@ -113,6 +113,16 @@ m_SocketID(1 << 30)
    #else
       m_TLSError = TlsAlloc();
    #endif
+
+   // Global initialization code
+   #ifdef WIN32
+      WORD wVersionRequested;
+      WSADATA wsaData;
+      wVersionRequested = MAKEWORD(2, 2);
+
+      if (0 != WSAStartup(wVersionRequested, &wsaData))
+         throw CUDTException(1, 0,  WSAGetLastError());
+   #endif
 }
 
 CUDTUnited::~CUDTUnited()
@@ -129,6 +139,11 @@ CUDTUnited::~CUDTUnited()
       pthread_key_delete(m_TLSError);
    #else
       TlsFree(m_TLSError);
+   #endif
+
+   // Global destruction code
+   #ifdef WIN32
+      WSACleanup();
    #endif
 }
 
