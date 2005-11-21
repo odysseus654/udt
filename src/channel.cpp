@@ -38,7 +38,7 @@ UDT packet definition: packet.h
 
 /****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 07/18/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 11/07/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -80,7 +80,7 @@ using namespace std;
 CChannel::CChannel():
 m_iIPversion(AF_INET),
 m_iSndBufSize(102400),
-m_iRcvBufSize(307200)
+m_iRcvBufSize(409600)
 {
    #ifdef WIN32
       WORD wVersionRequested;
