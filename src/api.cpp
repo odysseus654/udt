@@ -32,7 +32,7 @@ reference: UDT programming manual and socket programming reference
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 04/09/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 12/01/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -286,7 +286,17 @@ void CUDTUnited::newConnection(const UDTSOCKET listen, const sockaddr* peer, CHa
    // copy address information of local node
    ns->m_pUDT->m_pChannel->getSockAddr(ns->m_pSelfAddr);
 
+   #ifndef WIN32
+      pthread_mutex_lock(&(ls->m_AcceptLock));
+   #else
+      WaitForSingleObject(ls->m_AcceptLock, INFINITE);
+   #endif
    ls->m_pQueuedSockets->insert(ns->m_Socket);
+   #ifndef WIN32
+      pthread_mutex_unlock(&(ls->m_AcceptLock));
+   #else
+      ReleaseMutex(ls->m_AcceptLock);
+   #endif
 
    // protect the m_Sockets structure.
    #ifndef WIN32
@@ -414,9 +424,19 @@ UDTSOCKET CUDTUnited::accept(const UDTSOCKET listen, sockaddr* addr, __int32* ad
 
    UDTSOCKET u;
 
+   #ifndef WIN32
+      pthread_mutex_lock(&(ls->m_AcceptLock));
+   #else
+      WaitForSingleObject(ls->m_AcceptLock, INFINITE);
+   #endif
    u = *(ls->m_pQueuedSockets->begin());
    ls->m_pAcceptSockets->insert(ls->m_pAcceptSockets->end(), u);
    ls->m_pQueuedSockets->erase(ls->m_pQueuedSockets->begin());
+   #ifndef WIN32
+      pthread_mutex_unlock(&(ls->m_AcceptLock));
+   #else
+      ReleaseMutex(ls->m_AcceptLock);
+   #endif
 
    if (NULL != addr)
    {
