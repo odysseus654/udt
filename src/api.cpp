@@ -32,7 +32,7 @@ reference: UDT programming manual and socket programming reference
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 12/01/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 12/12/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -371,12 +371,16 @@ __int32 CUDTUnited::listen(const UDTSOCKET u, const __int32& backlog)
    if (NULL == s)
       throw CUDTException(5, 4, 0);
 
+   // listen is not supported in rendezvous connection setup
+   if (s->m_pUDT->m_bRendezvous)
+      throw CUDTException(5, 7, 0);
+
    if (backlog <= 0)
       throw CUDTException(5, 3, 0);
 
    s->m_uiBackLog = backlog;
 
-   // do nothing if the socket is already in listening
+   // do nothing if the socket is already listening
    if (CUDTSocket::LISTENING == s->m_Status)
       return 0;
 
@@ -402,6 +406,10 @@ UDTSOCKET CUDTUnited::accept(const UDTSOCKET listen, sockaddr* addr, __int32* ad
    // the "listen" socket must be in LISTENING status
    if (CUDTSocket::LISTENING != ls->m_Status)
       throw CUDTException(5, 6, 0);
+
+   // no "accept" in rendezvous connection setup
+   if (ls->m_pUDT->m_bRendezvous)
+      throw CUDTException(5, 7, 0);
 
    // non-blocking receiving, no connection available
    if ((!ls->m_pUDT->m_bSynRecving) && (0 == ls->m_pQueuedSockets->size()))
@@ -476,7 +484,12 @@ __int32 CUDTUnited::connect(const UDTSOCKET u, const sockaddr* name, const __int
 
    // a socket can "connect" only if it is in INIT or OPENED status
    if (CUDTSocket::INIT == s->m_Status)
-      s->m_pUDT->open();
+   {
+      if (!s->m_pUDT->m_bRendezvous)
+         s->m_pUDT->open();
+      else
+         throw CUDTException(5, 8, 0);
+   }
    else if (CUDTSocket::OPENED != s->m_Status)
       throw CUDTException(5, 2, 0);
 

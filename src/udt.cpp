@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 10/26/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 12/12/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -106,6 +106,7 @@ m_iQuickStartPkts(16)
    m_iMsgTTL = -1;
    m_iSockType = SOCK_STREAM;
    m_iIPversion = AF_INET;
+   m_bRendezvous = false;
 
    #ifdef CUSTOM_CC
       m_pCCFactory = new CCCFactory<CCC>;
@@ -162,6 +163,7 @@ m_iQuickStartPkts(ancestor.m_iQuickStartPkts)
    m_iMsgTTL = ancestor.m_iMsgTTL;
    m_iSockType = ancestor.m_iSockType;
    m_iIPversion = ancestor.m_iIPversion;
+   m_bRendezvous = ancestor.m_bRendezvous;
 
    #ifdef CUSTOM_CC
       m_pCCFactory = ancestor.m_pCCFactory->clone();
@@ -309,6 +311,13 @@ void CUDT::setOpt(UDTOpt optName, const void* optval, const __int32&)
       m_iMsgTTL = *(__int32 *)optval;
       break;
 
+   case UDT_RENDEZVOUS:
+      if (m_bConnected)
+         throw CUDTException(5, 1, 0);
+
+      m_bRendezvous = *(bool *)optval;
+      break;
+
    default:
       throw CUDTException(5, 0, 0);
    }
@@ -388,6 +397,11 @@ void CUDT::getOpt(UDTOpt optName, void* optval, __int32& optlen)
    case UDT_MSGTTL:
       *(__int32 *)optval = m_iMsgTTL;
       optlen = sizeof(__int32);
+      break;
+
+   case UDT_RENDEZVOUS:
+      *(bool *)optval = m_bRendezvous;
+      optlen = sizeof(bool);
       break;
 
    default:
@@ -571,9 +585,6 @@ void CUDT::connect(const sockaddr* serv_addr)
    if (m_bConnected)
       throw CUDTException(5, 2, 0);
 
-   // I will connect to an Initiator, so I am NOT an initiator.
-   m_bInitiator = false;
-
    CPacket initpkt;
    char* initdata = new char [m_iPayloadSize];
    CHandShake* hs = (CHandShake *)initdata;
@@ -582,6 +593,7 @@ void CUDT::connect(const sockaddr* serv_addr)
    hs->m_iVersion = m_iVersion;
    hs->m_iMSS = m_iMSS;
    hs->m_iFlightFlagSize = m_iFlightFlagSize;
+   hs->m_iReqType = (!m_bRendezvous) ? 1 : 0;
 
    // Random Initial Sequence Number
    timeval currtime;
@@ -596,7 +608,7 @@ void CUDT::connect(const sockaddr* serv_addr)
 
    initpkt.pack(0, NULL, initdata, sizeof(CHandShake));
  
-   // Inform the initiator my configurations.
+   // Inform the server my configurations.
    m_pChannel->sendto(initpkt, serv_addr);
 
    sockaddr* peer_addr;
@@ -609,7 +621,10 @@ void CUDT::connect(const sockaddr* serv_addr)
    initpkt.setLength(m_iPayloadSize);
    m_pChannel->recvfrom(initpkt, peer_addr);
 
-   const __int32 timeo = 3000000;
+   __int32 timeo = 3000000;
+
+   if (m_bRendezvous)
+      timeo *= 10;
 
    timeval entertime;
    gettimeofday(&entertime, 0);
@@ -635,7 +650,8 @@ void CUDT::connect(const sockaddr* serv_addr)
       delete (sockaddr_in6*)peer_addr;
 
    // Got it. Re-configure according to the negotiated values.
-   m_iMSS = hs->m_iMSS;
+   if (m_iMSS < hs->m_iMSS)
+      m_iMSS = hs->m_iMSS;
    m_iMaxFlowWindowSize = hs->m_iFlightFlagSize;
    m_iPktSize = m_iMSS - 28;
    m_iPayloadSize = m_iPktSize - CPacket::m_iPktHdrSize;
@@ -668,7 +684,7 @@ void CUDT::connect(const sockaddr* serv_addr)
       m_pCC->init();
    #endif
 
-   // Now I am also running, a little while after the Initiator was running.
+   // Now I am also running, a little while after the server was running.
    #ifndef WIN32
       m_bSndThrStart = false;
       if (0 != pthread_create(&m_RcvThread, NULL, CUDT::rcvHandler, this))
@@ -685,9 +701,6 @@ void CUDT::connect(const sockaddr* serv_addr)
 
 void CUDT::connect(const sockaddr* peer, const CHandShake* hs)
 {
-   // This UDT entity is an Initiator, since it is started at the server side.
-   m_bInitiator = true;
-
    // Type 0 (handshake) control packet
    CPacket initpkt;
    CHandShake ci;
@@ -723,6 +736,9 @@ void CUDT::connect(const sockaddr* peer, const CHandShake* hs)
    m_iSndLastAck = m_iISN;
    m_iSndLastDataAck = m_iISN;
    m_iSndCurrSeqNo = m_iISN - 1;
+
+   // this is a reponse handshake
+   ci.m_iReqType = -1;
 
    // Send back the negotiated configurations.
    *m_pChannel << initpkt;
@@ -1941,7 +1957,7 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
       break;
 
    case 0: //000 - Handshake
-      if ((m_bInitiator) && (m_iPeerISN - 1 == m_iRcvCurrSeqNo) && (m_iISN == m_iSndLastAck))
+      if ((((CHandShake*)(ctrlpkt.m_pcData))->m_iReqType != -1) && (m_iPeerISN - 1 == m_iRcvCurrSeqNo) && (m_iISN == m_iSndLastAck))
       {
          // The peer side has not received the handshake message, so it keeps querying
          // resend the handshake packet
@@ -1950,10 +1966,9 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
          initdata.m_iISN = m_iISN;
          initdata.m_iMSS = m_iMSS;
          initdata.m_iFlightFlagSize = m_iFlightFlagSize;
+         initdata.m_iReqType = -1;
          sendCtrl(0, NULL, (char *)&initdata, sizeof(CHandShake));
       }
-
-      // I am not an initiator, so both the initiator and I must had received the message before I came here
 
       break;
 

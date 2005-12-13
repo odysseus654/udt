@@ -8,7 +8,7 @@ ifndef arch
    arch = IA32
 endif
 
-CCFLAGS = -fpic -Wall -D$(os) -finline-functions #-O3
+CCFLAGS = -fPIC -Wall -D$(os) -finline-functions #-O3
 
 CCFLAGS += -DTRACE
 CCFLAGS += -DNO_BUSY_WAITING
