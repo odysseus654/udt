@@ -32,7 +32,7 @@ reference: UDT programming manual and socket programming reference
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 12/12/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 12/15/2005
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -286,18 +286,6 @@ void CUDTUnited::newConnection(const UDTSOCKET listen, const sockaddr* peer, CHa
    // copy address information of local node
    ns->m_pUDT->m_pChannel->getSockAddr(ns->m_pSelfAddr);
 
-   #ifndef WIN32
-      pthread_mutex_lock(&(ls->m_AcceptLock));
-   #else
-      WaitForSingleObject(ls->m_AcceptLock, INFINITE);
-   #endif
-   ls->m_pQueuedSockets->insert(ns->m_Socket);
-   #ifndef WIN32
-      pthread_mutex_unlock(&(ls->m_AcceptLock));
-   #else
-      ReleaseMutex(ls->m_AcceptLock);
-   #endif
-
    // protect the m_Sockets structure.
    #ifndef WIN32
       pthread_mutex_lock(&m_ControlLock);
@@ -309,6 +297,18 @@ void CUDTUnited::newConnection(const UDTSOCKET listen, const sockaddr* peer, CHa
       pthread_mutex_unlock(&m_ControlLock);
    #else
       ReleaseMutex(m_ControlLock);
+   #endif
+
+   #ifndef WIN32
+      pthread_mutex_lock(&(ls->m_AcceptLock));
+   #else
+      WaitForSingleObject(ls->m_AcceptLock, INFINITE);
+   #endif
+   ls->m_pQueuedSockets->insert(ns->m_Socket);
+   #ifndef WIN32
+      pthread_mutex_unlock(&(ls->m_AcceptLock));
+   #else
+      ReleaseMutex(ls->m_AcceptLock);
    #endif
 
    // wake up a waiting accept() call
@@ -415,36 +415,62 @@ UDTSOCKET CUDTUnited::accept(const UDTSOCKET listen, sockaddr* addr, __int32* ad
    if ((!ls->m_pUDT->m_bSynRecving) && (0 == ls->m_pQueuedSockets->size()))
       throw CUDTException(6, 2, 0);
 
-   #ifndef WIN32
-      pthread_mutex_lock(&(ls->m_AcceptLock));
-      while ((ls->m_pQueuedSockets->size() == 0) && (CUDTSocket::LISTENING == ls->m_Status))
-         pthread_cond_wait(&(ls->m_AcceptCond), &(ls->m_AcceptLock));
-      pthread_mutex_unlock(&(ls->m_AcceptLock));
-   #else
-      while ((ls->m_pQueuedSockets->size() == 0) && (CUDTSocket::LISTENING == ls->m_Status))
-         WaitForSingleObject(ls->m_AcceptCond, INFINITE);
-      // wake up other "accept" calls
-      if (CUDTSocket::CLOSED == ls->m_Status)
-         SetEvent(ls->m_AcceptCond);
-   #endif
+
+   UDTSOCKET u = CUDT::INVALID_SOCK;
+   bool accepted = false;
 
    // !!only one conection can be set up at each time!!
-
-   UDTSOCKET u;
-
    #ifndef WIN32
-      pthread_mutex_lock(&(ls->m_AcceptLock));
+      while (!accepted)
+      {
+         pthread_mutex_lock(&(ls->m_AcceptLock));
+
+         if (ls->m_pQueuedSockets->size() > 0)
+         {
+            u = *(ls->m_pQueuedSockets->begin());
+            ls->m_pAcceptSockets->insert(ls->m_pAcceptSockets->end(), u);
+            ls->m_pQueuedSockets->erase(ls->m_pQueuedSockets->begin());
+
+            accepted = true;
+         }
+         else
+            pthread_cond_wait(&(ls->m_AcceptCond), &(ls->m_AcceptLock));
+
+         if (CUDTSocket::LISTENING != ls->m_Status)
+            accepted = true;
+
+         pthread_mutex_unlock(&(ls->m_AcceptLock));
+      }
    #else
-      WaitForSingleObject(ls->m_AcceptLock, INFINITE);
+      while (!accepted)
+      {
+         WaitForSingleObject(ls->m_AcceptLock, INFINITE);
+
+         if (ls->m_pQueuedSockets->size() > 0)
+         {
+            u = *(ls->m_pQueuedSockets->begin());
+            ls->m_pAcceptSockets->insert(ls->m_pAcceptSockets->end(), u);
+            ls->m_pQueuedSockets->erase(ls->m_pQueuedSockets->begin());
+
+            accepted = true;
+         }
+
+         ReleaseMutex(ls->m_AcceptLock);
+
+         if  (!accepted & (CUDTSocket::LISTENING == ls->m_Status))
+            WaitForSingleObject(ls->m_AcceptCond, INFINITE);
+
+         if (CUDTSocket::LISTENING != ls->m_Status)
+         {
+            SetEvent(ls->m_AcceptCond);
+            accepted = true;
+         }
+      }
    #endif
-   u = *(ls->m_pQueuedSockets->begin());
-   ls->m_pAcceptSockets->insert(ls->m_pAcceptSockets->end(), u);
-   ls->m_pQueuedSockets->erase(ls->m_pQueuedSockets->begin());
-   #ifndef WIN32
-      pthread_mutex_unlock(&(ls->m_AcceptLock));
-   #else
-      ReleaseMutex(ls->m_AcceptLock);
-   #endif
+
+
+   if (u == CUDT::INVALID_SOCK)
+      throw CUDTException(5, 6, 0);
 
    if (NULL != addr)
    {
