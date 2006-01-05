@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright © 2001 - 2005, The Board of Trustees of the University of Illinois.
+Copyright © 2001 - 2006, The Board of Trustees of the University of Illinois.
 All Rights Reserved.
 
 UDP-based Data Transfer Library (UDT) version 2
@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 12/12/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 01/05/2006
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -123,6 +123,8 @@ m_iQuickStartPkts(16)
    m_bOpened = false;
    m_bConnected = false;
    m_bBroken = false;
+
+   m_pcTmpBuf = NULL;
 }
 
 CUDT::CUDT(const CUDT& ancestor):
@@ -180,6 +182,8 @@ m_iQuickStartPkts(ancestor.m_iQuickStartPkts)
    m_bOpened = false;
    m_bConnected = false;
    m_bBroken = false;
+
+   m_pcTmpBuf = NULL;
 }
 
 CUDT::~CUDT()
@@ -212,6 +216,8 @@ CUDT::~CUDT()
       delete m_pCCFactory;
    if (m_pCC)
       delete m_pCC;
+   if (m_pcTmpBuf)
+      delete [] m_pcTmpBuf;
 }
 
 void CUDT::setOpt(UDTOpt optName, const void* optval, const __int32&)
@@ -484,20 +490,15 @@ void CUDT::open(const sockaddr* addr)
    #endif
 
    // Construct and open a channel
-   try
-   {
-      m_pChannel = new CChannel(m_iIPversion);
+   m_pChannel = new CChannel(m_iIPversion);
 
-      m_pChannel->setSndBufSize(m_iUDPSndBufSize);
-      m_pChannel->setRcvBufSize(m_iUDPRcvBufSize);
+   m_pChannel->setSndBufSize(m_iUDPSndBufSize);
+   m_pChannel->setRcvBufSize(m_iUDPRcvBufSize);
 
-      m_pChannel->open(addr);
-   }
-   catch(CUDTException e)
-   {
-      // Let applications to process this exception
-      throw CUDTException(e);
-   }
+   m_pChannel->open(addr);
+
+   // Create an internal buffer to be used in threads
+   m_pcTmpBuf = new char [m_iPayloadSize];
 
    // Now UDT is opened.
    m_bOpened = true;
@@ -513,15 +514,18 @@ DWORD WINAPI CUDT::listenHandler(LPVOID listener)
 
    // Type 0 (handshake) control packet
    CPacket initpkt;
-   char* initdata = new char [self->m_iPayloadSize];
+   char* initdata = self->m_pcTmpBuf;
    CHandShake* hs = (CHandShake *)initdata;
    initpkt.pack(0, NULL, initdata, sizeof(CHandShake));
 
    sockaddr* addr;
+   sockaddr_in addr4;
+   sockaddr_in6 addr6;
+
    if (AF_INET == self->m_iIPversion)
-      addr = (sockaddr*)(new sockaddr_in);
+      addr = (sockaddr*)(&addr4);
    else
-      addr = (sockaddr*)(new sockaddr_in6);
+      addr = (sockaddr*)(&addr6);
 
    while (!self->m_bClosing)
    {
@@ -532,13 +536,15 @@ DWORD WINAPI CUDT::listenHandler(LPVOID listener)
 
       // When a peer side connects in...
       if ((1 == initpkt.getFlag()) && (0 == initpkt.getType()))
-         s_UDTUnited.newConnection(self->m_SocketID, addr, hs);
+      {
+         if (-1 == s_UDTUnited.newConnection(self->m_SocketID, addr, hs))
+         {
+            // couldn't create a new connection, reject the request
+            hs->m_iReqType = 1002;
+            self->m_pChannel->sendto(initpkt, addr);
+         }
+      }
    }
-
-   if (AF_INET == self->m_iIPversion)
-      delete (sockaddr_in*)addr;
-   else
-      delete (sockaddr_in6*)addr;
 
    #ifndef WIN32
       return NULL;
@@ -563,10 +569,10 @@ void CUDT::listen()
 
    #ifndef WIN32
       if (0 != pthread_create(&m_ListenThread, NULL, CUDT::listenHandler, this))
-         throw CUDTException(7, 0, errno);
+         throw CUDTException(3, 1, errno);
    #else
       if (NULL == (m_ListenThread = CreateThread(NULL, 0, CUDT::listenHandler, this, 0, NULL)))
-         throw CUDTException(7, 0, GetLastError());
+         throw CUDTException(3, 1, GetLastError());
    #endif
 
    m_bListening = true;
@@ -612,10 +618,12 @@ void CUDT::connect(const sockaddr* serv_addr)
    m_pChannel->sendto(initpkt, serv_addr);
 
    sockaddr* peer_addr;
+   sockaddr_in addr4;
+   sockaddr_in6 addr6;
    if (AF_INET == m_iIPversion)
-      peer_addr = (sockaddr*)(new sockaddr_in);
+      peer_addr = (sockaddr*)(&addr4);
    else
-      peer_addr = (sockaddr*)(new sockaddr_in6);
+      peer_addr = (sockaddr*)(&addr6);
 
    // Wait for the negotiated configurations from the peer side.
    initpkt.setLength(m_iPayloadSize);
@@ -642,12 +650,16 @@ void CUDT::connect(const sockaddr* serv_addr)
          throw CUDTException(1, 1, 0);
    }
 
-   m_pChannel->connect(peer_addr);
+   if (1002 == hs->m_iReqType)
+   {
+      // connection request rejected
+      delete [] initdata;
+      throw CUDTException(1, 2, 0);
+   }
 
-   if (AF_INET == m_iIPversion)
-      delete (sockaddr_in*)peer_addr;
-   else
-      delete (sockaddr_in6*)peer_addr;
+   //request accepted, continue connection setup
+
+   m_pChannel->connect(peer_addr);
 
    // Got it. Re-configure according to the negotiated values.
    if (m_iMSS < hs->m_iMSS)
@@ -699,7 +711,7 @@ void CUDT::connect(const sockaddr* serv_addr)
    m_bConnected = true;
 }
 
-void CUDT::connect(const sockaddr* peer, const CHandShake* hs)
+void CUDT::connect(const sockaddr* peer, CHandShake* hs)
 {
    // Type 0 (handshake) control packet
    CPacket initpkt;
@@ -740,8 +752,8 @@ void CUDT::connect(const sockaddr* peer, const CHandShake* hs)
    // this is a reponse handshake
    ci.m_iReqType = -1;
 
-   // Send back the negotiated configurations.
-   *m_pChannel << initpkt;
+   // Save the negotiated configurations.
+   memcpy(hs, &ci, sizeof(CHandShake));
   
    m_iPktSize = m_iMSS - 28;
    m_iPayloadSize = m_iPktSize - CPacket::m_iPktHdrSize;
@@ -890,6 +902,8 @@ void CUDT::close()
       delete m_pCCFactory;
    if (m_pCC)
       delete m_pCC;
+   if (m_pcTmpBuf)
+      delete [] m_pcTmpBuf;
 
    m_pSndBuffer = NULL;
    m_pRcvBuffer = NULL;
@@ -902,6 +916,7 @@ void CUDT::close()
    m_pRcvTimeWindow = NULL;
    m_pCCFactory = NULL;
    m_pCC = NULL;
+   m_pcTmpBuf = NULL;
 
    // CLOSED.
    m_bOpened = false;
@@ -1128,7 +1143,7 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
    CUDT* self = static_cast<CUDT *>(recver);
 
    CPacket packet;
-   char* payload = new char [self->m_iPayloadSize];
+   char* payload = self->m_pcTmpBuf;
    bool nextslotfound;
    __int32 offset;
    __int32 loss;
@@ -1468,8 +1483,6 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
    if (0 != self->m_pRcvBuffer->getRcvDataSize())
       self->sendCtrl(2);
 
-   delete [] payload;
-
    #ifndef WIN32
       return NULL;
    #else
@@ -1561,7 +1574,7 @@ void CUDT::sendCtrl(const __int32& pkttype, void* lparam, void* rparam, const __
       // Send out the ACK only if has not been received by the sender before
       if (((m_iRcvLastAck > m_iRcvLastAckAck) && (m_iRcvLastAck - m_iRcvLastAckAck < m_iSeqNoTH)) || (m_iRcvLastAck < m_iRcvLastAckAck - m_iSeqNoTH))
       {
-         __int32* data = new __int32 [5];
+         __int32 data[5];
 
          m_iAckSeqNo = (m_iAckSeqNo + 1) % m_iMaxAckSeqNo;
          data[0] = m_iRcvLastAck;
@@ -1587,8 +1600,6 @@ void CUDT::sendCtrl(const __int32& pkttype, void* lparam, void* rparam, const __
          #if defined (TRACE) && !defined (CUSTOM_CC)
             ++ m_iSentACK;
          #endif
-
-         delete [] data;
       }
 
       break;
@@ -1629,7 +1640,7 @@ void CUDT::sendCtrl(const __int32& pkttype, void* lparam, void* rparam, const __
          // this is periodically NAK report
 
          // read loss list from the local receiver loss list
-         __int32* data = new __int32 [m_iPayloadSize];
+         __int32* data = (__int32*)m_pcTmpBuf;
          __int32 losslen;
          m_pRcvLossList->getLossArray(data, losslen, m_iPayloadSize / sizeof(__int32), m_iRTT + 4 * m_iRTTVar);
 
@@ -1645,8 +1656,6 @@ void CUDT::sendCtrl(const __int32& pkttype, void* lparam, void* rparam, const __
                ++ m_iSentNAK;
             #endif
          }
-
-         delete [] data;
       }
 
       break;
@@ -2079,11 +2088,19 @@ __int32 CUDT::send(char* data, const __int32& len, __int32* overlapped, const UD
 
       #ifndef WIN32
          if (0 != pthread_create(&m_SndThread, NULL, CUDT::sndHandler, this))
-            throw CUDTException(7, 0, errno);
+         {
+            delete m_pSndTimeWindow;
+            m_pSndTimeWindow = NULL;
+            throw CUDTException(3, 1, errno);
+         }
          m_bSndThrStart = true;
       #else
          if (NULL == (m_SndThread = CreateThread(NULL, 0, CUDT::sndHandler, this, 0, NULL)))
-            throw CUDTException(7, 0, GetLastError());
+         {
+            delete m_pSndTimeWindow;
+            m_pSndTimeWindow = NULL;
+            throw CUDTException(3, 1, GetLastError());
+         }
       #endif
    }
 
@@ -2345,11 +2362,19 @@ __int64 CUDT::sendfile(ifstream& ifs, const __int64& offset, const __int64& size
 
       #ifndef WIN32
          if (0 != pthread_create(&m_SndThread, NULL, CUDT::sndHandler, this))
-            throw CUDTException(7, 0, errno);
+         {
+            delete m_pSndTimeWindow;
+            m_pSndTimeWindow = NULL;
+            throw CUDTException(3, 1, errno);
+         }
          m_bSndThrStart = true;
       #else
          if (NULL == (m_SndThread = CreateThread(NULL, 0, CUDT::sndHandler, this, 0, NULL)))
-            throw CUDTException(7, 0, GetLastError());
+         {
+            delete m_pSndTimeWindow;
+            m_pSndTimeWindow = NULL;
+            throw CUDTException(3, 1, GetLastError());
+         }
       #endif
    }
 

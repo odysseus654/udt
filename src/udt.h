@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright © 2001 - 2005, The Board of Trustees of the University of Illinois.
+Copyright © 2001 - 2006, The Board of Trustees of the University of Illinois.
 All Rights Reserved.
 
 UDP-based Data Transfer Library (UDT) version 2
@@ -53,7 +53,7 @@ CUDT:           UDT
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 12/12/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 01/05/2006
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -1255,11 +1255,11 @@ public:
       // Parameters:
       //    0) [in] listen: the listening UDT socket;
       //    1) [in] peer: peer address.
-      //    2) [in] hs: handshake information from peer side;
+      //    2) [in/out] hs: handshake information from peer side (in), negotiated value (out);
       // Returned value:
-      //    None.
+      //    If the new connection is successfully created: 1 success, 0 already exist, -1 error.
 
-   void newConnection(const UDTSOCKET listen, const sockaddr* peer, CHandShake* hs);
+   int newConnection(const UDTSOCKET listen, const sockaddr* peer, CHandShake* hs);
 
       // Functionality:
       //    look up the UDT entity according to its ID.
@@ -1489,6 +1489,7 @@ public:
 //////////////////////////////////////////////////////////////////////////////
 class UDT_API CUDT
 {
+friend class CUDTSocket;
 friend class CUDTUnited;
 friend class CCC;
 
@@ -1554,11 +1555,11 @@ private:
       //    Connect to a UDT entity listening at address "peer", which has sent "hs" request.
       // Parameters:
       //    0) [in] peer: The address of the listening UDT entity.
-      //    1) [in] hs: the handshake information sent by the peer side.
+      //    1) [in/out] hs: The handshake information sent by the peer side (in), negotiated value (out).
       // Returned value:
       //    None.
 
-   void connect(const sockaddr* peer, const CHandShake* hs);
+   void connect(const sockaddr* peer, CHandShake* hs);
 
       // Functionality:
       //    Close the opened UDT entity.
@@ -1874,6 +1875,9 @@ private: // Trace
    __int32 m_iRecvACK;				// number of ACKs received in the last trace interval
    __int32 m_iSentNAK;				// number of NAKs sent in the last trace interval
    __int32 m_iRecvNAK;				// number of NAKs received in the last trace interval
+
+private: // internal data
+   char* m_pcTmpBuf;
 };
 
 

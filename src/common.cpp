@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright © 2001 - 2005, The Board of Trustees of the University of Illinois.
+Copyright © 2001 - 2006, The Board of Trustees of the University of Illinois.
 All Rights Reserved.
 
 UDP-based Data Transfer Library (UDT) version 2
@@ -41,7 +41,7 @@ method to catch and handle UDT errors and exceptions.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 12/12/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 01/04/2006
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -245,6 +245,9 @@ CGuard::~CGuard()
 
 //
 CACKWindow::CACKWindow():
+m_piACKSeqNo(NULL),
+m_piACK(NULL),
+m_pTimeStamp(NULL),
 m_iSize(1024),
 m_iHead(0),
 m_iTail(0)
@@ -257,6 +260,9 @@ m_iTail(0)
 }
 
 CACKWindow::CACKWindow(const __int32& size):
+m_piACKSeqNo(NULL),
+m_piACK(NULL),
+m_pTimeStamp(NULL),
 m_iSize(size),
 m_iHead(0),
 m_iTail(0)
@@ -351,8 +357,13 @@ __int32 CACKWindow::acknowledge(const __int32& seq, __int32& ack)
 //
 CPktTimeWindow::CPktTimeWindow():
 m_iAWSize(16),
+m_piPktWindow(NULL),
 m_iRWSize(16),
-m_iPWSize(16)
+m_piRTTWindow(NULL),
+m_piPCTWindow(NULL),
+m_piPDTWindow(NULL),
+m_iPWSize(16),
+m_piProbeWindow(NULL)
 {
    m_piPktWindow = new __int32[m_iAWSize];
    m_piRTTWindow = new __int32[m_iRWSize];
@@ -380,8 +391,13 @@ m_iPWSize(16)
 
 CPktTimeWindow::CPktTimeWindow(const __int32& s1, const __int32& s2, const __int32& s3):
 m_iAWSize(s1),
+m_piPktWindow(NULL),
 m_iRWSize(s2),
-m_iPWSize(s3)
+m_piRTTWindow(NULL),
+m_piPCTWindow(NULL),
+m_piPDTWindow(NULL),
+m_iPWSize(s3),
+m_piProbeWindow(NULL)
 {
    m_piPktWindow = new __int32[m_iAWSize];
    m_piRTTWindow = new __int32[m_iRWSize];
@@ -830,7 +846,7 @@ const char* CUDTException::getErrorMessage()
         break;
 
       default:
-        strcpy(m_pcMsg, "Error");
+        strcpy(m_pcMsg, "Unknown error");
    }
 
    // Adding "errno" information

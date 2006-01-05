@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright © 2001 - 2005, The Board of Trustees of the University of Illinois.
+Copyright © 2001 - 2006, The Board of Trustees of the University of Illinois.
 All Rights Reserved.
 
 UDP-based Data Transfer Library (UDT) version 2
@@ -38,7 +38,7 @@ UDT packet definition: packet.h
 
 /****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 11/07/2005
+   Yunhong Gu [ygu@cs.uic.edu], last updated 01/04/2006
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -80,7 +80,8 @@ using namespace std;
 CChannel::CChannel():
 m_iIPversion(AF_INET),
 m_iSndBufSize(102400),
-m_iRcvBufSize(409600)
+m_iRcvBufSize(409600),
+m_pcChannelBuf(NULL)
 {
    m_pcChannelBuf = new char [9000];
 }
@@ -88,7 +89,8 @@ m_iRcvBufSize(409600)
 CChannel::CChannel(const __int32& version):
 m_iIPversion(version),
 m_iSndBufSize(102400),
-m_iRcvBufSize(409600)
+m_iRcvBufSize(409600),
+m_pcChannelBuf(NULL)
 {
    m_pcChannelBuf = new char [9000];
 }
