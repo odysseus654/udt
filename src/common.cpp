@@ -41,7 +41,7 @@ method to catch and handle UDT errors and exceptions.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 01/04/2006
+   Yunhong Gu [ygu@cs.uic.edu], last updated 01/12/2006
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -794,9 +794,13 @@ const char* CUDTException::getErrorMessage()
            strcpy(m_pcMsg + strlen(m_pcMsg), ": ");
            strcpy(m_pcMsg + strlen(m_pcMsg), "Socket is not in listening state");
 
+           break;
+
         case 7:
            strcpy(m_pcMsg + strlen(m_pcMsg), ": ");
            strcpy(m_pcMsg + strlen(m_pcMsg), "Listen/accept is not supported in rendezous connection setup");
+
+           break;
 
         case 8:
            strcpy(m_pcMsg + strlen(m_pcMsg), ": ");
