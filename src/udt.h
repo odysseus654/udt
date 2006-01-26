@@ -1192,10 +1192,10 @@ private:
       UDT_MEM_ROUTINE m_pMemRoutine;    // function to process buffer after a complete receiving
 
       Block* m_next;                    // next block
-   }  *m_pPendingBlock, *m_pLastBlock;
+   } *m_pPendingBlock, *m_pLastBlock;
 
-   // m_pPendingBlock			// the list of pending overlapped recv buffers
-   // m_pLastBlock;			// the last block of pending buffers
+   // m_pPendingBlock:			// the list of pending overlapped recv buffers
+   // m_pLastBlock:			// the last block of pending buffers
 
    __int32 m_iPendingSize;		// total size of pending recv buffers
 };
