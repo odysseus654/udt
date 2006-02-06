@@ -38,7 +38,7 @@ UDT packet definition: packet.h
 
 /****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 02/03/2006
+   Yunhong Gu [ygu@cs.uic.edu], last updated 02/06/2006
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -338,7 +338,7 @@ __int32 CChannel::recvfrom(CPacket& packet, sockaddr* addr) const
 
 __int32 CChannel::getSndBufSize()
 {
-   socklen_t size;
+   socklen_t size = sizeof(__int32);
 
    #ifndef CAPI
       getsockopt(m_iSocket, SOL_SOCKET, SO_SNDBUF, (char *)&m_iSndBufSize, &size);
@@ -351,7 +351,7 @@ __int32 CChannel::getSndBufSize()
 
 __int32 CChannel::getRcvBufSize()
 {
-   socklen_t size;
+   socklen_t size = sizeof(__int32);
 
    #ifndef CAPI
       getsockopt(m_iSocket, SOL_SOCKET, SO_RCVBUF, (char *)&m_iRcvBufSize, &size);
