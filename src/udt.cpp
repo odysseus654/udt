@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 01/05/2006
+   Yunhong Gu [ygu@cs.uic.edu], last updated 02/03/2006
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -96,17 +96,19 @@ m_iQuickStartPkts(16)
    m_bSynSending = true;
    m_bSynRecving = true;
    m_iFlightFlagSize = 25600;
-   m_iSndQueueLimit = 40960000;
-   m_iUDTBufSize = 40960000;
+   m_iSndQueueLimit = 20000000;
+   m_iUDTBufSize = 20000000;
    m_Linger.l_onoff = 1;
    m_Linger.l_linger = 180;
    m_iUDPSndBufSize = 65536;
-   m_iUDPRcvBufSize = 4 * 1024 * 1024;
+   m_iUDPRcvBufSize = 10000000;
    m_iMaxMsg = 9000;
    m_iMsgTTL = -1;
    m_iSockType = SOCK_STREAM;
    m_iIPversion = AF_INET;
    m_bRendezvous = false;
+   m_iSndTimeOut = -1;
+   m_iRcvTimeOut = -1;
 
    #ifdef CUSTOM_CC
       m_pCCFactory = new CCCFactory<CCC>;
@@ -324,6 +326,14 @@ void CUDT::setOpt(UDTOpt optName, const void* optval, const __int32&)
       m_bRendezvous = *(bool *)optval;
       break;
 
+   case UDT_SNDTIMEO:
+      m_iSndTimeOut = *(__int32 *)optval;
+      break;
+
+   case UDT_RCVTIMEO:
+      m_iRcvTimeOut = *(__int32 *)optval;
+      break;
+
    default:
       throw CUDTException(5, 0, 0);
    }
@@ -408,6 +418,16 @@ void CUDT::getOpt(UDTOpt optName, void* optval, __int32& optlen)
    case UDT_RENDEZVOUS:
       *(bool *)optval = m_bRendezvous;
       optlen = sizeof(bool);
+      break;
+
+   case UDT_SNDTIMEO:
+      *(__int32 *)optval = m_iSndTimeOut;
+      optlen = sizeof(__int32);
+      break;
+
+   case UDT_RCVTIMEO:
+      *(__int32 *)optval = m_iRcvTimeOut;
+      optlen = sizeof(__int32);
       break;
 
    default:
@@ -2113,12 +2133,29 @@ __int32 CUDT::send(char* data, const __int32& len, __int32* overlapped, const UD
          // wait here during a blocking sending
          #ifndef WIN32
             pthread_mutex_lock(&m_SendBlockLock);
-            while (!m_bBroken && m_bConnected && (m_iSndQueueLimit < m_pSndBuffer->getCurrBufSize()))
-               pthread_cond_wait(&m_SendBlockCond, &m_SendBlockLock);
+            if (m_iSndTimeOut < 0)
+            {
+               while (!m_bBroken && m_bConnected && (m_iSndQueueLimit < m_pSndBuffer->getCurrBufSize()))
+                  pthread_cond_wait(&m_SendBlockCond, &m_SendBlockLock);
+            }
+            else
+            {
+               timeval currtime;
+               timespec locktime;
+
+               gettimeofday(&currtime, 0);
+               locktime.tv_sec = currtime.tv_sec + ((__int64)m_iSndTimeOut * 1000 + currtime.tv_usec) / 1000000;
+               locktime.tv_nsec = ((__int64)m_iSndTimeOut * 1000 + currtime.tv_usec) % 1000000 * 1000;
+
+               pthread_cond_timedwait(&m_SendBlockCond, &m_SendBlockLock, &locktime);
+            }
             pthread_mutex_unlock(&m_SendBlockLock);
          #else
-            while (!m_bBroken && m_bConnected && (m_iSndQueueLimit < m_pSndBuffer->getCurrBufSize()))
-               WaitForSingleObject(m_SendBlockCond, INFINITE);
+            if (m_iSndTimeOut < 0)
+               while (!m_bBroken && m_bConnected && (m_iSndQueueLimit < m_pSndBuffer->getCurrBufSize()))
+                  WaitForSingleObject(m_SendBlockCond, INFINITE);
+            else
+               WaitForSingleObject(m_SendBlockCond, DWORD(m_iSndTimeOut));
          #endif
 
          // check the connection status
@@ -2126,6 +2163,9 @@ __int32 CUDT::send(char* data, const __int32& len, __int32* overlapped, const UD
             throw CUDTException(2, 1, 0);
       }
    }
+
+   if ((m_iSndTimeOut >= 0) && (m_iSndQueueLimit < m_pSndBuffer->getCurrBufSize()))
+      return 0;
 
    char* buf;
    __int32 handle = 0;
@@ -2206,11 +2246,28 @@ __int32 CUDT::recv(char* data, const __int32& len, __int32* overlapped, UDT_MEM_
       {
          #ifndef WIN32
             pthread_mutex_lock(&m_RecvDataLock);
-            while (!m_bBroken && (0 == m_pRcvBuffer->getRcvDataSize()))
-               pthread_cond_wait(&m_RecvDataCond, &m_RecvDataLock);
+            if (m_iRcvTimeOut < 0)
+            {
+               while (!m_bBroken && (0 == m_pRcvBuffer->getRcvDataSize()))
+                  pthread_cond_wait(&m_RecvDataCond, &m_RecvDataLock);
+            }
+            else
+            {
+               timeval currtime;
+               timespec locktime;
+
+               gettimeofday(&currtime, 0);
+               locktime.tv_sec = currtime.tv_sec + ((__int64)m_iSndTimeOut * 1000 + currtime.tv_usec) / 1000000;
+               locktime.tv_nsec = ((__int64)m_iSndTimeOut * 1000 + currtime.tv_usec) % 1000000 * 1000;
+
+               pthread_cond_timedwait(&m_RecvDataCond, &m_RecvDataLock, &locktime);
+            }
             pthread_mutex_unlock(&m_RecvDataLock);
          #else
-            WaitForSingleObject(m_RecvDataCond, INFINITE);
+            if (m_iRcvTimeOut < 0)
+               WaitForSingleObject(m_RecvDataCond, INFINITE);
+            else
+               WaitForSingleObject(m_RecvDataCond, DWORD(m_iRcvTimeOut));
          #endif
       }
    }
@@ -2221,7 +2278,9 @@ __int32 CUDT::recv(char* data, const __int32& len, __int32* overlapped, UDT_MEM_
       if (len <= avail)
          avail = len;
 
-      m_pRcvBuffer->readBuffer(data, avail);
+      if (avail > 0)
+         m_pRcvBuffer->readBuffer(data, avail);
+
       return avail;
    }
 

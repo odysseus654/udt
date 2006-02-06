@@ -132,7 +132,7 @@ non-blocking IO, send will return immediately. UDT <b>send</b> either sends all
 the data specified by the length parameter or nothing. However, it is still 
 recommended to use a loop to check the return value for future compatibilities.</font></P>
 <P><font face="Verdana" size="2">In overlapped IO (when the <i>handle</i> parameter is given), 
-a blocking sending waits until all data are sent out, whereas a non-blocking IO 
+a blocking sending waits until all data are sent out, whereas a non-blocking sending 
 returns immediately and the data will be sent at background (if there is enough 
 buffer). Once the data sending is completed, the function of <i>routine</i> will be 
 executed on the data.</font></P>
