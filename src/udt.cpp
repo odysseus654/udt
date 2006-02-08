@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 02/03/2006
+   Yunhong Gu [ygu@cs.uic.edu], last updated 02/07/2006
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -95,7 +95,7 @@ m_iQuickStartPkts(16)
    m_iMSS = 1500;
    m_bSynSending = true;
    m_bSynRecving = true;
-   m_iFlightFlagSize = 25600;
+   m_iFlightFlagSize = 100000;
    m_iSndQueueLimit = 20000000;
    m_iUDTBufSize = 20000000;
    m_Linger.l_onoff = 1;
@@ -1419,7 +1419,7 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
       }
 
       // update time/delay information
-      self->m_pRcvTimeWindow->onPktArrival();
+      //self->m_pRcvTimeWindow->onPktArrival();
 
       // check if it is probing packet pair
       if (packet.m_iSeqNo % self->m_iProbeInterval < 2)
@@ -1601,9 +1601,9 @@ void CUDT::sendCtrl(const __int32& pkttype, void* lparam, void* rparam, const __
          data[1] = m_iRTT;
          data[2] = m_iRTTVar;
 
-         flowControl(m_pRcvTimeWindow->getPktRcvSpeed());
-         data[3] = m_iFlowControlWindow;
-         if (data[3] > (__int32)(m_pRcvBuffer->getAvailBufSize() / m_iPayloadSize))
+//         flowControl(m_pRcvTimeWindow->getPktRcvSpeed());
+//         data[3] = m_iFlowControlWindow;
+//         if (data[3] > (__int32)(m_pRcvBuffer->getAvailBufSize() / m_iPayloadSize))
             data[3] = (__int32)(m_pRcvBuffer->getAvailBufSize() / m_iPayloadSize);
          if (data[3] < 2)
             data[3] = 2;
