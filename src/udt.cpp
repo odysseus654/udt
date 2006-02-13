@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 02/07/2006
+   Yunhong Gu [ygu@cs.uic.edu], last updated 02/13/2006
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -168,6 +168,8 @@ m_iQuickStartPkts(ancestor.m_iQuickStartPkts)
    m_iSockType = ancestor.m_iSockType;
    m_iIPversion = ancestor.m_iIPversion;
    m_bRendezvous = ancestor.m_bRendezvous;
+   m_iSndTimeOut = ancestor.m_iSndTimeOut;
+   m_iRcvTimeOut = ancestor.m_iRcvTimeOut;
 
    #ifdef CUSTOM_CC
       m_pCCFactory = ancestor.m_pCCFactory->clone();
