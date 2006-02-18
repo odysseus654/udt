@@ -8,13 +8,12 @@ ifndef arch
    arch = IA32
 endif
 
-CCFLAGS = -fPIC -Wall -D$(os) -finline-functions #-O3
+CCFLAGS = -fPIC -Wall -D$(os) -finline-functions -g #-O3
 
 CCFLAGS += -DTRACE
 CCFLAGS += -DNO_BUSY_WAITING
+CCFLAGS += -DNOISY_LINK
 #CCFLAGS += -DCUSTOM_CC
-#CCFLAGS += -DCAPI
-#CCFLAGS += -DNOISY_LINK
 
 ifeq ($(arch), IA32)
    CCFLAGS += -DIA32 #-mcpu=pentiumpro -march=pentiumpro -mmmx -msse
@@ -36,12 +35,12 @@ ifeq ($(arch), AMD64)
    CCFLAGS += -DAMD64
 endif
 
-OBJS = common.o list.o buffer.o packet.o channel.o udt.o api.o socket.o
+OBJS = common.o window.o list.o buffer.o packet.o channel.o core.o api.o ccc.o
 DIR = $(shell pwd)
 
 all: libudt.so libudt.a udt
 
-%.o: %.cpp udt.h
+%.o: %.cpp %.h udt.h
 	$(C++) $(CCFLAGS) $< -c
 
 libudt.so: $(OBJS)

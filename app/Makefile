@@ -8,7 +8,7 @@ ifndef arch
    arch = IA32
 endif
 
-CCFLAGS = -Wall -D$(os) -I../src -O2 -finline-functions
+CCFLAGS = -Wall -D$(os) -I../src -O2 -finline-functions -g
 
 ifeq ($(arch), IA32)
    CCFLAGS += -DIA32 #-mcpu=pentiumpro -march=pentiumpro -mmmx -msse
@@ -28,7 +28,7 @@ ifeq ($(os), UNIX)
    LDFLAGS += -lsocket
 endif
 
-OBJS = appserver.o appclient.o sendfile.o recvfile.o
+OBJS = appserver.o appclient.o sendfile.o recvfile.o msgserver.o msgclient.o
 
 DIR = $(shell pwd)
 
@@ -48,7 +48,7 @@ recvfile: recvfile.o
 
 clean:
 	rm -f *.o
-	rm -f appserver appclient sendfile recvfile
+	rm -f appserver appclient sendfile recvfile msgserver msgclient
 
 install:
 	export PATH=$(DIR):$$PATH

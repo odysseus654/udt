@@ -1,6 +1,7 @@
 #ifndef __WIN32
 #include <cstdlib>
 #endif
+#include <fstream>
 #include <iostream>
 #include <udt.h>
 
@@ -40,7 +41,7 @@ int main(int argc, char* argv[])
 
    cout << "server is ready at port: " << port << endl;
 
-   CUDT::listen(serv, 1);
+   UDT::listen(serv, 1);
 
    int namelen;
    sockaddr_in their_addr;

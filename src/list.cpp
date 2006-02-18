@@ -2,7 +2,7 @@
 Copyright © 2001 - 2006, The Board of Trustees of the University of Illinois.
 All Rights Reserved.
 
-UDP-based Data Transfer Library (UDT) version 2
+UDP-based Data Transfer Library (UDT) version 3
 
 Laboratory for Advanced Computing (LAC)
 National Center for Data Mining (NCDM)
@@ -33,15 +33,12 @@ All the lists are static linked lists in ascending order of sequence numbers.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 01/04/2006
-
-modified by
-   <programmer's name, programmer's email, last updated mm/dd/yyyy>
-   <descrition of changes>
+   Yunhong Gu [gu@lac.uic.edu], last updated 02/14/2006
 *****************************************************************************/
 
+#include "common.h"
+#include "list.h"
 
-#include "udt.h"
 
 // Definition of >, <, >=, and <= with sequence number wrap
 
@@ -100,6 +97,7 @@ inline const __int32 CList::decSeqNo(const __int32& seqno) const
    return (seqno - 1 + m_iMaxSeqNo) % m_iMaxSeqNo;
 }
 
+////////////////////////////////////////////////////////////////////////////////
 
 CSndLossList::CSndLossList(const __int32& size, const __int32& th, const __int32& max):
 m_piData1(NULL),
@@ -495,8 +493,8 @@ __int32 CSndLossList::getLostSeq()
    return seqno;
 }
 
+////////////////////////////////////////////////////////////////////////////////
 
-//
 CRcvLossList::CRcvLossList(const __int32& size, const __int32& th, const __int32& max):
 m_piData1(NULL),
 m_piData2(NULL),
@@ -740,6 +738,44 @@ bool CRcvLossList::remove(const __int32& seqno)
    return true;
 }
 
+bool CRcvLossList::remove(const __int32& seqno1, const __int32& seqno2)
+{
+   if (seqno1 <= seqno2)
+   {
+      for (__int32 i = seqno1; i <= seqno2; ++ i)
+         remove(i);
+   }
+   else
+   {
+      for (__int32 i = seqno1; i < m_iMaxSeqNo; ++ i)
+         remove(i);
+      for (__int32 i = 0; i <= seqno2; ++ i)
+         remove(i);
+   }
+
+   return true;
+}
+
+bool CRcvLossList::find(const __int32& seqno1, const __int32& seqno2) const
+{
+   if (0 == m_iLength)
+      return false;
+
+   __int32 p = m_iHead;
+
+   while (-1 != p)
+   {
+      if ((CSeqNo::seqcmp(m_piData1[p], seqno1) == 0) ||
+          ((CSeqNo::seqcmp(m_piData1[p], seqno1) > 0) && (CSeqNo::seqcmp(m_piData1[p], seqno2) <= 0)) ||
+          ((CSeqNo::seqcmp(m_piData1[p], seqno1) < 0) && (m_piData2[p] != -1) && CSeqNo::seqcmp(m_piData2[p], seqno1) >= 0))
+          return true;
+
+      p = m_piNext[p];
+   }
+
+   return false;
+}
+
 __int32 CRcvLossList::getLossLength() const
 {
    return m_iLength;
@@ -787,8 +823,8 @@ void CRcvLossList::getLossArray(__int32* array, __int32& len, const __int32& lim
    }
 }
 
+////////////////////////////////////////////////////////////////////////////////
 
-//
 CIrregularPktList::CIrregularPktList(const __int32& size, const __int32& th, const __int32& max):
 m_piData(NULL),
 m_piErrorSize(NULL),
