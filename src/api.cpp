@@ -710,7 +710,6 @@ __int32 CUDTUnited::select(ud_set* readfds, ud_set* writefds, ud_set* exceptfds,
    timeval entertime, currtime;
 
    gettimeofday(&entertime, 0);
-   gettimeofday(&currtime, 0);
 
    __int64 to;
    if (NULL == timeout)

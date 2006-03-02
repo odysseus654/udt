@@ -191,6 +191,7 @@ typedef CPerfMon TRACEINFO;
 typedef ud_set UDSET;
 
 UDT_API extern const UDTSOCKET INVALID_SOCK;
+#undef ERROR
 UDT_API extern const int ERROR;
 
 UDT_API UDTSOCKET socket(int af, int type, int protocol);

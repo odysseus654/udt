@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 02/14/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/02/2006
 *****************************************************************************/
 
 
@@ -1290,18 +1290,18 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
       #if defined (CUSTOM_CC)
          if ((self->m_pCC->m_iACKInterval > 0) && (self->m_pCC->m_iACKInterval <= pktcount))
          {
-            self->sendCtrl(2, NULL, NULL, 2 * sizeof(__int32));
+            self->sendCtrl(2, NULL, NULL, sizeof(__int32));
             pktcount = 0;
          }
          if ((self->m_pCC->m_iACKPeriod > 0) && (currtime >= nextccacktime))
          {
-            self->sendCtrl(2, NULL, NULL, 2 * sizeof(__int32));
+            self->sendCtrl(2, NULL, NULL, sizeof(__int32));
             nextccacktime += self->m_pCC->m_iACKPeriod * 1000 * self->m_ullCPUFrequency;
          }
       #elif defined (NO_BUSY_WAITING)
          else if (self->m_iSelfClockInterval <= pktcount)
          {
-            self->sendCtrl(2, NULL, NULL, 2 * sizeof(__int32));
+            self->sendCtrl(2, NULL, NULL, sizeof(__int32));
             pktcount = 0;
          }
       #endif
@@ -1551,21 +1551,19 @@ void CUDT::sendCtrl(const __int32& pkttype, void* lparam, void* rparam, const __
       else
          ack = m_pRcvLossList->getFirstLostSeq();
 
-      #if defined (CUSTOM_CC) || defined (NO_BUSY_WAITING)
-         // send out a lite ACK
-         // to save time on buffer processing and bandwidth/AS measurement, a lite ACK only feeds back an ACK number
-         if (size == 2 * sizeof(__int32))
-         {
-            ctrlpkt.pack(2, NULL, &ack, 2 * sizeof(__int32));
-            *m_pChannel << ctrlpkt;
+      // send out a lite ACK
+      // to save time on buffer processing and bandwidth/AS measurement, a lite ACK only feeds back an ACK number
+      if (size == sizeof(__int32))
+      {
+         ctrlpkt.pack(2, NULL, &ack, sizeof(__int32));
+         *m_pChannel << ctrlpkt;
 
-            #if defined (TRACE) && defined (CUSTOM_CC)
-               ++ m_iSentACK;
-            #endif
+         #if defined (TRACE) && defined (CUSTOM_CC)
+            ++ m_iSentACK;
+         #endif
                
-            break;
-         }
-      #endif
+         break;
+      }
 
       unsigned __int64 currtime;
       m_pTimer->rdtsc(currtime);
@@ -1774,25 +1772,23 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
       {
       __int32 ack;
 
-      #if defined (CUSTOM_CC) || defined (NO_BUSY_WAITING)
-         // process a lite ACK
-         if (ctrlpkt.getLength() == 2 * sizeof(__int32))
-         {
-            ack = *(__int32 *)ctrlpkt.m_pcData;
-            if (((ack > m_iSndLastAck) && (ack - m_iSndLastAck < m_iSeqNoTH)) || (ack < m_iSndLastAck - m_iSeqNoTH))
-               m_iSndLastAck = ack;
+      // process a lite ACK
+      if (ctrlpkt.getLength() == sizeof(__int32))
+      {
+         ack = *(__int32 *)ctrlpkt.m_pcData;
+         if (((ack > m_iSndLastAck) && (ack - m_iSndLastAck < m_iSeqNoTH)) || (ack < m_iSndLastAck - m_iSeqNoTH))
+            m_iSndLastAck = ack;
 
-            #ifdef CUSTOM_CC
-               m_pCC->onACK(*(__int32 *)ctrlpkt.m_pcData);
-            #endif
+         #ifdef CUSTOM_CC
+            m_pCC->onACK(ack);
+         #endif
 
-            #if defined (TRACE) && defined (CUSTOM_CC)
-               ++ m_iRecvACK;
-            #endif
+         #if defined (TRACE) && defined (CUSTOM_CC)
+            ++ m_iRecvACK;
+         #endif
 
-            break;
-         }
-      #endif
+         break;
+      }
 
       // read ACK seq. no.
       ack = ctrlpkt.getAckSeqNo();

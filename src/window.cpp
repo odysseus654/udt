@@ -30,7 +30,7 @@ This header file contains the definition of UDT buffer structure and operations.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 02/14/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/01/2006
 *****************************************************************************/
 
 #include <cmath>
@@ -94,7 +94,7 @@ __int32 CACKWindow::acknowledge(const __int32& seq, __int32& ack)
    {
       // Head has not exceeded the physical boundary of the window
 
-      for (__int32 i = m_iTail, n = m_iHead; i <= n; ++ i)
+      for (__int32 i = m_iTail, n = m_iHead; i < n; ++ i)
          // looking for indentical ACK Seq. No.
          if (seq == m_piACKSeqNo[i])
          {
@@ -121,7 +121,7 @@ __int32 CACKWindow::acknowledge(const __int32& seq, __int32& ack)
    }
 
    // Head has exceeded the physical window boundary, so it is behind tail
-   for (__int32 i = m_iTail, n = m_iHead + m_iSize; i <= n; ++ i)
+   for (__int32 i = m_iTail, n = m_iHead + m_iSize; i < n; ++ i)
       // looking for indentical ACK seq. no.
       if (seq == m_piACKSeqNo[i % m_iSize])
       {

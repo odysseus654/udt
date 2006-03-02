@@ -26,26 +26,12 @@ along with this library; if not, write to the Free Software Foundation, Inc.,
 
 /*****************************************************************************
 This file contains implementation of UDT common routines of timer,
-mutex facility, ACK window, packet time window, and exception processing.
-
-CTimer is a high precision timing facility, which uses the CPU clock cycle
-as the minimum time unit.
-CGuard is mutex facility that can automatically lock a method.
-CACKWindow is the window management of UDT ACK packet.
-(reference: UDT header definition: packet.h)
-CPktTimeWindow is used to record and process packet sending and arrival
-timing information.
-CUDTException is used for UDT exception processing, which is the only
-method to catch and handle UDT errors and exceptions.
+mutex facility, and exception processing.
 *****************************************************************************/
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 01/12/2006
-
-modified by
-   <programmer's name, programmer's email, last updated mm/dd/yyyy>
-   <descrition of changes>
+   Yunhong Gu [ygu@cs.uic.edu], last updated 03/01/2006
 *****************************************************************************/
 
 
