@@ -32,7 +32,7 @@ reference: UDT programming manual and socket programming reference
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 02/14/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/02/2006
 *****************************************************************************/
 
 #ifndef WIN32
@@ -151,6 +151,9 @@ UDTSOCKET CUDTUnited::newSocket(const __int32& af, const __int32& type)
 {
    // garbage collection before a new socket is created
    checkBrokenSockets();
+
+   if ((type != SOCK_STREAM) || (type != SOCK_DGRAM))
+      throw CUDTException(5, 3, 0);
 
    CUDTSocket* ns = NULL;
 
@@ -1401,7 +1404,6 @@ CUDTException& CUDT::getlasterror()
 
 int CUDT::perfmon(UDTSOCKET u, CPerfMon* perf, bool clear)
 {
-#ifdef TRACE
    try
    {
       CUDT* udt = s_UDTUnited.lookup(u);
@@ -1420,10 +1422,6 @@ int CUDT::perfmon(UDTSOCKET u, CPerfMon* perf, bool clear)
       s_UDTUnited.setError(new CUDTException(-1, 0, 0));
       return ERROR;
    }
-#else
-   s_UDTUnited.setError(new CUDTException(5, 0, 0));
-   return ERROR;
-#endif
 }
 
 bool CUDT::isUSock(UDTSOCKET u)

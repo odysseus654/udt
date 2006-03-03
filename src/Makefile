@@ -10,13 +10,11 @@ endif
 
 CCFLAGS = -fPIC -Wall -D$(os) -finline-functions -g #-O3
 
-CCFLAGS += -DTRACE
 CCFLAGS += -DNO_BUSY_WAITING
-CCFLAGS += -DNOISY_LINK
 #CCFLAGS += -DCUSTOM_CC
 
 ifeq ($(arch), IA32)
-   CCFLAGS += -DIA32 #-mcpu=pentiumpro -march=pentiumpro -mmmx -msse
+   CCFLAGS += -DIA32
 endif
 
 ifeq ($(arch), POWERPC)

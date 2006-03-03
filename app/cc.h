@@ -125,7 +125,7 @@ protected:
       if (m_dCWndSize <= 38.0)
          CTCP::ACKAction();
       else
-         m_dCWndSize += 0.01 * m_dCWndSize;
+         m_dCWndSize += 0.01;
 
       if (m_dCWndSize > m_iMaxCWndSize)
          m_dCWndSize = m_iMaxCWndSize;

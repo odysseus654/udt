@@ -31,8 +31,8 @@ Linux system, simply use "make".
 
 On Windows systems, use the Visual Studio .NET project files in ./win directory.
 
-For more compile options (TRACE, NO_BUSY_WAITING, CUSTOM_CC, and CAPI), please 
-see UDT documenation: Installation.
+For more compile options (NO_BUSY_WAITING and CUSTOM_CC), please see UDT 
+documenation: Installation.
 
 
 To use UDT in your application: 

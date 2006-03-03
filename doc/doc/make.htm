@@ -59,20 +59,15 @@ the library path environment variable must be updated as:</font></p>
 of libudt.so&gt;:$LD_LIBRARY_PATH</font></p>
 
 <p><b><font face="Verdana" size="2"><a name="DTRACE"></a>Note:</font></b></p>
-<p><font face="Verdana" size="2">1. To enable 
-the performance trace function, please uncomment the -DTRACE 
-compile option in ./src/Makefile. If you do not need this, it is recommended
-that you close this option.</font></p>
-
-<p><font face="Verdana" size="2">2. By default, UDT uses the non-busy-waiting 
+<p><font face="Verdana" size="2">1. By default, UDT uses the non-busy-waiting 
 data sending in order to reduce CPU usage. You may turn off the -DNO_BUSY_WAITING 
 option in ./src/Makefile, which may lead to better performance.</font></p>
-<p><font face="Verdana" size="2">3. If you need to configure congestion control
+<p><font face="Verdana" size="2">2. If you need to configure congestion control
 algorithms, please uncomment the -DCUSTOM_CC compile option in ./src/Makefile.
 When this option is enabled, -DNO_BUSY_WAITIING is always disabled.</font></p>
-<p><font face="Verdana" size="2">4. </font>UDT has been compiled on UNIX 
+<p><font face="Verdana" size="2">3. UDT has been compiled on UNIX 
 systems. However, no thorough testing has been done on UNIX. Please contact the 
-developer directly for more information.</p>
+developer directly for more information.</font></p>
 
 </body>
 
