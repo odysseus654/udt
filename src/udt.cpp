@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 03/02/2006
+   Yunhong Gu [ygu@cs.uic.edu], last updated 03/03/2006
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -1421,7 +1421,7 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
       }
 
       // update time/delay information
-      //self->m_pRcvTimeWindow->onPktArrival();
+      self->m_pRcvTimeWindow->onPktArrival();
 
       // check if it is probing packet pair
       if (packet.m_iSeqNo % self->m_iProbeInterval < 2)
@@ -1601,9 +1601,11 @@ void CUDT::sendCtrl(const __int32& pkttype, void* lparam, void* rparam, const __
          data[1] = m_iRTT;
          data[2] = m_iRTTVar;
 
-//         flowControl(m_pRcvTimeWindow->getPktRcvSpeed());
-//         data[3] = m_iFlowControlWindow;
-//         if (data[3] > (__int32)(m_pRcvBuffer->getAvailBufSize() / m_iPayloadSize))
+         #ifndef CUSTOM_CC
+         flowControl(m_pRcvTimeWindow->getPktRcvSpeed());
+         data[3] = m_iFlowControlWindow;
+         if (data[3] > (__int32)(m_pRcvBuffer->getAvailBufSize() / m_iPayloadSize))
+         #endif
             data[3] = (__int32)(m_pRcvBuffer->getAvailBufSize() / m_iPayloadSize);
          if (data[3] < 2)
             data[3] = 2;
@@ -2278,6 +2280,8 @@ __int32 CUDT::recv(char* data, const __int32& len, __int32* overlapped, UDT_MEM_
 
       if (avail > 0)
          m_pRcvBuffer->readBuffer(data, avail);
+      else if (m_bBroken)
+         throw CUDTException(2, 1, 0);
 
       return avail;
    }

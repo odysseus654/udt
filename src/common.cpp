@@ -41,7 +41,7 @@ method to catch and handle UDT errors and exceptions.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 03/01/2006
+   Yunhong Gu [ygu@cs.uic.edu], last updated 03/02/2006
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -420,7 +420,7 @@ m_piProbeWindow(NULL)
       m_piRTTWindow[i] = m_piPCTWindow[i] = m_piPDTWindow[i] = 0;
 
    for (__int32 i = 0; i < m_iPWSize; ++ i)
-      m_piProbeWindow[i] = 1000;
+      m_piProbeWindow[i] = -1;
 }
 
 CPktTimeWindow::~CPktTimeWindow()
