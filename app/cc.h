@@ -39,7 +39,7 @@ public:
    void init()
    {
       m_bSlowStart = true;
-      m_issthresh = 2;
+      m_issthresh = 83333;
 
       m_dPktSndPeriod = 0.0;
       m_dCWndSize = 2.0;
@@ -85,7 +85,12 @@ protected:
    virtual void ACKAction()
    {
       if (m_bSlowStart)
+      {
          m_dCWndSize += 1.0;
+
+         if (m_dCWndSize >= m_issthresh)
+            m_bSlowStart = false;
+      }
       else
          m_dCWndSize += 1.0/m_dCWndSize;
    }
@@ -125,7 +130,12 @@ protected:
       if (m_dCWndSize <= 38.0)
          CTCP::ACKAction();
       else
-         m_dCWndSize += 0.01;
+      {
+         if (m_bSlowStart)
+            m_dCWndSize += 1.0;
+         else
+            m_dCWndSize += 0.01;
+      }
 
       if (m_dCWndSize > m_iMaxCWndSize)
          m_dCWndSize = m_iMaxCWndSize;
