@@ -32,7 +32,7 @@ reference: UDT programming manual and socket programming reference
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/02/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/13/2006
 *****************************************************************************/
 
 #ifndef WIN32
@@ -152,7 +152,7 @@ UDTSOCKET CUDTUnited::newSocket(const __int32& af, const __int32& type)
    // garbage collection before a new socket is created
    checkBrokenSockets();
 
-   if ((type != SOCK_STREAM) || (type != SOCK_DGRAM))
+   if ((type != SOCK_STREAM) && (type != SOCK_DGRAM))
       throw CUDTException(5, 3, 0);
 
    CUDTSocket* ns = NULL;
