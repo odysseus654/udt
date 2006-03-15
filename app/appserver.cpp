@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
 
 
    sockaddr_storage clientaddr;
-   addrlen = sizeof(clientaddr);
+   int addrlen = sizeof(clientaddr);
 
    UDTSOCKET recver;
 

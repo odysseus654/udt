@@ -38,7 +38,7 @@ UDT packet definition: packet.h
 
 /****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 02/14/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/15/2006
 *****************************************************************************/
 
 #ifndef WIN32
@@ -58,10 +58,7 @@ written by
 #include "packet.h"
 
 
-// For BSD/WIN32 compatability
-#ifdef BSD
-   #define socklen_t int
-#elif WIN32
+#ifdef WIN32
    #define socklen_t int
 #endif
 
