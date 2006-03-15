@@ -32,7 +32,7 @@ reference: UDT programming manual and socket programming reference
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 02/21/2006
+   Yunhong Gu [ygu@cs.uic.edu], last updated 03/13/2006
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
