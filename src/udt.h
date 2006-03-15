@@ -30,7 +30,7 @@ This is the (only) header file of the UDT API, needed for programming with UDT.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 02/14/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/14/2006
 *****************************************************************************/
 
 #ifndef _UDT_H_
@@ -220,7 +220,7 @@ UDT_API int send(UDTSOCKET u, const char* buf, int len, int flags = 0, int* hand
 
 UDT_API int recv(UDTSOCKET u, char* buf, int len, int flags = 0, int* handle = NULL, UDT_MEM_ROUTINE routine = NULL);
 
-UDT_API int sendmsg(UDTSOCKET u, char* buf, int len, int ttl = -1, bool inorder = false);
+UDT_API int sendmsg(UDTSOCKET u, const char* buf, int len, int ttl = -1, bool inorder = false);
 
 UDT_API int recvmsg(UDTSOCKET u, char* buf, int len);
 

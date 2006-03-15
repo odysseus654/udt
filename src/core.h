@@ -167,7 +167,7 @@ private:
       // Returned value:
       //    Actual size of data sent.
 
-   __int32 sendmsg(char* data, const __int32& len, const __int32& ttl, const bool& inorder);
+   __int32 sendmsg(const char* data, const __int32& len, const __int32& ttl, const bool& inorder);
 
       // Functionality:
       //    Receive a message to buffer "data".

@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/03/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/14/2006
 *****************************************************************************/
 
 
@@ -2385,7 +2385,7 @@ __int32 CUDT::recv(char* data, const __int32& len, __int32* overlapped, UDT_MEM_
    return len;
 }
 
-__int32 CUDT::sendmsg(char* data, const __int32& len, const __int32& msttl, const bool& inorder)
+__int32 CUDT::sendmsg(const char* data, const __int32& len, const __int32& msttl, const bool& inorder)
 {
    if (SOCK_STREAM == m_iSockType)
       throw CUDTException(5, 9, 0);

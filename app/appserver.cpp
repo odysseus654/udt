@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
 
 
    sockaddr_storage clientaddr;
-   int addrlen;
+   addrlen = sizeof(clientaddr);
 
    UDTSOCKET recver;
 
@@ -88,8 +88,8 @@ int main(int argc, char* argv[])
          return 0;
       }
 
-      char clienthost[1025];
-      char clientservice[32];
+      char clienthost[NI_MAXHOST];
+      char clientservice[NI_MAXSERV];
       getnameinfo((sockaddr *)&clientaddr, addrlen, clienthost, sizeof(clienthost), clientservice, sizeof(clientservice), NI_NUMERICHOST|NI_NUMERICSERV);
       cout << "new connection: " << clienthost << ":" << clientservice << endl;
 

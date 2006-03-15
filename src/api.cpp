@@ -32,7 +32,7 @@ reference: UDT programming manual and socket programming reference
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/13/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/14/2006
 *****************************************************************************/
 
 #ifndef WIN32
@@ -1503,7 +1503,7 @@ int recv(UDTSOCKET u, char* buf, int len, int flags, int* handle, UDT_MEM_ROUTIN
    return CUDT::recv(u, buf, len, flags, handle, routine);
 }
 
-int sendmsg(UDTSOCKET u, char* buf, int len, int ttl, bool inorder)
+int sendmsg(UDTSOCKET u, const char* buf, int len, int ttl, bool inorder)
 {
    return CUDT::sendmsg(u, buf, len, ttl, inorder);
 }
