@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 03/03/2006
+   Yunhong Gu [ygu@cs.uic.edu], last updated 03/15/2006
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -961,6 +961,7 @@ DWORD WINAPI CUDT::sndHandler(LPVOID sender)
    #endif
 
    bool probe = false;
+   bool newdata = true;
 
    unsigned __int64 entertime;
    unsigned __int64 targettime;
@@ -1002,6 +1003,8 @@ DWORD WINAPI CUDT::sndHandler(LPVOID sender)
       // If no loss, pack a new packet.
       else
       {
+         newdata = true;
+
          #ifndef CUSTOM_CC
             if (self->m_iFlowWindowSize <= ((self->m_iSndCurrSeqNo - self->m_iSndLastAck + 1 + self->m_iMaxSeqNo) % self->m_iMaxSeqNo))
          #else
@@ -1009,35 +1012,12 @@ DWORD WINAPI CUDT::sndHandler(LPVOID sender)
             if (cwnd <= ((self->m_iSndCurrSeqNo - self->m_iSndLastAck + 1 + self->m_iMaxSeqNo) % self->m_iMaxSeqNo))
          #endif
          {
-            //wait here for ACK, NAK, or EXP (i.e, some data to sent)
-            #ifndef WIN32
-               gettimeofday(&now, 0);
-               if (now.tv_usec < 990000)
-               {
-                  timeout.tv_sec = now.tv_sec;
-                  timeout.tv_nsec = (now.tv_usec + 10000) * 1000;
-               }
-               else
-               {
-                  timeout.tv_sec = now.tv_sec + 1;
-                  timeout.tv_nsec = now.tv_usec * 1000;
-               }
-               pthread_cond_timedwait(&self->m_WindowCond, &self->m_WindowLock, &timeout);
-            #else
-               WaitForSingleObject(self->m_WindowCond, 1);
-            #endif
-
-            #ifdef NO_BUSY_WAITING
-               // the waiting time should not be counted in. clear the time diff to zero.
-               self->m_ullTimeDiff = 0;
-            #endif
-
-            continue;
+            // window control limit
+            newdata = false;
          }
-
-         if (0 == (payload = self->m_pSndBuffer->readData(&(datapkt.m_pcData), self->m_iPayloadSize)))
+         else if (0 == (payload = self->m_pSndBuffer->readData(&(datapkt.m_pcData), self->m_iPayloadSize)))
          {
-            //check if the sender buffer is empty
+            //check if the sender buffer is empty, if yes, wait here
             if (0 == self->m_pSndBuffer->getCurrBufSize())
             {
                // If yes, sleep here until a signal comes.
@@ -1057,6 +1037,29 @@ DWORD WINAPI CUDT::sndHandler(LPVOID sender)
                   ReleaseMutex(self->m_SendDataLock);
                #endif
             }
+
+            newdata = false;
+         }
+
+         if (!newdata)
+         {
+            //wait here for ACK, NAK, or EXP (i.e, some data to sent)
+            #ifndef WIN32
+               gettimeofday(&now, 0);
+               if (now.tv_usec < 990000)
+               {
+                  timeout.tv_sec = now.tv_sec;
+                  timeout.tv_nsec = (now.tv_usec + 10000) * 1000;
+               }
+               else
+               {
+                  timeout.tv_sec = now.tv_sec + 1;
+                  timeout.tv_nsec = now.tv_usec * 1000;
+               }
+               pthread_cond_timedwait(&self->m_WindowCond, &self->m_WindowLock, &timeout);
+            #else
+               WaitForSingleObject(self->m_WindowCond, 1);
+            #endif
 
             #ifdef NO_BUSY_WAITING
                // the waiting time should not be counted in. clear the time diff to zero.
