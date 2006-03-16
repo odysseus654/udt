@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 03/15/2006
+   Yunhong Gu [ygu@cs.uic.edu], last updated 03/16/2006
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -613,31 +613,35 @@ void CUDT::connect(const sockaddr* serv_addr)
    if (m_bConnected)
       throw CUDTException(5, 2, 0);
 
-   CPacket initpkt;
-   char* initdata = new char [m_iPayloadSize];
-   CHandShake* hs = (CHandShake *)initdata;
+   CPacket request;
+   char* reqdata = new char [m_iPayloadSize];
+   CHandShake* req = (CHandShake *)reqdata;
+
+   CPacket response;
+   char* resdata = new char [m_iPayloadSize];
+   CHandShake* res = (CHandShake *)resdata;
 
    // This is my current configurations.
-   hs->m_iVersion = m_iVersion;
-   hs->m_iMSS = m_iMSS;
-   hs->m_iFlightFlagSize = m_iFlightFlagSize;
-   hs->m_iReqType = (!m_bRendezvous) ? 1 : 0;
+   req->m_iVersion = m_iVersion;
+   req->m_iMSS = m_iMSS;
+   req->m_iFlightFlagSize = m_iFlightFlagSize;
+   req->m_iReqType = (!m_bRendezvous) ? 1 : 0;
 
    // Random Initial Sequence Number
    timeval currtime;
    gettimeofday(&currtime, 0);
    srand(currtime.tv_usec);
-   m_iISN = hs->m_iISN = (__int32)(double(rand()) * m_iMaxSeqNo / (RAND_MAX + 1.0));
+   m_iISN = req->m_iISN = (__int32)(double(rand()) * m_iMaxSeqNo / (RAND_MAX + 1.0));
 
-   m_iLastDecSeq = hs->m_iISN - 1;
-   m_iSndLastAck = hs->m_iISN;
-   m_iSndLastDataAck = hs->m_iISN;
-   m_iSndCurrSeqNo = hs->m_iISN - 1;
+   m_iLastDecSeq = req->m_iISN - 1;
+   m_iSndLastAck = req->m_iISN;
+   m_iSndLastDataAck = req->m_iISN;
+   m_iSndCurrSeqNo = req->m_iISN - 1;
 
-   initpkt.pack(0, NULL, initdata, sizeof(CHandShake));
+   request.pack(0, NULL, reqdata, sizeof(CHandShake));
  
    // Inform the server my configurations.
-   m_pChannel->sendto(initpkt, serv_addr);
+   m_pChannel->sendto(request, serv_addr);
 
    sockaddr* peer_addr;
    sockaddr_in addr4;
@@ -648,8 +652,8 @@ void CUDT::connect(const sockaddr* serv_addr)
       peer_addr = (sockaddr*)(&addr6);
 
    // Wait for the negotiated configurations from the peer side.
-   initpkt.setLength(m_iPayloadSize);
-   m_pChannel->recvfrom(initpkt, peer_addr);
+   response.pack(0, NULL, resdata, sizeof(CHandShake));
+   m_pChannel->recvfrom(response, peer_addr);
 
    __int32 timeo = 3000000;
 
@@ -659,24 +663,61 @@ void CUDT::connect(const sockaddr* serv_addr)
    timeval entertime;
    gettimeofday(&entertime, 0);
 
-   while ((initpkt.getLength() <= 0) || (1 != initpkt.getFlag()) || (0 != initpkt.getType()))
+   while ((response.getLength() <= 0) || (1 != response.getFlag()) || (0 != response.getType()))
    {
-      initpkt.setLength(sizeof(CHandShake));
-      m_pChannel->sendto(initpkt, serv_addr);
+      m_pChannel->sendto(request, serv_addr);
 
-      initpkt.setLength(m_iPayloadSize);
-      m_pChannel->recvfrom(initpkt, peer_addr);
+      response.setLength(m_iPayloadSize);
+      m_pChannel->recvfrom(response, peer_addr);
 
       gettimeofday(&currtime, 0);
       if ((currtime.tv_sec - entertime.tv_sec) * 1000000 + (currtime.tv_usec - entertime.tv_usec) > timeo)
+      {
+         delete [] reqdata;
+         delete [] resdata;
          throw CUDTException(1, 1, 0);
+      }
+
+      #ifdef WIN32
+         if (response.getLength() <= 0)
+            Sleep(1);
+      #endif
    }
 
-   if (1002 == hs->m_iReqType)
+   delete [] reqdata;
+
+   if (1002 == res->m_iReqType)
    {
       // connection request rejected
-      delete [] initdata;
+      delete [] resdata;
       throw CUDTException(1, 2, 0);
+   }
+
+   // secuity check
+   bool secure = true;
+   if (m_bRendezvous)
+   {
+      char req_ip[NI_MAXHOST];
+      char req_port[NI_MAXSERV];
+      char res_ip[NI_MAXHOST];
+      char res_port[NI_MAXSERV];
+      int addrlen = (AF_INET == m_iIPversion) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
+      getnameinfo(serv_addr, addrlen, req_ip, sizeof(req_ip), req_port, sizeof(req_port), NI_NUMERICHOST|NI_NUMERICSERV);
+      getnameinfo(peer_addr, addrlen, res_ip, sizeof(res_ip), res_port, sizeof(res_port), NI_NUMERICHOST|NI_NUMERICSERV);
+
+      if ((0 != strcmp(req_ip, res_ip)) || (0 != strcmp(req_port, res_port)))
+         secure = false;
+   }
+   else
+   {
+      if (m_iISN != res->m_iISN)
+         secure = false;
+   }
+
+   if (!secure)
+   {
+      delete [] resdata;
+      throw CUDTException(1, 4, 0);
    }
 
    //request accepted, continue connection setup
@@ -684,22 +725,22 @@ void CUDT::connect(const sockaddr* serv_addr)
    m_pChannel->connect(peer_addr);
 
    // Got it. Re-configure according to the negotiated values.
-   if (m_iMSS < hs->m_iMSS)
-      m_iMSS = hs->m_iMSS;
-   m_iMaxFlowWindowSize = hs->m_iFlightFlagSize;
+   if (m_iMSS < res->m_iMSS)
+      m_iMSS = res->m_iMSS;
+   m_iMaxFlowWindowSize = res->m_iFlightFlagSize;
    m_iPktSize = m_iMSS - 28;
    m_iPayloadSize = m_iPktSize - CPacket::m_iPktHdrSize;
 
-   m_iPeerISN = hs->m_iISN;      
+   m_iPeerISN = res->m_iISN;      
 
-   m_iRcvLastAck = hs->m_iISN;
-   m_iRcvLastAckAck = hs->m_iISN;
-   m_iRcvCurrSeqNo = hs->m_iISN - 1;
-   m_iNextExpect = hs->m_iISN;
+   m_iRcvLastAck = res->m_iISN;
+   m_iRcvLastAckAck = res->m_iISN;
+   m_iRcvCurrSeqNo = res->m_iISN - 1;
+   m_iNextExpect = res->m_iISN;
 
    m_iUserBufBorder = m_iRcvLastAck + (__int32)ceil(double(m_iUDTBufSize) / m_iPayloadSize);
 
-   delete [] initdata;
+   delete [] resdata;
 
    // Prepare all structures
    m_pTimer = new CTimer;
@@ -760,11 +801,8 @@ void CUDT::connect(const sockaddr* peer, CHandShake* hs)
 
    m_pChannel->connect(peer);
 
-   // Random Initial Sequence Number
-   timeval currtime;
-   gettimeofday(&currtime, 0);
-   srand(currtime.tv_usec);
-   ci.m_iISN = m_iISN = (__int32)(double(rand()) * m_iMaxSeqNo / (RAND_MAX + 1.0));
+   // use client's ISN and send it back for security check
+   m_iISN = ci.m_iISN;
 
    m_iLastDecSeq = m_iISN - 1;
    m_iSndLastAck = m_iISN;

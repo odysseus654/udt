@@ -41,7 +41,7 @@ method to catch and handle UDT errors and exceptions.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 03/02/2006
+   Yunhong Gu [ygu@cs.uic.edu], last updated 03/16/2006
 
 modified by
    <programmer's name, programmer's email, last updated mm/dd/yyyy>
@@ -673,6 +673,10 @@ const char* CUDTException::getErrorMessage()
            strcpy(m_pcMsg + strlen(m_pcMsg), "unable to create/configure UDP socket");
 
            break;
+
+        case 4:
+           strcpy(m_pcMsg + strlen(m_pcMsg), ": ");
+           strcpy(m_pcMsg + strlen(m_pcMsg), "abort for security reasons");
         
         default:
            break;
