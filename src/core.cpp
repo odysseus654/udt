@@ -2215,8 +2215,10 @@ __int32 CUDT::send(char* data, const __int32& len, __int32* overlapped, const UD
             pthread_mutex_unlock(&m_SendBlockLock);
          #else
             if (m_iSndTimeOut < 0)
+            {
                while (!m_bBroken && m_bConnected && (m_iSndQueueLimit < m_pSndBuffer->getCurrBufSize()))
                   WaitForSingleObject(m_SendBlockCond, INFINITE);
+            }
             else 
                WaitForSingleObject(m_SendBlockCond, DWORD(m_iSndTimeOut)); 
          #endif
@@ -2331,7 +2333,10 @@ __int32 CUDT::recv(char* data, const __int32& len, __int32* overlapped, UDT_MEM_
             pthread_mutex_unlock(&m_RecvDataLock);
          #else
             if (m_iRcvTimeOut < 0)
-               WaitForSingleObject(m_RecvDataCond, INFINITE);
+            {
+               while (!m_bBroken && (0 == m_pRcvBuffer->getRcvDataSize()))
+                  WaitForSingleObject(m_RecvDataCond, INFINITE);
+            }
             else
                WaitForSingleObject(m_RecvDataCond, DWORD(m_iRcvTimeOut));
          #endif
@@ -2553,7 +2558,8 @@ __int32 CUDT::recvmsg(char* data, const __int32& len)
                pthread_cond_wait(&m_RecvDataCond, &m_RecvDataLock);
             pthread_mutex_unlock(&m_RecvDataLock);
          #else
-            WaitForSingleObject(m_RecvDataCond, INFINITE);
+            while (!m_bBroken && (0 == m_pRcvBuffer->getValidMsgCount()))
+               WaitForSingleObject(m_RecvDataCond, INFINITE);
          #endif
       }
    }
