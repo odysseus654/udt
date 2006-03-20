@@ -40,30 +40,10 @@ written by
 #include "udt.h"
 
 
-class CList
-{
-protected:
-   const bool greaterthan(const __int32& seqno1, const __int32& seqno2) const;
-   const bool lessthan(const __int32& seqno1, const __int32& seqno2) const;
-   const bool notlessthan(const __int32& seqno1, const __int32& seqno2) const;
-   const bool notgreaterthan(const __int32& seqno1, const __int32& seqno2) const;
-
-   const __int32 getLength(const __int32& seqno1, const __int32& seqno2) const;
-
-   const __int32 incSeqNo(const __int32& seqno) const;
-   const __int32 decSeqNo(const __int32& seqno) const;
-
-protected:
-   __int32 m_iSeqNoTH;                  // threshold for comparing seq. no.
-   __int32 m_iMaxSeqNo;                 // maximum permitted seq. no.
-};
-
-////////////////////////////////////////////////////////////////////////////////
-
-class CSndLossList: public CList
+class CSndLossList
 {
 public:
-   CSndLossList(const __int32& size, const __int32& th, const __int32& max);
+   CSndLossList(const __int32& size);
    ~CSndLossList();
 
       // Functionality:
@@ -118,10 +98,10 @@ private:
 
 ////////////////////////////////////////////////////////////////////////////////
 
-class CRcvLossList: public CList
+class CRcvLossList
 {
 public:
-   CRcvLossList(const __int32& size, const __int32& th, const __int32& max);
+   CRcvLossList(const __int32& size);
    ~CRcvLossList();
 
       // Functionality:
@@ -209,10 +189,10 @@ private:
 
 ////////////////////////////////////////////////////////////////////////////////
 
-class CIrregularPktList: public CList
+class CIrregularPktList
 {
 public:
-   CIrregularPktList(const __int32& size, const __int32& th, const __int32& max);
+   CIrregularPktList(const __int32& size);
    ~CIrregularPktList();
 
       // Functionality:

@@ -34,8 +34,8 @@ int main(int argc, char* argv[])
 
    hints.ai_flags = AI_PASSIVE;
    hints.ai_family = AF_INET;
-   //hints.ai_socktype = SOCK_STREAM;
-   hints.ai_socktype = SOCK_DGRAM;
+   hints.ai_socktype = SOCK_STREAM;
+   //hints.ai_socktype = SOCK_DGRAM;
 
    char* service = "9000";
    if (2 == argc)
@@ -124,8 +124,8 @@ DWORD WINAPI recvdata(LPVOID usocket)
 
    while (true)
    {
-      //if (UDT::ERROR == UDT::recv(recver, data, size, 0, &handle, NULL))
-      if (UDT::ERROR == UDT::recvmsg(recver, data, size))
+      if (UDT::ERROR == UDT::recv(recver, data, size, 0, &handle, NULL))
+      //if (UDT::ERROR == UDT::recvmsg(recver, data, size))
       {
          cout << "recv:" << UDT::getlasterror().getErrorMessage() << endl;
          break;

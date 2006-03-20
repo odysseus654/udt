@@ -30,7 +30,7 @@ This header file contains the definition of UDT buffer structure and operations.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 02/14/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/20/2006
 *****************************************************************************/
 
 #ifndef __UDT_CORE_H__
@@ -283,9 +283,6 @@ private: // Timing intervals
 private: // Packet size and sequence number attributes
    __int32 m_iPktSize;                          // Maximum/regular packet size, in bytes
    __int32 m_iPayloadSize;                      // Maximum/regular payload size, in bytes
-   const __int32 m_iMaxSeqNo;                   // Maximum data sequence number
-   const __int32 m_iSeqNoTH;                    // The threshold used to compare 2 sequence numbers
-   const __int32 m_iMaxAckSeqNo;                // Maximum ACK sequence number
 
 private: // Options
    __int32 m_iMSS;                              // Maximum Segment Size

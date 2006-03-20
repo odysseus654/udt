@@ -35,9 +35,8 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/16/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/20/2006
 *****************************************************************************/
-
 
 #ifndef WIN32
    #include <unistd.h>
@@ -65,9 +64,6 @@ CUDT::CUDT():
 m_iVersion(3),
 m_iSYNInterval(10000),
 m_iSelfClockInterval(64),
-m_iMaxSeqNo(1 << 30),
-m_iSeqNoTH(1 << 29),
-m_iMaxAckSeqNo(1 << 16),
 m_iProbeInterval(16),
 m_iQuickStartPkts(16)
 {
@@ -126,9 +122,6 @@ CUDT::CUDT(const CUDT& ancestor):
 m_iVersion(ancestor.m_iVersion),
 m_iSYNInterval(ancestor.m_iSYNInterval),
 m_iSelfClockInterval(ancestor.m_iSelfClockInterval),
-m_iMaxSeqNo(ancestor.m_iMaxSeqNo),
-m_iSeqNoTH(ancestor.m_iSeqNoTH),
-m_iMaxAckSeqNo(ancestor.m_iMaxAckSeqNo),
 m_iProbeInterval(ancestor.m_iProbeInterval),
 m_iQuickStartPkts(ancestor.m_iQuickStartPkts)
 {
@@ -622,7 +615,7 @@ void CUDT::connect(const sockaddr* serv_addr)
    timeval currtime;
    gettimeofday(&currtime, 0);
    srand(currtime.tv_usec);
-   m_iISN = req->m_iISN = (__int32)(double(rand()) * m_iMaxSeqNo / (RAND_MAX + 1.0));
+   m_iISN = req->m_iISN = (__int32)(double(rand()) * CSeqNo::m_iMaxSeqNo / (RAND_MAX + 1.0));
 
    m_iLastDecSeq = req->m_iISN - 1;
    m_iSndLastAck = req->m_iISN;
@@ -739,10 +732,10 @@ void CUDT::connect(const sockaddr* serv_addr)
       m_pRcvBuffer->initMsgList();
 
    // after introducing lite ACK, the sndlosslist may not be cleared in time, so it requires twice space.
-   m_pSndLossList = new CSndLossList(m_iMaxFlowWindowSize * 2, m_iSeqNoTH, m_iMaxSeqNo);
+   m_pSndLossList = new CSndLossList(m_iMaxFlowWindowSize * 2);
 
-   m_pRcvLossList = new CRcvLossList(m_iFlightFlagSize, m_iSeqNoTH, m_iMaxSeqNo);
-   m_pIrrPktList = new CIrregularPktList(m_iFlightFlagSize, m_iSeqNoTH, m_iMaxSeqNo);
+   m_pRcvLossList = new CRcvLossList(m_iFlightFlagSize);
+   m_pIrrPktList = new CIrregularPktList(m_iFlightFlagSize);
    m_pACKWindow = new CACKWindow(4096);
    m_pRcvTimeWindow = new CPktTimeWindow(m_iQuickStartPkts, 16, 64);
 
@@ -817,9 +810,9 @@ void CUDT::connect(const sockaddr* peer, CHandShake* hs)
    m_pRcvBuffer = new CRcvBuffer(m_iPayloadSize, m_iUDTBufSize);
    if (SOCK_DGRAM == m_iSockType)
       m_pRcvBuffer->initMsgList();
-   m_pSndLossList = new CSndLossList(m_iMaxFlowWindowSize * 2, m_iSeqNoTH, m_iMaxSeqNo);
-   m_pRcvLossList = new CRcvLossList(m_iFlightFlagSize, m_iSeqNoTH, m_iMaxSeqNo);
-   m_pIrrPktList = new CIrregularPktList(m_iFlightFlagSize, m_iSeqNoTH, m_iMaxSeqNo);
+   m_pSndLossList = new CSndLossList(m_iMaxFlowWindowSize * 2);
+   m_pRcvLossList = new CRcvLossList(m_iFlightFlagSize);
+   m_pIrrPktList = new CIrregularPktList(m_iFlightFlagSize);
    m_pACKWindow = new CACKWindow(4096);
    m_pRcvTimeWindow = new CPktTimeWindow(m_iQuickStartPkts, 16, 64);
 
@@ -1017,11 +1010,8 @@ DWORD WINAPI CUDT::sndHandler(LPVOID sender)
          // protect m_iSndLastDataAck from updating by ACK processing
          CGuard ackguard(self->m_AckLock);
 
-         if ((datapkt.m_iSeqNo >= self->m_iSndLastDataAck) && (datapkt.m_iSeqNo < self->m_iSndLastDataAck + self->m_iSeqNoTH))
-            offset = (datapkt.m_iSeqNo - self->m_iSndLastDataAck) * self->m_iPayloadSize;
-         else if (datapkt.m_iSeqNo < self->m_iSndLastDataAck - self->m_iSeqNoTH)
-            offset = (datapkt.m_iSeqNo + self->m_iMaxSeqNo - self->m_iSndLastDataAck) * self->m_iPayloadSize;
-         else
+         offset = CSeqNo::seqoff(self->m_iSndLastDataAck, datapkt.m_iSeqNo) * self->m_iPayloadSize;
+         if (offset < 0)
             continue;
 
          __int32 seqpair[2];
@@ -1030,9 +1020,8 @@ DWORD WINAPI CUDT::sndHandler(LPVOID sender)
 
          if (-1 == payload)
          {
-            seqpair[1] = seqpair[0] + seqpair[1] / self->m_iPayloadSize;
-            if (seqpair[1] >= self->m_iMaxSeqNo)
-               seqpair[1] -= self->m_iMaxSeqNo;
+            seqpair[1] = CSeqNo::incseq(seqpair[0], seqpair[1] / self->m_iPayloadSize);
+
             self->sendCtrl(7, &datapkt.m_iMsgNo, seqpair, sizeof(__int32) * 2);
 
             // only one msg drop request is necessary
@@ -1051,10 +1040,10 @@ DWORD WINAPI CUDT::sndHandler(LPVOID sender)
          newdata = true;
 
          #ifndef CUSTOM_CC
-            if (self->m_iFlowWindowSize <= ((self->m_iSndCurrSeqNo - self->m_iSndLastAck + 1 + self->m_iMaxSeqNo) % self->m_iMaxSeqNo))
+            if (self->m_iFlowWindowSize <= CSeqNo::seqlen((__int32)self->m_iSndLastAck, CSeqNo::incseq(self->m_iSndCurrSeqNo)) - 1)
          #else
             cwnd = (self->m_iFlowWindowSize < (__int32)self->m_dCongestionWindow) ? self->m_iFlowWindowSize : (__int32)self->m_dCongestionWindow;
-            if (cwnd <= ((self->m_iSndCurrSeqNo - self->m_iSndLastAck + 1 + self->m_iMaxSeqNo) % self->m_iMaxSeqNo))
+            if (cwnd <= CSeqNo::seqlen((__int32)self->m_iSndLastAck, CSeqNo::incseq(self->m_iSndCurrSeqNo)) - 1)
          #endif
          {
             // congestion/flow window limit reached
@@ -1114,7 +1103,7 @@ DWORD WINAPI CUDT::sndHandler(LPVOID sender)
             continue;
          }
 
-         self->m_iSndCurrSeqNo = (self->m_iSndCurrSeqNo + 1) % self->m_iMaxSeqNo;
+         self->m_iSndCurrSeqNo = CSeqNo::incseq(self->m_iSndCurrSeqNo);
          datapkt.m_iSeqNo = self->m_iSndCurrSeqNo;
  
          if (0 == self->m_iSndCurrSeqNo % self->m_iProbeInterval)
@@ -1371,7 +1360,7 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
 
          // sender: Insert all the packets sent after last received acknowledgement into the sender loss list.
          // recver: Send out a keep-alive packet
-         if (((self->m_iSndCurrSeqNo + 1) % self->m_iMaxSeqNo) != self->m_iSndLastAck)
+         if (CSeqNo::incseq(self->m_iSndCurrSeqNo) != self->m_iSndLastAck)
          {
             __int32 csn = self->m_iSndCurrSeqNo;
 
@@ -1414,9 +1403,7 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
 
       packet.setLength(self->m_iPayloadSize);
 
-      offset = self->m_iNextExpect - self->m_iRcvLastAck;
-      if (offset < -self->m_iSeqNoTH)
-         offset += self->m_iMaxSeqNo;
+      offset = CSeqNo::seqoff(self->m_iRcvLastAck, self->m_iNextExpect);
 
       // Look for a slot for the speculated data.
       if (!(self->m_pRcvBuffer->nextDataPos(&(packet.m_pcData), offset * self->m_iPayloadSize - self->m_pIrrPktList->currErrorSize(self->m_iNextExpect), self->m_iPayloadSize)))
@@ -1441,7 +1428,7 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
          if (self->m_pCC->m_iRTO > 0)
             ullexpint = self->m_pCC->m_iRTO * self->m_ullCPUFrequency;
       #endif
-      if (((self->m_iSndCurrSeqNo + 1) % self->m_iMaxSeqNo) == self->m_iSndLastAck)
+      if (CSeqNo::incseq(self->m_iSndCurrSeqNo) == self->m_iSndLastAck)
       {
          self->m_pTimer->rdtsc(nextexptime);
          nextexptime += ullexpint;
@@ -1481,10 +1468,7 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
 
       ++ self->m_llTraceRecv;
 
-      offset = packet.m_iSeqNo - self->m_iRcvLastAck;
-      if (offset < -self->m_iSeqNoTH)
-         offset += self->m_iMaxSeqNo;
-
+      offset = CSeqNo::seqoff(self->m_iRcvLastAck, packet.m_iSeqNo);
       if ((offset >= self->m_iFlightFlagSize) || (offset < 0))
          continue;
 
@@ -1497,20 +1481,20 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
             continue;
 
          // Loss detection.
-         if (((packet.m_iSeqNo > self->m_iRcvCurrSeqNo + 1) && (packet.m_iSeqNo - self->m_iRcvCurrSeqNo < self->m_iSeqNoTH)) || (packet.m_iSeqNo < self->m_iRcvCurrSeqNo - self->m_iSeqNoTH))
+         if (CSeqNo::seqcmp(packet.m_iSeqNo, CSeqNo::incseq(self->m_iRcvCurrSeqNo)) > 0)
          {
             // If loss found, insert them to the receiver loss list
-            self->m_pRcvLossList->insert(self->m_iRcvCurrSeqNo + 1, packet.m_iSeqNo - 1);
+            self->m_pRcvLossList->insert(CSeqNo::incseq(self->m_iRcvCurrSeqNo), CSeqNo::decseq(packet.m_iSeqNo));
 
             // pack loss list for NAK
             __int32 lossdata[2];
-            lossdata[0] = (self->m_iRcvCurrSeqNo + 1) | 0x80000000;
-            lossdata[1] = packet.m_iSeqNo - 1;
+            lossdata[0] = CSeqNo::incseq(self->m_iRcvCurrSeqNo) | 0x80000000;
+            lossdata[1] = CSeqNo::decseq(packet.m_iSeqNo);
 
             // Generate loss report immediately.
-            self->sendCtrl(3, NULL, lossdata, (self->m_iRcvCurrSeqNo + 1 == packet.m_iSeqNo - 1) ? 1 : 2);
+            self->sendCtrl(3, NULL, lossdata, (CSeqNo::incseq(self->m_iRcvCurrSeqNo) == CSeqNo::decseq(packet.m_iSeqNo)) ? 1 : 2);
 
-            self->m_iTraceRcvLoss += (packet.m_iSeqNo - self->m_iRcvCurrSeqNo - 1 + self->m_iMaxSeqNo) % self->m_iMaxSeqNo;
+            self->m_iTraceRcvLoss += CSeqNo::seqlen(self->m_iRcvCurrSeqNo, packet.m_iSeqNo) - 2;
          }
       }
 
@@ -1526,12 +1510,12 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
          self->m_pIrrPktList->addIrregularPkt(packet.m_iSeqNo, self->m_iPayloadSize - packet.getLength());
 
       // Update the current largest sequence number that has been received.
-      if (((packet.m_iSeqNo > self->m_iRcvCurrSeqNo) && (packet.m_iSeqNo - self->m_iRcvCurrSeqNo < self->m_iSeqNoTH)) || (packet.m_iSeqNo < self->m_iRcvCurrSeqNo - self->m_iSeqNoTH))
+      if (CSeqNo::seqcmp(packet.m_iSeqNo, self->m_iRcvCurrSeqNo) > 0)
       {
          self->m_iRcvCurrSeqNo = packet.m_iSeqNo;
 
          // Speculate next packet.
-         self->m_iNextExpect = (self->m_iRcvCurrSeqNo + 1) % self->m_iMaxSeqNo;
+         self->m_iNextExpect = CSeqNo::incseq(self->m_iRcvCurrSeqNo);
       }
       else
       {
@@ -1576,7 +1560,7 @@ void CUDT::sendCtrl(const __int32& pkttype, void* lparam, void* rparam, const __
       // If there is no loss, the ACK is the current largest sequence number plus 1;
       // Otherwise it is the smallest sequence number in the receiver loss list.
       if (0 == m_pRcvLossList->getLossLength())
-         ack = (m_iRcvCurrSeqNo + 1) % m_iMaxSeqNo;
+         ack = CSeqNo::incseq(m_iRcvCurrSeqNo);
       else
          ack = m_pRcvLossList->getFirstLostSeq();
 
@@ -1596,9 +1580,10 @@ void CUDT::sendCtrl(const __int32& pkttype, void* lparam, void* rparam, const __
       m_pTimer->rdtsc(currtime);
 
       // There is new received packet to acknowledge, update related information.
-      if (((ack > m_iRcvLastAck) && (ack - m_iRcvLastAck < m_iSeqNoTH)) || (ack < m_iRcvLastAck - m_iSeqNoTH))
+      if (CSeqNo::seqcmp(ack, m_iRcvLastAck) > 0)
       {
-         __int32 acksize = (ack - m_iRcvLastAck + m_iMaxSeqNo) % m_iMaxSeqNo;
+         __int32 acksize = CSeqNo::seqlen(m_iRcvLastAck, ack) - 1;
+
          m_iRcvLastAck = ack;
 
          if (m_pRcvBuffer->ackData(acksize * m_iPayloadSize - m_pIrrPktList->currErrorSize(m_iRcvLastAck)))
@@ -1660,11 +1645,11 @@ void CUDT::sendCtrl(const __int32& pkttype, void* lparam, void* rparam, const __
          break;
 
       // Send out the ACK only if has not been received by the sender before
-      if (((m_iRcvLastAck > m_iRcvLastAckAck) && (m_iRcvLastAck - m_iRcvLastAckAck < m_iSeqNoTH)) || (m_iRcvLastAck < m_iRcvLastAckAck - m_iSeqNoTH))
+      if (CSeqNo::seqcmp(m_iRcvLastAck, m_iRcvLastAckAck) > 0)
       {
          __int32 data[5];
 
-         m_iAckSeqNo = (m_iAckSeqNo + 1) % m_iMaxAckSeqNo;
+         m_iAckSeqNo = CAckNo::incack(m_iAckSeqNo);
          data[0] = m_iRcvLastAck;
          data[1] = m_iRTT;
          data[2] = m_iRTTVar;
@@ -1799,7 +1784,7 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
       if (ctrlpkt.getLength() == sizeof(__int32))
       {
          ack = *(__int32 *)ctrlpkt.m_pcData;
-         if (((ack > m_iSndLastAck) && (ack - m_iSndLastAck < m_iSeqNoTH)) || (ack < m_iSndLastAck - m_iSeqNoTH))
+         if (CSeqNo::seqcmp(ack, (__int32)m_iSndLastAck) > 0)
             m_iSndLastAck = ack;
 
          #ifdef CUSTOM_CC
@@ -1820,7 +1805,7 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
       // Got data ACK
       ack = *(__int32 *)ctrlpkt.m_pcData;
 
-      if (((ack > m_iSndLastAck) && (ack - m_iSndLastAck < m_iSeqNoTH)) || (ack < m_iSndLastAck - m_iSeqNoTH))
+      if (CSeqNo::seqcmp(ack, (__int32)m_iSndLastAck) > 0)
          m_iSndLastAck = ack;
 
       // protect packet retransmission
@@ -1830,12 +1815,8 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
          WaitForSingleObject(m_AckLock, INFINITE);
       #endif
 
-      // acknowledge the sending buffer
-      if ((ack > m_iSndLastDataAck) && (ack - m_iSndLastDataAck < m_iSeqNoTH))
-         m_pSndBuffer->ackData((ack - m_iSndLastDataAck) * m_iPayloadSize, m_iPayloadSize);
-      else if (ack < m_iSndLastDataAck - m_iSeqNoTH)
-         m_pSndBuffer->ackData((ack - m_iSndLastDataAck + m_iMaxSeqNo) * m_iPayloadSize, m_iPayloadSize);
-      else
+      __int32 offset = CSeqNo::seqoff(m_iSndLastDataAck, ack);
+      if (offset <= 0)
       {
          // discard it if it is a repeated ACK
          #ifndef WIN32
@@ -1847,9 +1828,12 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
          break;
       }
 
+      // acknowledge the sending buffer
+      m_pSndBuffer->ackData(offset * m_iPayloadSize, m_iPayloadSize);
+
       // update sending variables
       m_iSndLastDataAck = ack;
-      m_pSndLossList->remove((m_iSndLastDataAck - 1 + m_iMaxSeqNo) % m_iMaxSeqNo);
+      m_pSndLossList->remove(CSeqNo::decseq(m_iSndLastDataAck));
 
       #ifndef WIN32
          pthread_mutex_unlock(&m_AckLock);
@@ -1940,7 +1924,7 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
       m_iRTT = (m_iRTT * 7 + rtt) >> 3;
 
       // update last ACK that has been received by the sender
-      if (((m_iRcvLastAckAck < ack) && (ack - m_iRcvLastAckAck < m_iSeqNoTH)) || (m_iRcvLastAckAck > ack + m_iSeqNoTH))
+      if (CSeqNo::seqcmp(ack, m_iRcvLastAckAck) > 0)
          m_iRcvLastAckAck = ack;
 
       break;
@@ -1957,7 +1941,7 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
 
       #ifndef CUSTOM_CC
          // Congestion Control on Loss
-         if ((((losslist[0] & 0x7FFFFFFF) > m_iLastDecSeq) && ((losslist[0] & 0x7FFFFFFF) - m_iLastDecSeq < m_iSeqNoTH)) || ((losslist[0] & 0x7FFFFFFF) < m_iLastDecSeq - m_iSeqNoTH))
+         if (CSeqNo::seqcmp(losslist[0] & 0x7FFFFFFF, m_iLastDecSeq) > 0)
          {
             m_bFreeze = true;
 
@@ -1988,14 +1972,14 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
       {
          if (0 != (losslist[i] & 0x80000000))
          {
-            if (((losslist[i] & 0x7FFFFFFF) >= m_iSndLastAck) || ((losslist[i] & 0x7FFFFFFF) < m_iSndLastAck - m_iSeqNoTH))
-            {
+            if (CSeqNo::seqcmp(losslist[i] & 0x7FFFFFFF, (__int32)m_iSndLastAck) >= 0)
                m_iTraceSndLoss += m_pSndLossList->insert(losslist[i] & 0x7FFFFFFF, losslist[i + 1]);
+            else if (CSeqNo::seqcmp(losslist[i + 1], (__int32)m_iSndLastAck) >= 0)
+               m_iTraceSndLoss += m_pSndLossList->insert((__int32)m_iSndLastAck, losslist[i + 1]);
 
-               ++ i;
-            }
+            ++ i;
          }
-         else if ((losslist[i] >= m_iSndLastAck) || (losslist[i] < m_iSndLastAck - m_iSeqNoTH))
+         else if (CSeqNo::seqcmp(losslist[i], (__int32)m_iSndLastAck) >= 0)
          {
             m_iTraceSndLoss += m_pSndLossList->insert(losslist[i], losslist[i]);
          }
@@ -2125,7 +2109,7 @@ void CUDT::flowControl(const __int32& recvrate)
 {
    if (m_bRcvSlowStart)
    {
-      m_iFlowControlWindow = (m_iRcvLastAck > m_iPeerISN) ? (m_iRcvLastAck - m_iPeerISN) : (m_iRcvLastAck - m_iPeerISN + m_iMaxSeqNo);
+      m_iFlowControlWindow = CSeqNo::seqlen(m_iPeerISN, m_iRcvLastAck) - 1;
 
       if ((recvrate > 0) && (m_iFlowControlWindow >= m_iQuickStartPkts))
       {
@@ -2888,7 +2872,7 @@ void CUDT::sample(CPerfMon* perf, bool clear)
    perf->usPktSndPeriod = m_ullInterval / double(m_ullCPUFrequency);
    perf->pktFlowWindow = m_iFlowWindowSize;
    perf->pktCongestionWindow = (__int32)m_dCongestionWindow;
-   perf->pktFlightSize = (m_iSndCurrSeqNo - m_iSndLastAck + 1 + m_iMaxSeqNo) % m_iMaxSeqNo;
+   perf->pktFlightSize = CSeqNo::seqlen((__int32)m_iSndLastAck, m_iSndCurrSeqNo);
    perf->msRTT = m_iRTT/1000.0;
    perf->mbpsBandwidth = m_iBandwidth * m_iPayloadSize * 8.0;
 

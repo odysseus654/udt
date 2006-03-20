@@ -137,7 +137,7 @@ void CSndBuffer::addBuffer(const char* data, const __int32& len, const __int32& 
 
    m_iCurrBufSize += len;
 
-   m_iNextMsgNo = CSeqNo::incseq(m_iNextMsgNo);
+   m_iNextMsgNo = CMsgNo::incmsg(m_iNextMsgNo);
 }
 
 __int32 CSndBuffer::readData(char** data, const __int32& len, __int32& msgno)
@@ -824,7 +824,7 @@ void CRcvBuffer::checkMsg(const __int32& type, const __int32& msgno, const __int
    }
    else
    {
-      pos = m_iPtrFirstMsg + CSeqNo::seqlen(m_pMessageList[m_iPtrFirstMsg].m_iMsgNo, msgno) - 1;
+      pos = m_iPtrFirstMsg + CMsgNo::msgoff(m_pMessageList[m_iPtrFirstMsg].m_iMsgNo, msgno);
 
       if (pos >= m_iMsgInfoSize)
          pos -= m_iMsgInfoSize;
@@ -867,7 +867,7 @@ void CRcvBuffer::checkMsg(const __int32& type, const __int32& msgno, const __int
    }
 
    // update the largest msg no so far
-   if (CSeqNo::seqcmp(m_iLastMsgNo, msgno) < 0)
+   if (CMsgNo::msgcmp(m_iLastMsgNo, msgno) < 0)
       m_iLastMsgNo = msgno;
 }
 
@@ -892,7 +892,7 @@ bool CRcvBuffer::ackMsg(const __int32& ack, const CRcvLossList* rll)
    {
       // all messages are new, check from the start
       ptr = m_iPtrFirstMsg;
-      len = CSeqNo::seqlen(m_pMessageList[ptr].m_iMsgNo, m_iLastMsgNo);
+      len = CMsgNo::msglen(m_pMessageList[ptr].m_iMsgNo, m_iLastMsgNo);
    }
    else
    {
@@ -902,7 +902,7 @@ bool CRcvBuffer::ackMsg(const __int32& ack, const CRcvLossList* rll)
       if (ptr == m_iMsgInfoSize)
          ptr = 0;
 
-      len = CSeqNo::seqlen(m_pMessageList[ptr].m_iMsgNo, m_iLastMsgNo);
+      len = CMsgNo::msglen(m_pMessageList[ptr].m_iMsgNo, m_iLastMsgNo);
    }
 
    for (__int32 i = 0; i < len; ++ i)
@@ -939,7 +939,7 @@ void CRcvBuffer::dropMsg(const __int32& msgno)
    if (-1 == m_iPtrFirstMsg)
       return;
 
-   __int32 ptr = m_iPtrFirstMsg + CSeqNo::seqlen(m_pMessageList[m_iPtrFirstMsg].m_iMsgNo, msgno);
+   __int32 ptr = m_iPtrFirstMsg + CMsgNo::msglen(m_pMessageList[m_iPtrFirstMsg].m_iMsgNo, msgno);
    if (ptr >= m_iMsgInfoSize)
       ptr -= m_iMsgInfoSize;
 
@@ -947,7 +947,7 @@ void CRcvBuffer::dropMsg(const __int32& msgno)
    m_pMessageList[ptr].m_bDropped = true;
 
    // update the largest msg no so far
-   if (CSeqNo::seqcmp(m_iLastMsgNo, msgno) < 0)
+   if (CMsgNo::msgcmp(m_iLastMsgNo, msgno) < 0)
       m_iLastMsgNo = msgno;
 }
 
@@ -1008,7 +1008,7 @@ __int32 CRcvBuffer::readMsg(char* data, const __int32& len)
    }
 
    // all messages prior to the first valid message before the recent ACK point are permanently invalid
-   if (CSeqNo::seqcmp(m_pMessageList[ptr].m_iMsgNo, m_pMessageList[m_iPtrRecentACK].m_iMsgNo) <= 0)
+   if (CMsgNo::msgcmp(m_pMessageList[ptr].m_iMsgNo, m_pMessageList[m_iPtrRecentACK].m_iMsgNo) <= 0)
    {
       while (ptr != m_iPtrRecentACK)
       {

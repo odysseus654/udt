@@ -30,7 +30,7 @@ This header file contains the definitions of common types and utility classes.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 02/14/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/20/2006
 *****************************************************************************/
 
 #ifndef __UDT_COMMON_H__
@@ -48,8 +48,6 @@ written by
 #endif
 #include "udt.h"
 
-
-////////////////////////////////////////////////////////////////////////////////
 
 #ifdef WIN32
    // Windows compability
@@ -147,6 +145,15 @@ private:
 
 ////////////////////////////////////////////////////////////////////////////////
 
+// UDT Sequence Number 0 - (2^31 - 1)
+
+// seqcmp: compare two seq#, considering the wraping
+// seqlen: length from the 1st to the 2nd seq#, including both
+// seqoff: offset from the 2nd to the 1st seq#
+// incseq: increase the seq# by 1
+// decseq: decrease the seq# by 1
+// incseq: increase the seq# by a given offset
+
 class CSeqNo
 {
 public:
@@ -156,15 +163,75 @@ public:
    inline static const __int32 seqlen(const __int32& seq1, const __int32& seq2)
    {return (seq1 <= seq2) ? (seq2 - seq1 + 1) : (seq2 - seq1 + 1 + m_iMaxSeqNo);}
 
+   inline static const __int32 seqoff(const __int32& seq1, const __int32& seq2)
+   {
+      if (abs(seq1 - seq2) < m_iSeqNoTH)
+         return seq2 - seq1;
+
+      if (seq1 < seq2)
+         return seq2 - seq1 - m_iMaxSeqNo;
+
+      return seq2 - seq1 + m_iMaxSeqNo;
+   }
+
    inline static const __int32 incseq(const __int32& seq)
-   {return (seq == m_iMaxSeqNo) ? 0 : seq + 1;}
+   {return (seq == m_iMaxSeqNo - 1) ? 0 : seq + 1;}
 
    inline static const __int32 decseq(const __int32& seq)
-   {return (seq == 0) ? m_iMaxSeqNo : seq - 1;}
+   {return (seq == 0) ? m_iMaxSeqNo - 1 : seq - 1;}
 
-private:
+   inline static const __int32 incseq(const __int32& seq, const __int32& inc)
+   {return (m_iMaxSeqNo - seq > inc) ? seq + inc : seq - m_iMaxSeqNo + inc;}
+
+public:
    static const __int32 m_iSeqNoTH = 0x3FFFFFFF;        // threshold for comparing seq. no.
    static const __int32 m_iMaxSeqNo = 0x7FFFFFFF;       // maximum sequence number used in UDT
+};
+
+////////////////////////////////////////////////////////////////////////////////
+
+// UDT ACK Sub-sequence Number: 0 - (2^31 - 1)
+
+class CAckNo
+{
+public:
+   inline static const __int32 incack(const __int32& ackno)
+   {return (ackno == m_iMaxAckSeqNo - 1) ? 0 : ackno + 1;}
+
+public:
+   static const __int32 m_iMaxAckSeqNo = 0x7FFFFFFF;    // maximum ACK sub-sequence number used in UDT
+};
+
+////////////////////////////////////////////////////////////////////////////////
+
+// UDT Message Number: 0 - (2^29 - 1)
+
+class CMsgNo
+{
+public:
+   inline static const __int32 msgcmp(const __int32& msgno1, const __int32& msgno2)
+   {return (abs(msgno1 - msgno2) < m_iMsgNoTH) ? (msgno1 - msgno2) : (msgno2 - msgno1);}
+
+   inline static const __int32 msglen(const __int32& msgno1, const __int32& msgno2)
+   {return (msgno1 <= msgno2) ? (msgno2 - msgno1 + 1) : (msgno2 - msgno1 + m_iMaxMsgNo);}
+
+   inline static const __int32 msgoff(const __int32& msgno1, const __int32& msgno2)
+   {
+      if (abs(msgno1 - msgno2) < m_iMsgNoTH)
+         return msgno2 - msgno1;
+
+      if (msgno1 < msgno2)
+         return msgno2 - msgno1 - m_iMaxMsgNo;
+
+      return msgno2 - msgno1 + m_iMaxMsgNo;
+   }
+
+   inline static const __int32 incmsg(const __int32& msgno)
+   {return (msgno == m_iMaxMsgNo - 1) ? 0 : msgno + 1;}
+
+public:
+   static const __int32 m_iMsgNoTH = 0xFFFFFFF;         // threshold for comparing msg. no.
+   static const __int32 m_iMaxMsgNo = 0x1FFFFFFF;       // maximum message number used in UDT
 };
 
 
