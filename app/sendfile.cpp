@@ -43,8 +43,8 @@ int main(int argc, char* argv[])
 
    UDT::listen(serv, 1);
 
-   int namelen;
    sockaddr_in their_addr;
+   int namelen = sizeof(their_addr);
 
    UDTSOCKET fhandle;
 
