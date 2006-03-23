@@ -30,7 +30,7 @@ This header file contains the definition of Window structures used in UDT.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 02/14/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/22/2006
 *****************************************************************************/
 
 #ifndef __UDT_WINDOW_H__
@@ -129,11 +129,11 @@ public:
       // Functionality:
       //    Record time information of a packet sending.
       // Parameters:
-      //    0) currtime: time stamp of the packet sending.
+      //    0) currtime: timestamp of the packet sending.
       // Returned value:
       //    None.
 
-   void onPktSent(const timeval& currtime);
+   void onPktSent(const __int32& currtime);
 
       // Functionality:
       //    Record time information of an arrived packet.
@@ -186,7 +186,7 @@ private:
    __int32* m_piProbeWindow;    // record inter-packet time for probing packet pairs
    __int32 m_iProbeWindowPtr;   // position pointer to the probing window
 
-   timeval m_LastSentTime;      // last packet sending time
+   __int32 m_iLastSentTime;     // last packet sending time
    __int32 m_iMinPktSndInt;     // Minimum packet sending interval
 
    timeval m_LastArrTime;       // last packet arrival time

@@ -30,7 +30,7 @@ This header file contains the definition of UDT buffer structure and operations.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/01/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/22/2006
 *****************************************************************************/
 
 #include <cmath>
@@ -170,8 +170,9 @@ m_piProbeWindow(NULL)
    m_iRTTWindowPtr = 0;
    m_iProbeWindowPtr = 0;
 
-   gettimeofday(&m_LastSentTime, 0);
    gettimeofday(&m_LastArrTime, 0);
+
+   m_iLastSentTime = 0;
    m_iMinPktSndInt = 1000000;
 
    for (__int32 i = 0; i < m_iAWSize; ++ i)
@@ -205,8 +206,9 @@ m_piProbeWindow(NULL)
    m_iRTTWindowPtr = 0;
    m_iProbeWindowPtr = 0;
 
-   gettimeofday(&m_LastSentTime, 0);
    gettimeofday(&m_LastArrTime, 0);
+
+   m_iLastSentTime = 0;
    m_iMinPktSndInt = 1000000;
 
    for (__int32 i = 0; i < m_iAWSize; ++ i)
@@ -321,14 +323,14 @@ __int32 CPktTimeWindow::getBandwidth() const
    return (__int32)ceil(1000000.0 / (double(sum) / double(count)));
 }
 
-void CPktTimeWindow::onPktSent(const timeval& currtime)
+void CPktTimeWindow::onPktSent(const __int32& currtime)
 {
-   __int32 interval = (currtime.tv_sec - m_LastSentTime.tv_sec) * 1000000 + currtime.tv_usec - m_LastSentTime.tv_usec;
+   __int32 interval = currtime - m_iLastSentTime;
 
    if ((interval < m_iMinPktSndInt) && (interval > 0))
       m_iMinPktSndInt = interval;
 
-   m_LastSentTime = currtime;
+   m_iLastSentTime = currtime;
 }
 
 void CPktTimeWindow::onPktArrival()

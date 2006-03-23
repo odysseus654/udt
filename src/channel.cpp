@@ -38,7 +38,7 @@ UDT packet definition: packet.h
 
 /****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/15/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/22/2006
 *****************************************************************************/
 
 #ifndef WIN32
@@ -116,6 +116,8 @@ void CChannel::open(const sockaddr* addr)
    {
       throw e;
    }
+
+   m_bEndianess = (8383 == htonl(8383));
 }
 
 void CChannel::disconnect() const
@@ -152,14 +154,17 @@ __int32 CChannel::peek(char* buffer, const __int32& size) const
 
 const CChannel& CChannel::operator<<(CPacket& packet) const
 {
-   // convert control information into network order
-   if (packet.getFlag())
-      for (__int32 i = 0, n = packet.getLength() / sizeof(__int32); i < n; ++ i)
-         *((__int32 *)packet.m_pcData + i) = htonl(*((__int32 *)packet.m_pcData + i));
+   if (m_bEndianess)
+   {
+      // convert control information into network order
+      if (packet.getFlag())
+         for (__int32 i = 0, n = packet.getLength() / sizeof(__int32); i < n; ++ i)
+            *((__int32 *)packet.m_pcData + i) = htonl(*((__int32 *)packet.m_pcData + i));
 
-   // convert packet header into network order
-   packet.m_nHeader[0] = htonl(packet.m_nHeader[0]);
-   packet.m_nHeader[1] = htonl(packet.m_nHeader[1]);
+      // convert packet header into network order
+      packet.m_nHeader[0] = htonl(packet.m_nHeader[0]);
+      packet.m_nHeader[1] = htonl(packet.m_nHeader[1]);
+   }
 
    #ifdef UNIX
       while (0 == writev(m_iSocket, packet.getPacketVector(), 2)) {}
@@ -167,13 +172,16 @@ const CChannel& CChannel::operator<<(CPacket& packet) const
       writev(m_iSocket, packet.getPacketVector(), 2);
    #endif
 
-   // convert back into local host order
-   packet.m_nHeader[0] = ntohl(packet.m_nHeader[0]);
-   packet.m_nHeader[1] = ntohl(packet.m_nHeader[1]);
+   if (m_bEndianess)
+   {
+      // convert back into local host order
+      packet.m_nHeader[0] = ntohl(packet.m_nHeader[0]);
+      packet.m_nHeader[1] = ntohl(packet.m_nHeader[1]);
 
-   if (packet.getFlag())
-      for (__int32 i = 0, n = packet.getLength() / sizeof(__int32); i < n; ++ i)
-         *((__int32 *)packet.m_pcData + i) = ntohl(*((__int32 *)packet.m_pcData + i));
+      if (packet.getFlag())
+         for (__int32 i = 0, n = packet.getLength() / sizeof(__int32); i < n; ++ i)
+            *((__int32 *)packet.m_pcData + i) = ntohl(*((__int32 *)packet.m_pcData + i));
+   }
 
    return *this;
 }
@@ -195,28 +203,34 @@ const CChannel& CChannel::operator>>(CPacket& packet) const
    if (packet.getLength() <= 0)
       return *this;
 
-   // convert packet header into local host order
-   packet.m_nHeader[0] = ntohl(packet.m_nHeader[0]);
-   packet.m_nHeader[1] = ntohl(packet.m_nHeader[1]);
+   if (m_bEndianess)
+   {
+      // convert packet header into local host order
+      packet.m_nHeader[0] = ntohl(packet.m_nHeader[0]);
+      packet.m_nHeader[1] = ntohl(packet.m_nHeader[1]);
 
-   // convert control information into local host order
-   if (packet.getFlag())
-      for (__int32 i = 0, n = packet.getLength() / sizeof(__int32); i < n; ++ i)
-         *((__int32 *)packet.m_pcData + i) = ntohl(*((__int32 *)packet.m_pcData + i));
+      // convert control information into local host order
+      if (packet.getFlag())
+         for (__int32 i = 0, n = packet.getLength() / sizeof(__int32); i < n; ++ i)
+            *((__int32 *)packet.m_pcData + i) = ntohl(*((__int32 *)packet.m_pcData + i));
+   }
 
    return *this;
 }
 
 __int32 CChannel::sendto(CPacket& packet, const sockaddr* addr) const
 {
-   // convert control information into network order
-   if (packet.getFlag())
-      for (__int32 i = 0, n = packet.getLength() / sizeof(__int32); i < n; ++ i)
-         *((__int32 *)packet.m_pcData + i) = htonl(*((__int32 *)packet.m_pcData + i));
+   if (m_bEndianess)
+   {
+      // convert control information into network order
+      if (packet.getFlag())
+         for (__int32 i = 0, n = packet.getLength() / sizeof(__int32); i < n; ++ i)
+            *((__int32 *)packet.m_pcData + i) = htonl(*((__int32 *)packet.m_pcData + i));
 
-   // convert packet header into network order
-   packet.m_nHeader[0] = htonl(packet.m_nHeader[0]);
-   packet.m_nHeader[1] = htonl(packet.m_nHeader[1]);
+      // convert packet header into network order
+      packet.m_nHeader[0] = htonl(packet.m_nHeader[0]);
+      packet.m_nHeader[1] = htonl(packet.m_nHeader[1]);
+   }
 
    char* buf;
    if (CPacket::m_iPktHdrSize + packet.getLength() <= 9000)
@@ -239,13 +253,16 @@ __int32 CChannel::sendto(CPacket& packet, const sockaddr* addr) const
    if (CPacket::m_iPktHdrSize + packet.getLength() > 9000)
       delete [] buf;
 
-   // convert back into local host order
-   packet.m_nHeader[0] = ntohl(packet.m_nHeader[0]);
-   packet.m_nHeader[1] = ntohl(packet.m_nHeader[1]);
+   if (m_bEndianess)
+   {
+      // convert back into local host order
+      packet.m_nHeader[0] = ntohl(packet.m_nHeader[0]);
+      packet.m_nHeader[1] = ntohl(packet.m_nHeader[1]);
 
-   if (packet.getFlag())
-      for (__int32 i = 0, n = packet.getLength() / sizeof(__int32); i < n; ++ i)
-         *((__int32 *)packet.m_pcData + i) = ntohl(*((__int32 *)packet.m_pcData + i));
+      if (packet.getFlag())
+         for (__int32 i = 0, n = packet.getLength() / sizeof(__int32); i < n; ++ i)
+            *((__int32 *)packet.m_pcData + i) = ntohl(*((__int32 *)packet.m_pcData + i));
+   }
 
    return ret;
 }
@@ -277,13 +294,16 @@ __int32 CChannel::recvfrom(CPacket& packet, sockaddr* addr) const
       memcpy(packet.getPacketVector()[0].iov_base, buf, CPacket::m_iPktHdrSize);
       memcpy(packet.getPacketVector()[1].iov_base, buf + CPacket::m_iPktHdrSize, ret - CPacket::m_iPktHdrSize);
 
-      // convert back into local host order
-      packet.m_nHeader[0] = ntohl(packet.m_nHeader[0]);
-      packet.m_nHeader[1] = ntohl(packet.m_nHeader[1]);
+      if (m_bEndianess)
+      {
+         // convert back into local host order
+         packet.m_nHeader[0] = ntohl(packet.m_nHeader[0]);
+         packet.m_nHeader[1] = ntohl(packet.m_nHeader[1]);
 
-      if (packet.getFlag())
-         for (__int32 i = 0, n = packet.getLength() / sizeof(__int32); i < n; ++ i)
-            *((__int32 *)packet.m_pcData + i) = ntohl(*((__int32 *)packet.m_pcData + i));
+         if (packet.getFlag())
+            for (__int32 i = 0, n = packet.getLength() / sizeof(__int32); i < n; ++ i)
+               *((__int32 *)packet.m_pcData + i) = ntohl(*((__int32 *)packet.m_pcData + i));
+      }
    }
    else
    {

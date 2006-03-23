@@ -30,7 +30,7 @@ This header file contains the definition of the UDP channel.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 02/14/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/22/2006
 *****************************************************************************/
 
 #ifndef __UDT_CHANNEL_H__
@@ -198,7 +198,7 @@ public:
    void getPeerAddr(sockaddr* addr) const;
 
 private:
-   __int32 m_iIPversion;
+   __int32 m_iIPversion;		// IP version
 
    #ifndef WIN32
       __int32 m_iSocket;                // socket descriptor
@@ -210,6 +210,8 @@ private:
    __int32 m_iRcvBufSize;               // UDP receiving buffer size
 
    char* m_pcChannelBuf;                // buffer for temporally storage of in/out data
+
+   bool m_bEndianess;			// endianess
 
 private:
    void setChannelOpt();

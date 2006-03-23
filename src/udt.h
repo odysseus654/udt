@@ -122,8 +122,8 @@ struct UDT_API CPerfMon
    __int32 pktRecvACK;                  // number of received ACK packets
    __int32 pktSentNAK;                  // number of sent NAK packets
    __int32 pktRecvNAK;                  // number of received NAK packets
-   double mbpsSendRate;                 // sending rate in Mbps
-   double mbpsRecvRate;                 // receiving rate in Mbps
+   double mbpsSendRate;                 // sending rate in Mb/s
+   double mbpsRecvRate;                 // receiving rate in Mb/s
 
    // instant measurements
    double usPktSndPeriod;               // packet sending period, in microseconds
@@ -131,7 +131,7 @@ struct UDT_API CPerfMon
    __int32 pktCongestionWindow;         // congestion window size, in number of packets
    __int32 pktFlightSize;               // number of packets on flight
    double msRTT;                        // RTT, in milliseconds
-   double mbpsBandwidth;                // estimated bandwidth, in Mbps
+   double mbpsBandwidth;                // estimated bandwidth, in Mb/s
    __int32 byteAvailSndBuf;             // available UDT sender buffer size
    __int32 byteAvailRcvBuf;             // available UDT receiver buffer size
 };

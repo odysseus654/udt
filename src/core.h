@@ -30,7 +30,7 @@ This header file contains the definition of UDT buffer structure and operations.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/20/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/22/2006
 *****************************************************************************/
 
 #ifndef __UDT_CORE_H__
@@ -301,7 +301,6 @@ private: // Options
    __int32 m_iSndTimeOut;                       // sending timeout in milliseconds
    __int32 m_iRcvTimeOut;                       // receiving timeout in milliseconds
 
-   const __int32 m_iProbeInterval;              // Number of regular packets between two probing packet pairs
    const __int32 m_iQuickStartPkts;             // Number of packets to be sent as a quick start
 
 private: // CCC
@@ -339,7 +338,7 @@ private: // Sending related data
    unsigned __int64 m_ullLastDecRate;           // inter-packet time when last decrease occurs
    unsigned __int64 m_ullTimeDiff;              // aggregate difference in inter-packet time
 
-   __int32 m_iFlowWindowSize;                   // Flow control window size
+   volatile __int32 m_iFlowWindowSize;          // Flow control window size
    __int32 m_iMaxFlowWindowSize;                // Maximum flow window size = flight flag size of the peer side
    volatile double m_dCongestionWindow;         // congestion window size
 
