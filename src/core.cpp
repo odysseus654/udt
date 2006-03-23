@@ -1034,7 +1034,6 @@ DWORD WINAPI CUDT::sndHandler(LPVOID sender)
       else
       {
          // If no loss, pack a new packet.
-
          newdata = false;
 
          // check congestion/flow window limit
@@ -1068,11 +1067,27 @@ DWORD WINAPI CUDT::sndHandler(LPVOID sender)
                      }
                      ReleaseMutex(self->m_SendDataLock);
                   #endif
+
+                  #ifdef NO_BUSY_WAITING
+                  // the waiting time should not be counted in. clear the time diff to zero.
+                     self->m_ullTimeDiff = 0;
+                  #endif
+
+                  continue;
                }
             }
          }
 
-         if (!newdata)
+         if (newdata)
+         {
+            self->m_iSndCurrSeqNo = CSeqNo::incseq(self->m_iSndCurrSeqNo);
+            datapkt.m_iSeqNo = self->m_iSndCurrSeqNo;
+
+            // every 16 (0xF) packets, a packet pair is sent
+            if (0 == (datapkt.m_iSeqNo & 0xF))
+               probe = true;
+         }
+         else
          {
             //wait here for ACK, NAK, or EXP (i.e, some data to sent)
             #ifndef WIN32
@@ -1099,13 +1114,6 @@ DWORD WINAPI CUDT::sndHandler(LPVOID sender)
 
             continue;
          }
-
-         self->m_iSndCurrSeqNo = CSeqNo::incseq(self->m_iSndCurrSeqNo);
-         datapkt.m_iSeqNo = self->m_iSndCurrSeqNo;
-
-         // every 16 (0xF) packets, a packet pair is sent
-         if (0 == (datapkt.m_iSeqNo & 0xF))
-            probe = true;
       }
 
       gettimeofday(&now, 0);
