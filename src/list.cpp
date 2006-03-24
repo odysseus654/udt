@@ -33,14 +33,14 @@ All the lists are static linked lists in ascending order of sequence numbers.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/20/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/23/2006
 *****************************************************************************/
 
 #include "common.h"
 #include "list.h"
 
 
-CSndLossList::CSndLossList(const __int32& size):
+CSndLossList::CSndLossList(const int& size):
 m_piData1(NULL),
 m_piData2(NULL),
 m_piNext(NULL),
@@ -48,10 +48,10 @@ m_iSize(size)
 {
    m_piData1 = new __int32 [m_iSize];
    m_piData2 = new __int32 [m_iSize];
-   m_piNext = new __int32 [m_iSize];
+   m_piNext = new int [m_iSize];
 
    // -1 means there is no data in the node
-   for (__int32 i = 0; i < size; ++ i)
+   for (int i = 0; i < size; ++ i)
    {
       m_piData1[i] = -1;
       m_piData2[i] = -1;
@@ -82,7 +82,7 @@ CSndLossList::~CSndLossList()
    #endif
 }
 
-__int32 CSndLossList::insert(const __int32& seqno1, const __int32& seqno2)
+int CSndLossList::insert(const __int32& seqno1, const __int32& seqno2)
 {
    CGuard listguard(m_ListLock);
 
@@ -104,9 +104,9 @@ __int32 CSndLossList::insert(const __int32& seqno1, const __int32& seqno2)
    }
 
    // otherwise find the position where the data can be inserted
-   __int32 origlen = m_iLength;
-   __int32 offset = CSeqNo::seqoff(m_piData1[m_iHead], seqno1);
-   __int32 loc = (m_iHead + offset + m_iSize) % m_iSize;
+   int origlen = m_iLength;
+   int offset = CSeqNo::seqoff(m_piData1[m_iHead], seqno1);
+   int loc = (m_iHead + offset + m_iSize) % m_iSize;
 
    if (offset < 0)
    {
@@ -151,7 +151,7 @@ __int32 CSndLossList::insert(const __int32& seqno1, const __int32& seqno2)
       else
       {
          // searching the prior node
-         __int32 i;
+         int i;
          if ((-1 != m_iLastInsertPos) && (CSeqNo::seqcmp(m_piData1[m_iLastInsertPos], seqno1) < 0))
             i = m_iLastInsertPos;
          else
@@ -218,7 +218,7 @@ __int32 CSndLossList::insert(const __int32& seqno1, const __int32& seqno2)
    // coalesce with next node. E.g., [3, 7], ..., [6, 9] becomes [3, 9] 
    while ((-1 != m_piNext[loc]) && (-1 != m_piData2[loc]))
    {
-      __int32 i = m_piNext[loc];
+      int i = m_piNext[loc];
 
       if (CSeqNo::seqcmp(m_piData1[i], CSeqNo::incseq(m_piData2[loc])) <= 0)
       {
@@ -262,8 +262,8 @@ void CSndLossList::remove(const __int32& seqno)
       return;
 
    // Remove all from the head pointer to a node with a larger seq. no. or the list is empty
-   __int32 offset = CSeqNo::seqoff(m_piData1[m_iHead], seqno);
-   __int32 loc = (m_iHead + offset + m_iSize) % m_iSize;
+   int offset = CSeqNo::seqoff(m_piData1[m_iHead], seqno);
+   int loc = (m_iHead + offset + m_iSize) % m_iSize;
 
    if (0 == offset)
    {
@@ -294,12 +294,12 @@ void CSndLossList::remove(const __int32& seqno)
    }
    else if (offset > 0)
    {
-      __int32 h = m_iHead;
+      int h = m_iHead;
 
       if (seqno == m_piData1[loc])
       {
          // target node is not empty, remove part/all of the seqno in the node.
-         __int32 temp = loc;
+         int temp = loc;
          loc = (loc + 1) % m_iSize;         
 
          if (-1 == m_piData2[temp])
@@ -319,7 +319,7 @@ void CSndLossList::remove(const __int32& seqno)
       else
       {
          // targe node is empty, check prior node
-         __int32 i = m_iHead;
+         int i = m_iHead;
          while ((-1 != m_piNext[i]) && (CSeqNo::seqcmp(m_piData1[m_piNext[i]], seqno) < 0))
             i = m_piNext[i];
 
@@ -366,7 +366,7 @@ void CSndLossList::remove(const __int32& seqno)
    }
 }
 
-__int32 CSndLossList::getLossLength()
+int CSndLossList::getLossLength()
 {
    CGuard listguard(m_ListLock);
 
@@ -399,7 +399,7 @@ __int32 CSndLossList::getLostSeq()
    else
    {
       // shift to next node, e.g., [3, 7] becomes [], [4, 7]
-      __int32 loc = (m_iHead + 1) % m_iSize;
+      int loc = (m_iHead + 1) % m_iSize;
 
       m_piData1[loc] = CSeqNo::incseq(seqno);
       if (CSeqNo::seqcmp(m_piData2[m_iHead], m_piData1[loc]) > 0)
@@ -419,7 +419,7 @@ __int32 CSndLossList::getLostSeq()
 
 ////////////////////////////////////////////////////////////////////////////////
 
-CRcvLossList::CRcvLossList(const __int32& size):
+CRcvLossList::CRcvLossList(const int& size):
 m_piData1(NULL),
 m_piData2(NULL),
 m_pLastFeedbackTime(NULL),
@@ -431,12 +431,12 @@ m_iSize(size)
    m_piData1 = new __int32 [m_iSize];
    m_piData2 = new __int32 [m_iSize];
    m_pLastFeedbackTime = new timeval [m_iSize];
-   m_piCount = new __int32 [m_iSize];
-   m_piNext = new __int32 [m_iSize];
-   m_piPrior = new __int32 [m_iSize];
+   m_piCount = new int [m_iSize];
+   m_piNext = new int [m_iSize];
+   m_piPrior = new int [m_iSize];
 
    // -1 means there is no data in the node
-   for (__int32 i = 0; i < size; ++ i)
+   for (int i = 0; i < size; ++ i)
    {
       m_piData1[i] = -1;
       m_piData2[i] = -1;
@@ -482,8 +482,8 @@ void CRcvLossList::insert(const __int32& seqno1, const __int32& seqno2)
    }
 
    // otherwise searching for the position where the node should be
-   __int32 offset = CSeqNo::seqoff(m_piData1[m_iHead], seqno1);
-   __int32 loc = (m_iHead + offset) % m_iSize;
+   int offset = CSeqNo::seqoff(m_piData1[m_iHead], seqno1);
+   int loc = (m_iHead + offset) % m_iSize;
 
    if ((-1 != m_piData2[m_iTail]) && (CSeqNo::incseq(m_piData2[m_iTail]) == seqno1))
    {
@@ -518,11 +518,11 @@ bool CRcvLossList::remove(const __int32& seqno)
       return false; 
 
    // locate the position of "seqno" in the list
-   __int32 offset = CSeqNo::seqoff(m_piData1[m_iHead], seqno);
+   int offset = CSeqNo::seqoff(m_piData1[m_iHead], seqno);
    if (offset < 0)
       return false;
 
-   __int32 loc = (m_iHead + offset) % m_iSize;
+   int loc = (m_iHead + offset) % m_iSize;
 
    if (seqno == m_piData1[loc])
    {
@@ -554,7 +554,7 @@ bool CRcvLossList::remove(const __int32& seqno)
          // move the node to the next and update the starter as the next loss inSeqNo(seqno)
 
          // find next node
-         __int32 i = (loc + 1) % m_iSize;
+         int i = (loc + 1) % m_iSize;
 
          // remove the "seqno" and change the starter as next seq. no.
          m_piData1[i] = CSeqNo::incseq(m_piData1[loc]);
@@ -595,7 +595,7 @@ bool CRcvLossList::remove(const __int32& seqno)
    // the "seqno" may be contained in a previous node
 
    // searching previous node
-   __int32 i = (loc - 1 + m_iSize) % m_iSize;
+   int i = (loc - 1 + m_iSize) % m_iSize;
    while (-1 == m_piData1[i])
       i = (i - 1 + m_iSize) % m_iSize;
 
@@ -659,10 +659,10 @@ bool CRcvLossList::remove(const __int32& seqno1, const __int32& seqno2)
    }
    else
    {
-      for (__int32 i = seqno1; i < CSeqNo::m_iMaxSeqNo; ++ i)
-         remove(i);
-      for (__int32 i = 0; i <= seqno2; ++ i)
-         remove(i);
+      for (__int32 j = seqno1; j < CSeqNo::m_iMaxSeqNo; ++ j)
+         remove(j);
+      for (__int32 k = 0; k <= seqno2; ++ k)
+         remove(k);
    }
 
    return true;
@@ -673,7 +673,7 @@ bool CRcvLossList::find(const __int32& seqno1, const __int32& seqno2) const
    if (0 == m_iLength)
       return false;
 
-   __int32 p = m_iHead;
+   int p = m_iHead;
 
    while (-1 != p)
    {
@@ -688,12 +688,12 @@ bool CRcvLossList::find(const __int32& seqno1, const __int32& seqno2) const
    return false;
 }
 
-__int32 CRcvLossList::getLossLength() const
+int CRcvLossList::getLossLength() const
 {
    return m_iLength;
 }
 
-__int32 CRcvLossList::getFirstLostSeq() const
+int CRcvLossList::getFirstLostSeq() const
 {
    if (0 == m_iLength)
       return -1;
@@ -701,12 +701,12 @@ __int32 CRcvLossList::getFirstLostSeq() const
    return m_piData1[m_iHead];
 }
 
-void CRcvLossList::getLossArray(__int32* array, __int32& len, const __int32& limit, const __int32& threshold)
+void CRcvLossList::getLossArray(__int32* array, int& len, const int& limit, const int& threshold)
 {
    timeval currtime;
    gettimeofday(&currtime, 0);
 
-   __int32 i  = m_iHead;
+   int i  = m_iHead;
 
    len = 0;
 
@@ -737,18 +737,18 @@ void CRcvLossList::getLossArray(__int32* array, __int32& len, const __int32& lim
 
 ////////////////////////////////////////////////////////////////////////////////
 
-CIrregularPktList::CIrregularPktList(const __int32& size):
+CIrregularPktList::CIrregularPktList(const int& size):
 m_piData(NULL),
 m_piErrorSize(NULL),
 m_piNext(NULL),
 m_iSize(size)
 {
    m_piData = new __int32 [m_iSize];
-   m_piErrorSize = new __int32 [m_iSize];
-   m_piNext = new __int32 [m_iSize];
+   m_piErrorSize = new int [m_iSize];
+   m_piNext = new int [m_iSize];
 
    // -1 means there is no data in the node
-   for (__int32 i = 0; i < size; ++ i)
+   for (int i = 0; i < size; ++ i)
       m_piData[i] = -1;
 
    m_iLength = 0;
@@ -763,13 +763,13 @@ CIrregularPktList::~CIrregularPktList()
    delete [] m_piNext;
 }
 
-__int32 CIrregularPktList::currErrorSize(const __int32& seqno) const
+int CIrregularPktList::currErrorSize(const __int32& seqno) const
 {
    if (0 == m_iLength)
       return 0;
 
-   __int32 size = 0;
-   __int32 i = m_iHead;
+   int size = 0;
+   int i = m_iHead;
 
    // calculate the sum of the size error until the node with a seq. no. not less than "seqno"
    while ((-1 != i) && (CSeqNo::seqcmp(m_piData[i], seqno) < 0))
@@ -781,7 +781,7 @@ __int32 CIrregularPktList::currErrorSize(const __int32& seqno) const
    return size;
 }
 
-void CIrregularPktList::addIrregularPkt(const __int32& seqno, const __int32& errsize)
+void CIrregularPktList::addIrregularPkt(const __int32& seqno, const int& errsize)
 {
    if (0 == m_iLength)
    {
@@ -798,8 +798,8 @@ void CIrregularPktList::addIrregularPkt(const __int32& seqno, const __int32& err
    }
 
    // positioning...
-   __int32 offset = CSeqNo::seqoff(m_piData[m_iHead], seqno);
-   __int32 loc = (m_iHead + offset + m_iSize) % m_iSize;
+   int offset = CSeqNo::seqoff(m_piData[m_iHead], seqno);
+   int loc = (m_iHead + offset + m_iSize) % m_iSize;
 
    if (offset < 0)
    {
@@ -818,7 +818,7 @@ void CIrregularPktList::addIrregularPkt(const __int32& seqno, const __int32& err
          return;
 
       // locate previous node
-      __int32 i;
+      int i;
 
       if ((-1 != m_iInsertPos) && (CSeqNo::seqcmp(m_piData[m_iInsertPos], seqno) < 0))
          i = m_iInsertPos;
@@ -844,7 +844,7 @@ void CIrregularPktList::deleteIrregularPkt(const __int32& seqno)
 {
    // remove all node until the one with seq. no. larger than the parameter
 
-   __int32 i = m_iHead;
+   int i = m_iHead;
    while ((-1 != i) && (CSeqNo::seqcmp(m_piData[i], seqno) <= 0))
    {
       m_piData[i] = -1;

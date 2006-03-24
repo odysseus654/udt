@@ -32,7 +32,7 @@ reference: UDT programming manual and socket programming reference
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/14/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/23/2006
 *****************************************************************************/
 
 #ifndef WIN32
@@ -43,6 +43,8 @@ written by
 #endif
 #include "api.h"
 #include "core.h"
+
+using namespace std;
 
 
 CUDTSocket::CUDTSocket():
@@ -147,7 +149,7 @@ CUDTUnited::~CUDTUnited()
    #endif
 }
 
-UDTSOCKET CUDTUnited::newSocket(const __int32& af, const __int32& type)
+UDTSOCKET CUDTUnited::newSocket(const int& af, const int& type)
 {
    // garbage collection before a new socket is created
    checkBrokenSockets();
@@ -401,7 +403,7 @@ CUDT* CUDTUnited::lookup(const UDTSOCKET u)
    return i->second->m_pUDT;
 }
 
-__int32 CUDTUnited::bind(const UDTSOCKET u, const sockaddr* name, const __int32& namelen)
+int CUDTUnited::bind(const UDTSOCKET u, const sockaddr* name, const int& namelen)
 {
    CUDTSocket* s = locate(u);
 
@@ -433,7 +435,7 @@ __int32 CUDTUnited::bind(const UDTSOCKET u, const sockaddr* name, const __int32&
    return 0;
 }
 
-__int32 CUDTUnited::listen(const UDTSOCKET u, const __int32& backlog)
+int CUDTUnited::listen(const UDTSOCKET u, const int& backlog)
 {
    CUDTSocket* s = locate(u);
 
@@ -475,7 +477,7 @@ __int32 CUDTUnited::listen(const UDTSOCKET u, const __int32& backlog)
    return 0;
 }
 
-UDTSOCKET CUDTUnited::accept(const UDTSOCKET listen, sockaddr* addr, __int32* addrlen)
+UDTSOCKET CUDTUnited::accept(const UDTSOCKET listen, sockaddr* addr, int* addrlen)
 {
    CUDTSocket* ls = locate(listen);
 
@@ -575,7 +577,7 @@ UDTSOCKET CUDTUnited::accept(const UDTSOCKET listen, sockaddr* addr, __int32* ad
    return u;
 }
 
-__int32 CUDTUnited::connect(const UDTSOCKET u, const sockaddr* name, const __int32& namelen)
+int CUDTUnited::connect(const UDTSOCKET u, const sockaddr* name, const int& namelen)
 {
    CUDTSocket* s = locate(u);
 
@@ -621,7 +623,7 @@ __int32 CUDTUnited::connect(const UDTSOCKET u, const sockaddr* name, const __int
    return 0;
 }
 
-__int32 CUDTUnited::close(const UDTSOCKET u)
+int CUDTUnited::close(const UDTSOCKET u)
 {
    CUDTSocket* s = locate(u);
    
@@ -669,7 +671,7 @@ __int32 CUDTUnited::close(const UDTSOCKET u)
    return 0;
 }
 
-__int32 CUDTUnited::getpeername(const UDTSOCKET u, sockaddr* name, __int32* namelen)
+int CUDTUnited::getpeername(const UDTSOCKET u, sockaddr* name, int* namelen)
 {
    CUDTSocket* s = locate(u);
 
@@ -690,7 +692,7 @@ __int32 CUDTUnited::getpeername(const UDTSOCKET u, sockaddr* name, __int32* name
    return 0;
 }
 
-__int32 CUDTUnited::getsockname(const UDTSOCKET u, sockaddr* name, __int32* namelen)
+int CUDTUnited::getsockname(const UDTSOCKET u, sockaddr* name, int* namelen)
 {
    CUDTSocket* s = locate(u);
 
@@ -708,7 +710,7 @@ __int32 CUDTUnited::getsockname(const UDTSOCKET u, sockaddr* name, __int32* name
    return 0;
 }
 
-__int32 CUDTUnited::select(ud_set* readfds, ud_set* writefds, ud_set* exceptfds, const timeval* timeout)
+int CUDTUnited::select(ud_set* readfds, ud_set* writefds, ud_set* exceptfds, const timeval* timeout)
 {
    timeval entertime, currtime;
 
@@ -720,7 +722,7 @@ __int32 CUDTUnited::select(ud_set* readfds, ud_set* writefds, ud_set* exceptfds,
    else
       to = timeout->tv_sec * 1000000 + timeout->tv_usec;
 
-   __int32 count = 0;
+   int count = 0;
 
    set<UDTSOCKET> rs, ws, es;
 
@@ -834,10 +836,10 @@ CUDTSocket* CUDTUnited::locate(const UDTSOCKET u, const sockaddr* peer)
          // compare IPv6 address
          if (((sockaddr_in6*)peer)->sin6_port == ((sockaddr_in6*)k->second->m_pPeerAddr)->sin6_port)
          {
-            __int32* addr1 = (__int32*)&(((sockaddr_in6*)peer)->sin6_addr);
-            __int32* addr2 = (__int32*)&(((sockaddr_in6*)k->second->m_pPeerAddr)->sin6_addr);
+            int* addr1 = (int*)&(((sockaddr_in6*)peer)->sin6_addr);
+            int* addr2 = (int*)&(((sockaddr_in6*)k->second->m_pPeerAddr)->sin6_addr);
 
-            __int32 m = 4;
+            int m = 4;
             for (; m > 0; -- m)
                if (addr1[m] != addr2[m])
                   break;
@@ -864,10 +866,10 @@ CUDTSocket* CUDTUnited::locate(const UDTSOCKET u, const sockaddr* peer)
          // compare IPv6 address
          if (((sockaddr_in6*)peer)->sin6_port == ((sockaddr_in6*)k->second->m_pPeerAddr)->sin6_port)
          {
-            __int32* addr1 = (__int32*)&(((sockaddr_in6*)peer)->sin6_addr);
-            __int32* addr2 = (__int32*)&(((sockaddr_in6*)k->second->m_pPeerAddr)->sin6_addr);
+            int* addr1 = (int*)&(((sockaddr_in6*)peer)->sin6_addr);
+            int* addr2 = (int*)&(((sockaddr_in6*)k->second->m_pPeerAddr)->sin6_addr);
 
-            __int32 m = 4;
+            int m = 4;
             for (; m > 0; -- m)
                if (addr1[m] != addr2[m])
                   break;
@@ -1300,7 +1302,7 @@ int CUDT::recvmsg(UDTSOCKET u, char* buf, int len)
    }
 }
 
-__int64 CUDT::sendfile(UDTSOCKET u, ifstream& ifs, const __int64& offset, __int64& size, const int& block)
+long long int CUDT::sendfile(UDTSOCKET u, ifstream& ifs, const long long int& offset, long long int& size, const int& block)
 {
    try
    {
@@ -1325,7 +1327,7 @@ __int64 CUDT::sendfile(UDTSOCKET u, ifstream& ifs, const __int64& offset, __int6
    }
 }
 
-__int64 CUDT::recvfile(UDTSOCKET u, ofstream& ofs, const __int64& offset, __int64& size, const int& block)
+long long int CUDT::recvfile(UDTSOCKET u, ofstream& ofs, const long long int& offset, long long int& size, const int& block)
 {
    try
    {
@@ -1513,12 +1515,12 @@ int recvmsg(UDTSOCKET u, char* buf, int len)
    return CUDT::recvmsg(u, buf, len);
 }
 
-__int64 sendfile(UDTSOCKET u, ifstream& ifs, const __int64& offset, __int64& size, const int& block)
+long long int sendfile(UDTSOCKET u, ifstream& ifs, const long long int& offset, long long int& size, const int& block)
 {
    return CUDT::sendfile(u, ifs, offset, size, block);
 }
 
-__int64 recvfile(UDTSOCKET u, ofstream& ofs, const __int64& offset, __int64& size, const int& block)
+long long int recvfile(UDTSOCKET u, ofstream& ofs, const long long int& offset, long long int& size, const int& block)
 {
    return CUDT::recvfile(u, ofs, offset, size, block);
 }

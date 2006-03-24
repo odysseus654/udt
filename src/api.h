@@ -30,7 +30,7 @@ This header file contains the definition of structures related to UDT API.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 02/14/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/23/2006
 *****************************************************************************/
 
 #ifndef __UDT_API_H__
@@ -55,7 +55,7 @@ struct CUDTSocket
 
    timeval m_TimeStamp;                 // time when the socket is closed
 
-   __int32 m_iIPversion;                // IP version
+   int m_iIPversion;                    // IP version
    sockaddr* m_pSelfAddr;               // pointer to the local address of the socket
    sockaddr* m_pPeerAddr;               // pointer to the peer address of the socket
 
@@ -64,13 +64,13 @@ struct CUDTSocket
 
    CUDT* m_pUDT;                        // pointer to the UDT entity
 
-   set<UDTSOCKET>* m_pQueuedSockets;    // set of connections waiting for accept()
-   set<UDTSOCKET>* m_pAcceptSockets;    // set of accept()ed connections
+   std::set<UDTSOCKET>* m_pQueuedSockets;    // set of connections waiting for accept()
+   std::set<UDTSOCKET>* m_pAcceptSockets;    // set of accept()ed connections
 
    pthread_cond_t m_AcceptCond;         // used to block "accept" call
    pthread_mutex_t m_AcceptLock;        // mutex associated to m_AcceptCond
 
-   unsigned __int32 m_uiBackLog;        // maximum number of connections in queue
+   unsigned int m_uiBackLog;            // maximum number of connections in queue
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -90,7 +90,7 @@ public:
       //    1) [in] type: socket type, SOCK_STREAM or SOCK_DGRAM
       // Returned value:
       //    The new UDT socket ID, or INVALID_SOCK.
-   UDTSOCKET newSocket(const __int32& af, const __int32& type);
+   UDTSOCKET newSocket(const int& af, const int& type);
 
       // Functionality:
       //    Create a new UDT connection.
@@ -114,14 +114,14 @@ public:
 
       // socket APIs
 
-   __int32 bind(const UDTSOCKET u, const sockaddr* name, const __int32& namelen);
-   __int32 listen(const UDTSOCKET u, const __int32& backlog);
-   UDTSOCKET accept(const UDTSOCKET listen, sockaddr* addr, __int32* addrlen);
-   __int32 connect(const UDTSOCKET u, const sockaddr* name, const __int32& namelen);
-   __int32 close(const UDTSOCKET u);
-   __int32 getpeername(const UDTSOCKET u, sockaddr* name, __int32* namelen);
-   __int32 getsockname(const UDTSOCKET u, sockaddr* name, __int32* namelen);
-   __int32 select(ud_set* readfds, ud_set* writefds, ud_set* exceptfds, const timeval* timeout);
+   int bind(const UDTSOCKET u, const sockaddr* name, const int& namelen);
+   int listen(const UDTSOCKET u, const int& backlog);
+   UDTSOCKET accept(const UDTSOCKET listen, sockaddr* addr, int* addrlen);
+   int connect(const UDTSOCKET u, const sockaddr* name, const int& namelen);
+   int close(const UDTSOCKET u);
+   int getpeername(const UDTSOCKET u, sockaddr* name, int* namelen);
+   int getsockname(const UDTSOCKET u, sockaddr* name, int* namelen);
+   int select(ud_set* readfds, ud_set* writefds, ud_set* exceptfds, const timeval* timeout);
 
       // Functionality:
       //    record the UDT exception.
@@ -142,7 +142,7 @@ public:
    CUDTException* getError();
 
 private:
-   map<UDTSOCKET, CUDTSocket*> m_Sockets;       // stores all the socket structures
+   std::map<UDTSOCKET, CUDTSocket*> m_Sockets;       // stores all the socket structures
 
    pthread_mutex_t m_ControlLock;               // used to synchronize UDT API
 

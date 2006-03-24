@@ -32,7 +32,7 @@ A UDT packet is a 2-dimension vector of packet header and data.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 02/14/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/23/2006
 *****************************************************************************/
 
 
@@ -134,6 +134,10 @@ written by
 
 #include "packet.h"
 
+
+const int CPacket::m_iPktHdrSize = 12;
+
+
 // Set up the aliases in the constructure
 CPacket::CPacket():
 m_iSeqNo((__int32&)(m_nHeader[0])),
@@ -149,17 +153,17 @@ CPacket::~CPacket()
 {
 }
 
-__int32 CPacket::getLength() const
+int CPacket::getLength() const
 {
    return m_PacketVector[1].iov_len;
 }
 
-void CPacket::setLength(const __int32& len)
+void CPacket::setLength(const int& len)
 {
    m_PacketVector[1].iov_len = len;
 }
 
-void CPacket::pack(const __int32& pkttype, void* lparam, void* rparam, const __int32& size)
+void CPacket::pack(const int& pkttype, void* lparam, void* rparam, const int& size)
 {
    // Set (bit-0 = 1) and (bit-1~15 = type)
    m_nHeader[0] = 0x80000000 | (pkttype << 16);
@@ -267,19 +271,19 @@ iovec* CPacket::getPacketVector()
    return m_PacketVector;
 }
 
-__int32 CPacket::getFlag() const
+int CPacket::getFlag() const
 {
    // read bit 0
    return m_nHeader[0] >> 31;
 }
 
-__int32 CPacket::getType() const
+int CPacket::getType() const
 {
    // read bit 1~15
    return (m_nHeader[0] >> 16) & 0x00007FFF;
 }
 
-__int32 CPacket::getExtendedType() const
+int CPacket::getExtendedType() const
 {
    // read bit 16~31
    return m_nHeader[0] & 0x0000FFFF;
@@ -291,16 +295,16 @@ __int32 CPacket::getAckSeqNo() const
    return m_nHeader[1];
 }
 
-__int32 CPacket::getMsgBoundary() const
+int CPacket::getMsgBoundary() const
 {
    // read [1] bit 0~1
    return m_nHeader[1] >> 30;
 }
 
-__int32 CPacket::getMsgOrderFlag() const
+bool CPacket::getMsgOrderFlag() const
 {
    // read [1] bit 2
-   return (m_nHeader[1] >> 29) & 1;
+   return (1 == ((m_nHeader[1] >> 29) & 1));
 }
 
 __int32 CPacket::getMsgSeq() const

@@ -31,7 +31,7 @@ mutex facility, and exception processing.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 03/16/2006
+   Yunhong Gu [ygu@cs.uic.edu], last updated 03/23/2006
 *****************************************************************************/
 
 
@@ -107,7 +107,7 @@ void CTimer::rdtsc(unsigned __int64 &x)
 
       // on Windows
       /*
-         unsigned __int32 a, b;
+         unsigned int a, b;
          __asm 
          {
             __emit 0x0f
@@ -122,7 +122,7 @@ void CTimer::rdtsc(unsigned __int64 &x)
    #elif IA64
       __asm__ volatile ("mov %0=ar.itc" : "=r"(x) :: "memory");
    #elif AMD64
-      unsigned __int32 lval, hval;
+      unsigned int lval, hval;
       __asm__ volatile ("rdtsc" : "=a" (lval), "=d" (hval));
       x = hval;
       x = (x << 32) | lval;
@@ -228,7 +228,7 @@ CGuard::~CGuard()
 }
 
 //
-CUDTException::CUDTException(__int32 major, __int32 minor, __int32 err):
+CUDTException::CUDTException(int major, int minor, int err):
 m_iMajor(major),
 m_iMinor(minor)
 {
@@ -505,7 +505,7 @@ const char* CUDTException::getErrorMessage()
    return m_pcMsg;
 }
 
-const __int32 CUDTException::getErrorCode() const
+const int CUDTException::getErrorCode() const
 {
    return m_iMajor * 1000 + m_iMinor;
 }

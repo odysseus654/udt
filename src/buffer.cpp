@@ -34,7 +34,7 @@ The receiving buffer is a logically circular memeory block.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 02/14/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/23/2006
 *****************************************************************************/
 
 #include <cstring>
@@ -43,7 +43,7 @@ written by
 #include "buffer.h"
 
 
-CSndBuffer::CSndBuffer(const __int32& mss):
+CSndBuffer::CSndBuffer(const int& mss):
 m_pBlock(NULL),
 m_pLastBlock(NULL),
 m_pCurrSendBlk(NULL),
@@ -85,7 +85,7 @@ CSndBuffer::~CSndBuffer()
    #endif
 }
 
-void CSndBuffer::addBuffer(const char* data, const __int32& len, const __int32& handle, const UDT_MEM_ROUTINE func, const __int32& ttl, const __int32& seqno, const bool& order)
+void CSndBuffer::addBuffer(const char* data, const int& len, const int& handle, const UDT_MEM_ROUTINE func, const int& ttl, const __int32& seqno, const bool& order)
 {
    CGuard bufferguard(m_BufLock);
 
@@ -116,7 +116,7 @@ void CSndBuffer::addBuffer(const char* data, const __int32& len, const __int32& 
       // Insert a new block to the tail of the list
 
       __int32 lastseq = m_pLastBlock->m_iSeqNo;
-      __int32 offset = m_pLastBlock->m_iLength;
+      int offset = m_pLastBlock->m_iLength;
 
       m_pLastBlock->m_next = new Block;
       m_pLastBlock = m_pLastBlock->m_next;
@@ -140,7 +140,7 @@ void CSndBuffer::addBuffer(const char* data, const __int32& len, const __int32& 
    m_iNextMsgNo = CMsgNo::incmsg(m_iNextMsgNo);
 }
 
-__int32 CSndBuffer::readData(char** data, const __int32& len, __int32& msgno)
+int CSndBuffer::readData(char** data, const int& len, __int32& msgno)
 {
    CGuard bufferguard(m_BufLock);
 
@@ -166,7 +166,7 @@ __int32 CSndBuffer::readData(char** data, const __int32& len, __int32& msgno)
 
    // Not enough data to read. 
    // Read an irregular packet and move the current sending block pointer to the next block
-   __int32 readlen = m_pCurrSendBlk->m_iLength - m_iCurrSendPnt;
+   int readlen = m_pCurrSendBlk->m_iLength - m_iCurrSendPnt;
    *data = m_pCurrSendBlk->m_pcData + m_iCurrSendPnt;
 
    if (0 == m_iCurrSendPnt)
@@ -180,7 +180,7 @@ __int32 CSndBuffer::readData(char** data, const __int32& len, __int32& msgno)
    return readlen;
 }
 
-__int32 CSndBuffer::readData(char** data, const __int32 offset, const __int32& len, __int32& msgno, __int32& seqno, __int32& msglen)
+int CSndBuffer::readData(char** data, const int offset, const int& len, __int32& msgno, __int32& seqno, int& msglen)
 {
    CGuard bufferguard(m_BufLock);
 
@@ -191,7 +191,7 @@ __int32 CSndBuffer::readData(char** data, const __int32 offset, const __int32& l
       return 0;
 
    // Locate to the data position by the offset
-   __int32 loffset = offset + m_iCurrAckPnt;
+   int loffset = offset + m_iCurrAckPnt;
    while (p->m_iLength <= loffset)
    {
       loffset -= p->m_iLength;
@@ -206,7 +206,7 @@ __int32 CSndBuffer::readData(char** data, const __int32 offset, const __int32& l
       timeval currtime;
       gettimeofday(&currtime, 0);
 
-      __int32 e = (currtime.tv_sec - p->m_OriginTime.tv_sec) * 1000000 + currtime.tv_usec - p->m_OriginTime.tv_usec;
+      int e = (currtime.tv_sec - p->m_OriginTime.tv_sec) * 1000000 + currtime.tv_usec - p->m_OriginTime.tv_usec;
 
       if (e > p->m_iTTL)
       {
@@ -244,7 +244,7 @@ __int32 CSndBuffer::readData(char** data, const __int32 offset, const __int32& l
    return p->m_iLength - loffset;
 }
 
-void CSndBuffer::ackData(const __int32& len, const __int32& payloadsize)
+void CSndBuffer::ackData(const int& len, const int& payloadsize)
 {
    CGuard bufferguard(m_BufLock);
 
@@ -274,12 +274,12 @@ void CSndBuffer::ackData(const __int32& len, const __int32& payloadsize)
    }
 }
 
-__int32 CSndBuffer::getCurrBufSize() const
+int CSndBuffer::getCurrBufSize() const
 {
    return m_iCurrBufSize - m_iCurrAckPnt;
 }
 
-bool CSndBuffer::getOverlappedResult(const __int32& handle, __int32& progress)
+bool CSndBuffer::getOverlappedResult(const int& handle, int& progress)
 {
    CGuard bufferguard(m_BufLock);
 
@@ -292,8 +292,8 @@ bool CSndBuffer::getOverlappedResult(const __int32& handle, __int32& progress)
       }
       else 
       {
-         __int32 end = (m_pLastBlock->m_iHandle >= m_pCurrAckBlk->m_iHandle) ? m_pLastBlock->m_iHandle : m_pLastBlock->m_iHandle + (1 << 30);
-         __int32 h = (handle >= m_pCurrAckBlk->m_iHandle) ? handle : handle + (1 << 30);
+         int end = (m_pLastBlock->m_iHandle >= m_pCurrAckBlk->m_iHandle) ? m_pLastBlock->m_iHandle : m_pLastBlock->m_iHandle + (1 << 30);
+         int h = (handle >= m_pCurrAckBlk->m_iHandle) ? handle : handle + (1 << 30);
 
          if ((h > m_pCurrAckBlk->m_iHandle) && (h <= end))
          {
@@ -314,7 +314,7 @@ void CSndBuffer::releaseBuffer(char* buf, int)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-CRcvBuffer::CRcvBuffer(const __int32& mss):
+CRcvBuffer::CRcvBuffer(const int& mss):
 m_pcData(NULL),
 m_iSize(40960000),
 m_iStartPos(0),
@@ -337,7 +337,7 @@ m_iMSS(mss)
    #endif
 }
 
-CRcvBuffer::CRcvBuffer(const __int32& mss, const __int32& bufsize):
+CRcvBuffer::CRcvBuffer(const int& mss, const int& bufsize):
 m_pcData(NULL),
 m_iSize(bufsize),
 m_iStartPos(0),
@@ -383,7 +383,7 @@ CRcvBuffer::~CRcvBuffer()
    #endif
 }
 
-bool CRcvBuffer::nextDataPos(char** data, __int32 offset, const __int32& len)
+bool CRcvBuffer::nextDataPos(char** data, int offset, const int& len)
 {
    // Search the user data block first
    if (NULL != m_pcUserBuf)
@@ -405,7 +405,7 @@ bool CRcvBuffer::nextDataPos(char** data, __int32 offset, const __int32& len)
    }
 
    // Remember the position of the furthest "dirty" data
-   __int32 origoff = m_iMaxOffset;
+   int origoff = m_iMaxOffset;
    if (offset + len > m_iMaxOffset)
       m_iMaxOffset = offset + len;
 
@@ -433,7 +433,7 @@ bool CRcvBuffer::nextDataPos(char** data, __int32 offset, const __int32& len)
    return false;
 }
 
-bool CRcvBuffer::addData(char** data, __int32 offset, __int32 len)
+bool CRcvBuffer::addData(char** data, int offset, int len)
 {
    // Check the user buffer first
    if (NULL != m_pcUserBuf)
@@ -458,7 +458,7 @@ bool CRcvBuffer::addData(char** data, __int32 offset, __int32 len)
    }
 
    // Record this value in case that the method is failed
-   __int32 origoff = m_iMaxOffset;
+   int origoff = m_iMaxOffset;
    if (offset + len > m_iMaxOffset)
       m_iMaxOffset = offset + len;
 
@@ -496,7 +496,7 @@ bool CRcvBuffer::addData(char** data, __int32 offset, __int32 len)
    return false;
 }
 
-void CRcvBuffer::moveData(__int32 offset, const __int32& len)
+void CRcvBuffer::moveData(int offset, const int& len)
 {
    // check the user buffer first
    if (NULL != m_pcUserBuf)
@@ -509,7 +509,7 @@ void CRcvBuffer::moveData(__int32 offset, const __int32& len)
          // move data from protocol buffer
          if (m_iMaxOffset > 0)
          {
-            __int32 reallen = len;
+            int reallen = len;
             if (m_iMaxOffset < len)
                reallen = m_iMaxOffset;
 
@@ -528,8 +528,8 @@ void CRcvBuffer::moveData(__int32 offset, const __int32& len)
       {
          if (m_iMaxOffset > m_iUserBufAck + offset + len - m_iUserBufSize)
          {
-            __int32 reallen = m_iUserBufSize - (m_iUserBufAck + offset);
-            __int32 startpos = m_iLastAckPos + len - reallen;
+            int reallen = m_iUserBufSize - (m_iUserBufAck + offset);
+            int startpos = m_iLastAckPos + len - reallen;
             if (m_iMaxOffset < len)
                reallen -= len - m_iMaxOffset;
 
@@ -580,7 +580,7 @@ void CRcvBuffer::moveData(__int32 offset, const __int32& len)
    m_iMaxOffset -= len;
 }
 
-bool CRcvBuffer::readBuffer(char* data, const __int32& len)
+bool CRcvBuffer::readBuffer(char* data, const int& len)
 {
    if (m_iStartPos + len <= m_iLastAckPos)
    {
@@ -612,9 +612,9 @@ bool CRcvBuffer::readBuffer(char* data, const __int32& len)
    return false;
 }
 
-__int32 CRcvBuffer::ackData(const __int32& len)
+int CRcvBuffer::ackData(const int& len)
 {
-   __int32 ret = 0;
+   int ret = 0;
 
    if (NULL != m_pcUserBuf)
       if (m_iUserBufAck + len < m_iUserBufSize)
@@ -657,7 +657,7 @@ __int32 CRcvBuffer::ackData(const __int32& len)
    return ret;
 }
 
-__int32 CRcvBuffer::registerUserBuf(char* buf, const __int32& len, const __int32& handle, const UDT_MEM_ROUTINE func)
+int CRcvBuffer::registerUserBuf(char* buf, const int& len, const int& handle, const UDT_MEM_ROUTINE func)
 {
    if (NULL != m_pcUserBuf)
    {
@@ -686,7 +686,7 @@ __int32 CRcvBuffer::registerUserBuf(char* buf, const __int32& len, const __int32
    m_iHandle = handle;
 
    // find the furthest "dirty" data that need to be copied
-   __int32 currwritepos = (m_iLastAckPos + m_iMaxOffset) % m_iSize;
+   int currwritepos = (m_iLastAckPos + m_iMaxOffset) % m_iSize;
 
    // copy data from protocol buffer into user buffer
    if (m_iStartPos <= currwritepos)
@@ -738,9 +738,9 @@ void CRcvBuffer::removeUserBuf()
    m_iUserBufAck = 0;
 }
 
-__int32 CRcvBuffer::getAvailBufSize() const
+int CRcvBuffer::getAvailBufSize() const
 {
-   __int32 bs = m_iSize;
+   int bs = m_iSize;
 
    bs -= m_iLastAckPos - m_iStartPos;
 
@@ -753,12 +753,12 @@ __int32 CRcvBuffer::getAvailBufSize() const
    return bs;
 }
 
-__int32 CRcvBuffer::getRcvDataSize() const
+int CRcvBuffer::getRcvDataSize() const
 {
    return (m_iLastAckPos - m_iStartPos + m_iSize) % m_iSize;
 }
 
-bool CRcvBuffer::getOverlappedResult(const __int32& handle, __int32& progress)
+bool CRcvBuffer::getOverlappedResult(const int& handle, int& progress)
 {
    if ((NULL != m_pcUserBuf) && (handle == m_iHandle))
    {
@@ -770,8 +770,8 @@ bool CRcvBuffer::getOverlappedResult(const __int32& handle, __int32& progress)
 
    if (NULL != m_pPendingBlock)
    {
-      __int32 end = (m_pLastBlock->m_iHandle >= m_pPendingBlock->m_iHandle) ? m_pLastBlock->m_iHandle : m_pLastBlock->m_iHandle + (1 << 30);
-      __int32 h = (handle >= m_pPendingBlock->m_iHandle) ? handle : handle + (1 << 30);
+      int end = (m_pLastBlock->m_iHandle >= m_pPendingBlock->m_iHandle) ? m_pLastBlock->m_iHandle : m_pLastBlock->m_iHandle + (1 << 30);
+      int h = (handle >= m_pPendingBlock->m_iHandle) ? handle : handle + (1 << 30);
 
       if ((h >= m_pPendingBlock->m_iHandle) && (h <= end))
          return false;
@@ -780,7 +780,7 @@ bool CRcvBuffer::getOverlappedResult(const __int32& handle, __int32& progress)
    return true;
 }
 
-__int32 CRcvBuffer::getPendingQueueSize() const
+int CRcvBuffer::getPendingQueueSize() const
 {
    return m_iPendingSize + m_iUserBufSize;
 }
@@ -811,11 +811,11 @@ void CRcvBuffer::initMsgList()
    }
 }
 
-void CRcvBuffer::checkMsg(const __int32& type, const __int32& msgno, const __int32& seqno, const char* ptr, const bool& inorder, const __int32& diff)
+void CRcvBuffer::checkMsg(const int& type, const __int32& msgno, const __int32& seqno, const char* ptr, const bool& inorder, const int& diff)
 {
    CGuard msgguard(m_MsgLock);
 
-   __int32 pos;
+   int pos;
 
    if (-1 == m_iPtrFirstMsg)
    {
@@ -885,8 +885,8 @@ bool CRcvBuffer::ackMsg(const __int32& ack, const CRcvLossList* rll)
       return false;
    }
 
-   __int32 ptr;
-   __int32 len;
+   int ptr;
+   int len;
 
    if (-1 == m_iPtrRecentACK)
    {
@@ -905,7 +905,7 @@ bool CRcvBuffer::ackMsg(const __int32& ack, const CRcvLossList* rll)
       len = CMsgNo::msglen(m_pMessageList[ptr].m_iMsgNo, m_iLastMsgNo);
    }
 
-   for (__int32 i = 0; i < len; ++ i)
+   for (int i = 0; i < len; ++ i)
    {
       if ((m_pMessageList[ptr].m_iStartSeq != -1) &&
           (m_pMessageList[ptr].m_iEndSeq != -1) &&
@@ -939,7 +939,7 @@ void CRcvBuffer::dropMsg(const __int32& msgno)
    if (-1 == m_iPtrFirstMsg)
       return;
 
-   __int32 ptr = m_iPtrFirstMsg + CMsgNo::msglen(m_pMessageList[m_iPtrFirstMsg].m_iMsgNo, msgno);
+   int ptr = m_iPtrFirstMsg + CMsgNo::msglen(m_pMessageList[m_iPtrFirstMsg].m_iMsgNo, msgno);
    if (ptr >= m_iMsgInfoSize)
       ptr -= m_iMsgInfoSize;
 
@@ -951,7 +951,7 @@ void CRcvBuffer::dropMsg(const __int32& msgno)
       m_iLastMsgNo = msgno;
 }
 
-__int32 CRcvBuffer::readMsg(char* data, const __int32& len)
+int CRcvBuffer::readMsg(char* data, const int& len)
 {
    CGuard msgguard(m_MsgLock);
 
@@ -959,7 +959,7 @@ __int32 CRcvBuffer::readMsg(char* data, const __int32& len)
    if (-1 == m_iPtrFirstMsg)
       return 0;
 
-   __int32 ptr = m_iPtrFirstMsg;
+   int ptr = m_iPtrFirstMsg;
 
    // searching first valid message
    while (m_pMessageList[ptr].m_iMsgNo != m_iLastMsgNo)
@@ -972,7 +972,7 @@ __int32 CRcvBuffer::readMsg(char* data, const __int32& len)
          ptr = 0;
    }
 
-   __int32 size = 0;
+   int size = 0;
 
    if (m_pMessageList[ptr].m_bValid)
    {
@@ -996,7 +996,7 @@ __int32 CRcvBuffer::readMsg(char* data, const __int32& len)
       }
       else
       {
-         __int32 partial = m_pMessageList[ptr].m_pcData - m_pcData + size - m_iSize;
+         int partial = m_pMessageList[ptr].m_pcData - m_pcData + size - m_iSize;
 
          memcpy(data, m_pMessageList[ptr].m_pcData, size - partial);
          memcpy(data + size - partial, m_pcData, partial);
@@ -1061,7 +1061,7 @@ __int32 CRcvBuffer::readMsg(char* data, const __int32& len)
    return size;
 }
 
-__int32 CRcvBuffer::getValidMsgCount()
+int CRcvBuffer::getValidMsgCount()
 {
    CGuard msgguard(m_MsgLock);
 
