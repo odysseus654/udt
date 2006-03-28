@@ -60,7 +60,7 @@ public:
       // Returned value:
       //    None.
 
-   void addBuffer(const char* data, const int& len, const int& handle, const UDT_MEM_ROUTINE func, const int& ttl = -1, const __int32& seqno = 0, const bool& order = false);
+   void addBuffer(const char* data, const int& len, const int& handle, const UDT_MEM_ROUTINE func, const int& ttl = -1, const int32_t& seqno = 0, const bool& order = false);
 
       // Functionality:
       //    Find data position to pack a DATA packet from the furthest reading point.
@@ -71,7 +71,7 @@ public:
       // Returned value:
       //    Actual length of data read.
 
-   int readData(char** data, const int& len, __int32& msgno);
+   int readData(char** data, const int& len, int32_t& msgno);
 
       // Functionality:
       //    Find data position to pack a DATA packet for a retransmission.
@@ -85,7 +85,7 @@ public:
       // Returned value:
       //    Actual length of data read.
 
-   int readData(char** data, const int offset, const int& len, __int32& msgno, __int32& seqno, int& msglen);
+   int readData(char** data, const int offset, const int& len, int32_t& msgno, int32_t& seqno, int& msglen);
 
       // Functionality:
       //    Update the ACK point and may release/unmap/return the user data according to the flag.
@@ -136,8 +136,8 @@ private:
 
       timeval m_OriginTime;             // original request time
       int m_iTTL;			// time to live
-      __int32 m_iMsgNo;                 // message number
-      __int32 m_iSeqNo;                 // sequence number of first packet
+      int32_t m_iMsgNo;                 // message number
+      int32_t m_iSeqNo;                 // sequence number of first packet
       int m_iInOrder;		        // flag indicating if the block should be delivered in order
 
       int m_iHandle;                    // a unique handle to represent this senidng request
@@ -155,7 +155,7 @@ private:
    int m_iCurrSendPnt;                  // pointer to the data with the largest current seq. no.
    int m_iCurrAckPnt;                   // pointer to the data with the latest ACK
 
-   __int32 m_iNextMsgNo;                // next message number
+   int32_t m_iNextMsgNo;                // next message number
 
    int m_iMSS;                          // maximum seqment/packet size
 };
@@ -297,7 +297,7 @@ public:
       // Returned value:
       //    None.
 
-   void checkMsg(const int& type, const __int32& msgno, const __int32& seqno, const char* ptr, const bool& inorder, const int& diff);
+   void checkMsg(const int& type, const int32_t& msgno, const int32_t& seqno, const char* ptr, const bool& inorder, const int& diff);
 
       // Functionality:
       //    acknowledgment check for the message list.
@@ -307,7 +307,7 @@ public:
       // Returned value:
       //    None.
 
-   bool ackMsg(const __int32& ackno, const CRcvLossList* rll);
+   bool ackMsg(const int32_t& ackno, const CRcvLossList* rll);
 
       // Functionality:
       //    mark the message to be dropped from the message list.
@@ -316,7 +316,7 @@ public:
       // Returned value:
       //    None.
 
-   void dropMsg(const __int32& msgno);
+   void dropMsg(const int32_t& msgno);
 
       // Functionality:
       //    read a message.
@@ -370,10 +370,10 @@ private:
 
    struct MsgInfo
    {
-      char* m_pcData;			// location of the message in the protocol buffer
-      __int32 m_iMsgNo;			// message number
-      __int32 m_iStartSeq;		// sequence number of the first packet in the message
-      __int32 m_iEndSeq;		// sequence number of the last packet in the message
+      char* m_pcData;	                // location of the message in the protocol buffer
+      int32_t m_iMsgNo;	                // message number
+      int32_t m_iStartSeq;		// sequence number of the first packet in the message
+      int32_t m_iEndSeq;                // sequence number of the last packet in the message
       int m_iSizeDiff;	                // the size difference of the last packet (that may be an irregular sized packet)
       int m_iLength;	                // length of this message
       bool m_bValid;			// if the message is valid
@@ -384,7 +384,7 @@ private:
    int m_iMsgInfoSize;	                // size of the message info list
    int m_iPtrFirstMsg;                  // pointer to the first message in the list
    int m_iPtrRecentACK;                 // the most recent ACK'ed message
-   __int32 m_iLastMsgNo;                // the last msg no ever received
+   int32_t m_iLastMsgNo;                // the last msg no ever received
 
    pthread_mutex_t m_MsgLock;           // used to synchronize MsgInfo operation
 

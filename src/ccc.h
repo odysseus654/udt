@@ -81,7 +81,7 @@ public:
       // Returned value:
       //    None.
 
-   virtual void onACK(const __int32&) {}
+   virtual void onACK(const int32_t&) {}
 
       // Functionality:
       //    Callback function to be called when a loss report is received.
@@ -91,7 +91,7 @@ public:
       // Returned value:
       //    None.
 
-   virtual void onLoss(const __int32*, const int&) {}
+   virtual void onLoss(const int32_t*, const int&) {}
 
       // Functionality:
       //    Callback function to be called when a timeout event occurs.

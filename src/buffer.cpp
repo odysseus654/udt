@@ -85,7 +85,7 @@ CSndBuffer::~CSndBuffer()
    #endif
 }
 
-void CSndBuffer::addBuffer(const char* data, const int& len, const int& handle, const UDT_MEM_ROUTINE func, const int& ttl, const __int32& seqno, const bool& order)
+void CSndBuffer::addBuffer(const char* data, const int& len, const int& handle, const UDT_MEM_ROUTINE func, const int& ttl, const int32_t& seqno, const bool& order)
 {
    CGuard bufferguard(m_BufLock);
 
@@ -115,7 +115,7 @@ void CSndBuffer::addBuffer(const char* data, const int& len, const int& handle, 
    {
       // Insert a new block to the tail of the list
 
-      __int32 lastseq = m_pLastBlock->m_iSeqNo;
+      int32_t lastseq = m_pLastBlock->m_iSeqNo;
       int offset = m_pLastBlock->m_iLength;
 
       m_pLastBlock->m_next = new Block;
@@ -125,7 +125,7 @@ void CSndBuffer::addBuffer(const char* data, const int& len, const int& handle, 
       gettimeofday(&m_pLastBlock->m_OriginTime, 0);
       m_pLastBlock->m_iTTL = ttl;
       m_pLastBlock->m_iMsgNo = m_iNextMsgNo;
-      m_pLastBlock->m_iSeqNo = lastseq + (__int32)ceil(double(offset) / m_iMSS);
+      m_pLastBlock->m_iSeqNo = lastseq + (int32_t)ceil(double(offset) / m_iMSS);
       m_pLastBlock->m_iInOrder = order;
       m_pLastBlock->m_iInOrder <<= 29;
       m_pLastBlock->m_iHandle = handle;
@@ -140,7 +140,7 @@ void CSndBuffer::addBuffer(const char* data, const int& len, const int& handle, 
    m_iNextMsgNo = CMsgNo::incmsg(m_iNextMsgNo);
 }
 
-int CSndBuffer::readData(char** data, const int& len, __int32& msgno)
+int CSndBuffer::readData(char** data, const int& len, int32_t& msgno)
 {
    CGuard bufferguard(m_BufLock);
 
@@ -180,7 +180,7 @@ int CSndBuffer::readData(char** data, const int& len, __int32& msgno)
    return readlen;
 }
 
-int CSndBuffer::readData(char** data, const int offset, const int& len, __int32& msgno, __int32& seqno, int& msglen)
+int CSndBuffer::readData(char** data, const int offset, const int& len, int32_t& msgno, int32_t& seqno, int& msglen)
 {
    CGuard bufferguard(m_BufLock);
 
@@ -811,7 +811,7 @@ void CRcvBuffer::initMsgList()
    }
 }
 
-void CRcvBuffer::checkMsg(const int& type, const __int32& msgno, const __int32& seqno, const char* ptr, const bool& inorder, const int& diff)
+void CRcvBuffer::checkMsg(const int& type, const int32_t& msgno, const int32_t& seqno, const char* ptr, const bool& inorder, const int& diff)
 {
    CGuard msgguard(m_MsgLock);
 
@@ -871,7 +871,7 @@ void CRcvBuffer::checkMsg(const int& type, const __int32& msgno, const __int32& 
       m_iLastMsgNo = msgno;
 }
 
-bool CRcvBuffer::ackMsg(const __int32& ack, const CRcvLossList* rll)
+bool CRcvBuffer::ackMsg(const int32_t& ack, const CRcvLossList* rll)
 {
    CGuard msgguard(m_MsgLock);
 
@@ -931,7 +931,7 @@ bool CRcvBuffer::ackMsg(const __int32& ack, const CRcvLossList* rll)
    return (m_iValidMsgCount > 0);
 }
 
-void CRcvBuffer::dropMsg(const __int32& msgno)
+void CRcvBuffer::dropMsg(const int32_t& msgno)
 {
    CGuard msgguard(m_MsgLock);
 

@@ -46,8 +46,8 @@ m_iSize(1024),
 m_iHead(0),
 m_iTail(0)
 {
-   m_piACKSeqNo = new __int32[m_iSize];
-   m_piACK = new __int32[m_iSize];
+   m_piACKSeqNo = new int32_t[m_iSize];
+   m_piACK = new int32_t[m_iSize];
    m_pTimeStamp = new timeval[m_iSize];
 
    m_piACKSeqNo[0] = -1;
@@ -61,8 +61,8 @@ m_iSize(size),
 m_iHead(0),
 m_iTail(0)
 {
-   m_piACKSeqNo = new __int32[m_iSize];
-   m_piACK = new __int32[m_iSize];
+   m_piACKSeqNo = new int32_t[m_iSize];
+   m_piACK = new int32_t[m_iSize];
    m_pTimeStamp = new timeval[m_iSize];
 
    m_piACKSeqNo[0] = -1;
@@ -75,7 +75,7 @@ CACKWindow::~CACKWindow()
    delete [] m_pTimeStamp;
 }
 
-void CACKWindow::store(const __int32& seq, const __int32& ack)
+void CACKWindow::store(const int32_t& seq, const int32_t& ack)
 {
    m_piACKSeqNo[m_iHead] = seq;
    m_piACK[m_iHead] = ack;
@@ -88,7 +88,7 @@ void CACKWindow::store(const __int32& seq, const __int32& ack)
       m_iTail = (m_iTail + 1) % m_iSize;
 }
 
-int CACKWindow::acknowledge(const __int32& seq, __int32& ack)
+int CACKWindow::acknowledge(const int32_t& seq, int32_t& ack)
 {
    if (m_iHead >= m_iTail)
    {

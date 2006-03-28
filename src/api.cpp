@@ -716,9 +716,9 @@ int CUDTUnited::select(ud_set* readfds, ud_set* writefds, ud_set* exceptfds, con
 
    gettimeofday(&entertime, 0);
 
-   __int64 to;
+   int64_t to;
    if (NULL == timeout)
-      to = (__int64)1 << 62;
+      to = (int64_t)1 << 62;
    else
       to = timeout->tv_sec * 1000000 + timeout->tv_usec;
 

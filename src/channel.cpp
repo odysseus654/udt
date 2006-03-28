@@ -158,8 +158,8 @@ const CChannel& CChannel::operator<<(CPacket& packet) const
    {
       // convert control information into network order
       if (packet.getFlag())
-         for (int i = 0, n = packet.getLength() / sizeof(__int32); i < n; ++ i)
-            *((__int32 *)packet.m_pcData + i) = htonl(*((__int32 *)packet.m_pcData + i));
+         for (int i = 0, n = packet.getLength() / 4; i < n; ++ i)
+            *((uint32_t *)packet.m_pcData + i) = htonl(*((uint32_t *)packet.m_pcData + i));
 
       // convert packet header into network order
       packet.m_nHeader[0] = htonl(packet.m_nHeader[0]);
@@ -179,8 +179,8 @@ const CChannel& CChannel::operator<<(CPacket& packet) const
       packet.m_nHeader[1] = ntohl(packet.m_nHeader[1]);
 
       if (packet.getFlag())
-         for (int j = 0, n = packet.getLength() / sizeof(__int32); j < n; ++ j)
-            *((__int32 *)packet.m_pcData + j) = ntohl(*((__int32 *)packet.m_pcData + j));
+         for (int j = 0, n = packet.getLength() / 4; j < n; ++ j)
+            *((uint32_t *)packet.m_pcData + j) = ntohl(*((uint32_t *)packet.m_pcData + j));
    }
 
    return *this;
@@ -211,8 +211,8 @@ const CChannel& CChannel::operator>>(CPacket& packet) const
 
       // convert control information into local host order
       if (packet.getFlag())
-         for (int i = 0, n = packet.getLength() / sizeof(__int32); i < n; ++ i)
-            *((__int32 *)packet.m_pcData + i) = ntohl(*((__int32 *)packet.m_pcData + i));
+         for (int i = 0, n = packet.getLength() / 4; i < n; ++ i)
+            *((uint32_t *)packet.m_pcData + i) = ntohl(*((uint32_t *)packet.m_pcData + i));
    }
 
    return *this;
@@ -224,8 +224,8 @@ int CChannel::sendto(CPacket& packet, const sockaddr* addr) const
    {
       // convert control information into network order
       if (packet.getFlag())
-         for (int i = 0, n = packet.getLength() / sizeof(__int32); i < n; ++ i)
-            *((__int32 *)packet.m_pcData + i) = htonl(*((__int32 *)packet.m_pcData + i));
+         for (int i = 0, n = packet.getLength() / 4; i < n; ++ i)
+            *((uint32_t *)packet.m_pcData + i) = htonl(*((uint32_t *)packet.m_pcData + i));
 
       // convert packet header into network order
       packet.m_nHeader[0] = htonl(packet.m_nHeader[0]);
@@ -260,8 +260,8 @@ int CChannel::sendto(CPacket& packet, const sockaddr* addr) const
       packet.m_nHeader[1] = ntohl(packet.m_nHeader[1]);
 
       if (packet.getFlag())
-         for (int j = 0, n = packet.getLength() / sizeof(__int32); j < n; ++ j)
-            *((__int32 *)packet.m_pcData + j) = ntohl(*((__int32 *)packet.m_pcData + j));
+         for (int j = 0, n = packet.getLength() / 4; j < n; ++ j)
+            *((uint32_t *)packet.m_pcData + j) = ntohl(*((uint32_t *)packet.m_pcData + j));
    }
 
    return ret;
@@ -301,8 +301,8 @@ int CChannel::recvfrom(CPacket& packet, sockaddr* addr) const
          packet.m_nHeader[1] = ntohl(packet.m_nHeader[1]);
 
          if (packet.getFlag())
-            for (int i = 0, n = packet.getLength() / sizeof(__int32); i < n; ++ i)
-               *((__int32 *)packet.m_pcData + i) = ntohl(*((__int32 *)packet.m_pcData + i));
+            for (int i = 0, n = packet.getLength() / 4; i < n; ++ i)
+               *((uint32_t *)packet.m_pcData + i) = ntohl(*((uint32_t *)packet.m_pcData + i));
       }
    }
    else

@@ -61,7 +61,7 @@ written by
       }
       else
       {
-         unsigned __int64 ft;
+         uint64_t ft;
          GetSystemTimeAsFileTime((FILETIME *)&ft);
          tv->tv_sec = (long)(ft / 10000000);
          tv->tv_usec = (long)((ft % 10000000) / 10);
@@ -90,9 +90,9 @@ written by
    }
 #endif
 
-unsigned __int64 CTimer::s_ullCPUFrequency = CTimer::readCPUFrequency();
+uint64_t CTimer::s_ullCPUFrequency = CTimer::readCPUFrequency();
 
-void CTimer::rdtsc(unsigned __int64 &x)
+void CTimer::rdtsc(uint64_t &x)
 {
    #ifdef WIN32
       if (!QueryPerformanceCounter((LARGE_INTEGER *)&x))
@@ -134,10 +134,10 @@ void CTimer::rdtsc(unsigned __int64 &x)
    #endif
 }
 
-unsigned __int64 CTimer::readCPUFrequency()
+uint64_t CTimer::readCPUFrequency()
 {
    #ifdef WIN32
-      __int64 ccf;
+      int64_t ccf;
       if (QueryPerformanceFrequency((LARGE_INTEGER *)&ccf))
          return ccf / 1000000;
       else
@@ -145,7 +145,7 @@ unsigned __int64 CTimer::readCPUFrequency()
    #elif IA32 || IA64 || AMD64
       // alternative: read /proc/cpuinfo
 
-      unsigned __int64 t1, t2;
+      uint64_t t1, t2;
 
       rdtsc(t1);
       usleep(100000);
@@ -158,26 +158,26 @@ unsigned __int64 CTimer::readCPUFrequency()
    #endif
 }
 
-unsigned __int64 CTimer::getCPUFrequency()
+uint64_t CTimer::getCPUFrequency()
 {
    return s_ullCPUFrequency;
 }
 
-void CTimer::sleep(const unsigned __int64& interval)
+void CTimer::sleep(const uint64_t& interval)
 {
-   unsigned __int64 t;
+   uint64_t t;
    rdtsc(t);
 
    // sleep next "interval" time
    sleepto(t + interval);
 }
 
-void CTimer::sleepto(const unsigned __int64& nexttime)
+void CTimer::sleepto(const uint64_t& nexttime)
 {
    // Use class member such that the method can be interrupted by others
    m_ullSchedTime = nexttime;
 
-   unsigned __int64 t;
+   uint64_t t;
    rdtsc(t);
 
    while (t < m_ullSchedTime)

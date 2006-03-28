@@ -49,9 +49,9 @@ class CPacket
 friend class CChannel;
 
 public:
-   __int32& m_iSeqNo;                   // alias: sequence number
-   __int32& m_iMsgNo;                   // alias: message number
-   __int32& m_iTimeStamp;               // alias: timestamp
+   int32_t& m_iSeqNo;                   // alias: sequence number
+   int32_t& m_iMsgNo;                   // alias: message number
+   int32_t& m_iTimeStamp;               // alias: timestamp
    char*& m_pcData;                     // alias: data/control information
 
    static const int m_iPktHdrSize;	// packet header size
@@ -133,7 +133,7 @@ public:
       // Returned value:
       //    packet header field (bit 16~31).
 
-   __int32 getAckSeqNo() const;
+   int32_t getAckSeqNo() const;
 
       // Functionality:
       //    Read the message boundary flag bit.
@@ -160,13 +160,13 @@ public:
       // Returned value:
       //    packet header field [1] (bit 3~31).
 
-   __int32 getMsgSeq() const;
+   int32_t getMsgSeq() const;
 
 protected:
-   unsigned __int32 m_nHeader[3];       // The 96-bit header field
+   uint32_t m_nHeader[3];               // The 96-bit header field
    iovec m_PacketVector[2];             // The 2-demension vector of UDT packet [header, data]
 
-   __int32 __pad;
+   int32_t __pad;
 
    void operator = (const CPacket&) {}
 };
@@ -175,12 +175,12 @@ protected:
 
 struct CHandShake
 {
-   __int32 m_iVersion;          // UDT version
-   __int32 m_iType;             // UDT socket type
-   __int32 m_iISN;              // random initial sequence number
-   __int32 m_iMSS;              // maximum segment size
-   __int32 m_iFlightFlagSize;   // flow control window size
-   __int32 m_iReqType;          // connection request type: -1: response, 1: initial request, 0: rendezvous request
+   int32_t m_iVersion;          // UDT version
+   int32_t m_iType;             // UDT socket type
+   int32_t m_iISN;              // random initial sequence number
+   int32_t m_iMSS;              // maximum segment size
+   int32_t m_iFlightFlagSize;   // flow control window size
+   int32_t m_iReqType;          // connection request type: -1: response, 1: initial request, 0: rendezvous request
 };
 
 

@@ -54,7 +54,7 @@ public:
       // Returned value:
       //    number of packets that are not in the list previously.
 
-   int insert(const __int32& seqno1, const __int32& seqno2);
+   int insert(const int32_t& seqno1, const int32_t& seqno2);
 
       // Functionality:
       //    Remove ALL the seq. no. that are not greater than the parameter.
@@ -63,7 +63,7 @@ public:
       // Returned value:
       //    None.
 
-   void remove(const __int32& seqno);
+   void remove(const int32_t& seqno);
 
       // Functionality:
       //    Read the loss length.
@@ -81,11 +81,11 @@ public:
       // Returned value:
       //    The seq. no. or -1 if the list is empty.
 
-   __int32 getLostSeq();
+   int32_t getLostSeq();
 
 private:
-   __int32* m_piData1;                  // sequence number starts
-   __int32* m_piData2;                  // seqnence number ends
+   int32_t* m_piData1;                  // sequence number starts
+   int32_t* m_piData2;                  // seqnence number ends
    int* m_piNext;                       // next node in the list
 
    int m_iHead;                         // first node
@@ -112,7 +112,7 @@ public:
       // Returned value:
       //    None.
 
-   void insert(const __int32& seqno1, const __int32& seqno2);
+   void insert(const int32_t& seqno1, const int32_t& seqno2);
 
       // Functionality:
       //    Remove a loss seq. no. from the receiver's loss list.
@@ -121,7 +121,7 @@ public:
       // Returned value:
       //    if the packet is removed (true) or no such lost packet is found (false).
 
-   bool remove(const __int32& seqno);
+   bool remove(const int32_t& seqno);
 
       // Functionality:
       //    Remove all packets between seqno1 and seqno2.
@@ -131,7 +131,7 @@ public:
       // Returned value:
       //    if the packet is removed (true) or no such lost packet is found (false).
 
-   bool remove(const __int32& seqno1, const __int32& seqno2);
+   bool remove(const int32_t& seqno1, const int32_t& seqno2);
 
       // Functionality:
       //    Find if there is any lost packets whose sequence number falling seqno1 and seqno2.
@@ -141,7 +141,7 @@ public:
       // Returned value:
       //    True if found; otherwise false.
 
-   bool find(const __int32& seqno1, const __int32& seqno2) const;
+   bool find(const int32_t& seqno1, const int32_t& seqno2) const;
 
       // Functionality:
       //    Read the loss length.
@@ -171,11 +171,11 @@ public:
       // Returned value:
       //    None.
 
-   void getLossArray(__int32* array, int& len, const int& limit, const int& threshold);
+   void getLossArray(int32_t* array, int& len, const int& limit, const int& threshold);
 
 private:
-   __int32* m_piData1;                  // sequence number starts
-   __int32* m_piData2;                  // sequence number ends
+   int32_t* m_piData1;                  // sequence number starts
+   int32_t* m_piData2;                  // sequence number ends
    timeval* m_pLastFeedbackTime;        // last feedback time of the node
    int* m_piCount;                      // report counter
    int* m_piNext;                       // next node in the list
@@ -202,7 +202,7 @@ public:
       // Returned value:
       //    the total size error of all the irregular packets prior to (excluding) "seqno".
 
-   int currErrorSize(const __int32& seqno) const;
+   int currErrorSize(const int32_t& seqno) const;
 
       // Functionality:
       //    Insert an irregular packet into the list.
@@ -212,7 +212,7 @@ public:
       // Returned value:
       //    None
 
-   void addIrregularPkt(const __int32& seqno, const int& errsize);
+   void addIrregularPkt(const int32_t& seqno, const int& errsize);
 
       // Functionality:
       //    Remove ALL the packets prior to "seqno".
@@ -221,10 +221,10 @@ public:
       // Returned value:
       //    None
 
-   void deleteIrregularPkt(const __int32& seqno);
+   void deleteIrregularPkt(const int32_t& seqno);
 
 private:
-   __int32* m_piData;                   // sequence number
+   int32_t* m_piData;                   // sequence number
    int* m_piErrorSize;                  // size error of the node
    int* m_piNext;                       // next node in the list
 

@@ -50,18 +50,20 @@ written by
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef WIN32
+#ifdef WIN32
    // Explicitly define 32-bit and 64-bit numbers
-   #define __int32 int
-   #define __int64 long long
+   typedef __int32 int32_t;
+   typedef __int64 int64_t;
+   typedef unsigned __int32 uint32_t;
+   typedef unsigned __int64 uint64_t;
 
-   #define UDT_API
-#else
    #ifdef UDT_EXPORTS
       #define UDT_API __declspec(dllexport)
    #else
       #define UDT_API __declspec(dllimport)
    #endif
+#else
+   #define UDT_API
 #endif
 
 typedef void (*UDT_MEM_ROUTINE)(char*, int);

@@ -59,7 +59,7 @@ public:
       // Returned value:
       //    None.
 
-   void store(const __int32& seq, const __int32& ack);
+   void store(const int32_t& seq, const int32_t& ack);
 
       // Functionality:
       //    Search the ACK-2 "seq" in the window, find out the DATA "ack" and caluclate RTT .
@@ -69,11 +69,11 @@ public:
       // Returned value:
       //    RTT.
 
-   int acknowledge(const __int32& seq, __int32& ack);
+   int acknowledge(const int32_t& seq, int32_t& ack);
 
 private:
-   __int32* m_piACKSeqNo;       // Seq. No. for the ACK packet
-   __int32* m_piACK;            // Data Seq. No. carried by the ACK packet
+   int32_t* m_piACKSeqNo;       // Seq. No. for the ACK packet
+   int32_t* m_piACK;            // Data Seq. No. carried by the ACK packet
    timeval* m_pTimeStamp;       // The timestamp when the ACK was sent
 
    int m_iSize;                 // Size of the ACK history window

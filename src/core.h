@@ -268,7 +268,7 @@ private: // Threads, data channel, and timing facility
    pthread_t m_RcvThread;                       // Receiving thread
    CChannel* m_pChannel;                        // UDP channel
    CTimer* m_pTimer;                            // Timing facility
-   unsigned __int64 m_ullCPUFrequency;          // CPU clock frequency, used for Timer
+   uint64_t m_ullCPUFrequency;                  // CPU clock frequency, used for Timer
 
 private: // Timing intervals
    const int m_iSYNInterval;                    // Periodical Rate Control Interval, 10 microseconds
@@ -328,9 +328,9 @@ private: // Sending related data
    CSndLossList* m_pSndLossList;                // Sender loss list
    CPktTimeWindow* m_pSndTimeWindow;            // Packet sending time window
 
-   volatile unsigned __int64 m_ullInterval;     // Inter-packet time, in CPU clock cycles
-   unsigned __int64 m_ullLastDecRate;           // inter-packet time when last decrease occurs
-   unsigned __int64 m_ullTimeDiff;              // aggregate difference in inter-packet time
+   volatile uint64_t m_ullInterval;             // Inter-packet time, in CPU clock cycles
+   uint64_t m_ullLastDecRate;                   // inter-packet time when last decrease occurs
+   uint64_t m_ullTimeDiff;                      // aggregate difference in inter-packet time
 
    volatile int m_iFlowWindowSize;              // Flow control window size
    int m_iMaxFlowWindowSize;                    // Maximum flow window size = flight flag size of the peer side
@@ -343,12 +343,12 @@ private: // Sending related data
    timeval m_LastSYNTime;                       // the timestamp when last rate control occured
    bool m_bLoss;                                // if there is any loss during last RC period
 
-   volatile __int32 m_iSndLastAck;              // Last ACK received
-   __int32 m_iSndLastDataAck;                   // The real last ACK that updates the sender buffer and loss list
-   __int32 m_iSndCurrSeqNo;                     // The largest sequence number that has been sent
-   __int32 m_iLastDecSeq;                       // Sequence number sent last decrease occurs
+   volatile int32_t m_iSndLastAck;              // Last ACK received
+   int32_t m_iSndLastDataAck;                   // The real last ACK that updates the sender buffer and loss list
+   int32_t m_iSndCurrSeqNo;                     // The largest sequence number that has been sent
+   int32_t m_iLastDecSeq;                       // Sequence number sent last decrease occurs
 
-   __int32 m_iISN;                              // Initial Sequence Number
+   int32_t m_iISN;                              // Initial Sequence Number
 
 private: // Receiving related data
    CRcvBuffer* m_pRcvBuffer;                    // Receiver buffer
@@ -360,23 +360,23 @@ private: // Receiving related data
    int m_iRTT;                                  // RTT
    int m_iRTTVar;                               // RTT variance
 
-   __int32 m_iRcvLastAck;                       // Last sent ACK
-   unsigned __int64 m_ullLastAckTime;           // Timestamp of last ACK
-   __int32 m_iRcvLastAckAck;                    // Last sent ACK that has been acknowledged
-   __int32 m_iAckSeqNo;                         // Last ACK sequence number
-   __int32 m_iRcvCurrSeqNo;                     // Largest received sequence number
-   __int32 m_iNextExpect;                       // Sequence number of next speculated packet to receive
+   int32_t m_iRcvLastAck;                       // Last sent ACK
+   uint64_t m_ullLastAckTime;                   // Timestamp of last ACK
+   int32_t m_iRcvLastAckAck;                    // Last sent ACK that has been acknowledged
+   int32_t m_iAckSeqNo;                         // Last ACK sequence number
+   int32_t m_iRcvCurrSeqNo;                     // Largest received sequence number
+   int32_t m_iNextExpect;                       // Sequence number of next speculated packet to receive
 
    volatile bool m_bReadBuf;                    // Application has called "recv" but has not finished
    volatile char* m_pcTempData;                 // Pointer to the buffer that application want to put received data into
    volatile int m_iTempLen;                     // Size of the "m_pcTempData"
    volatile UDT_MEM_ROUTINE m_iTempRoutine;     // pointer ot a routine function to process "m_pcTempData"
 
-   __int32 m_iUserBufBorder;                    // Sequence number of last packet that will fulfill a user buffer
+   int32_t m_iUserBufBorder;                    // Sequence number of last packet that will fulfill a user buffer
 
-   unsigned __int64 m_ullLastWarningTime;       // Last time that a warning message is sent
+   uint64_t m_ullLastWarningTime;               // Last time that a warning message is sent
 
-   __int32 m_iPeerISN;                          // Initial Sequence Number of the peer side
+   int32_t m_iPeerISN;                          // Initial Sequence Number of the peer side
 
    int m_iFlowControlWindow;                    // flow control window size to be advertised
 
