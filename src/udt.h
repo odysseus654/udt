@@ -93,8 +93,8 @@ enum UDTOpt
    UDT_MAXMSG,          // maximum datagram message size
    UDT_MSGTTL,          // time-to-live of a datagram message
    UDT_RENDEZVOUS,      // rendezvous connection mode
-   UDT_SNDTIMEO,	// send() timeout
-   UDT_RCVTIMEO		// recv() timeout
+   UDT_SNDTIMEO,        // send() timeout
+   UDT_RCVTIMEO	        // recv() timeout
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -165,7 +165,7 @@ public:
    virtual const int getErrorCode() const;
 
 private:
-   int m_iMajor;    // major exception categories
+   int m_iMajor;        // major exception categories
 
 // 0: correct condition
 // 1: network setup exception
@@ -175,9 +175,9 @@ private:
 // 5: method not supported
 // 6+: undefined error
 
-   int m_iMinor;    // for specific error reasons
+   int m_iMinor;        // for specific error reasons
 
-   int m_iErrno;    // errno returned by the system if there is any
+   int m_iErrno;        // errno returned by the system if there is any
 
    char m_pcMsg[1024];  // text error message
 };

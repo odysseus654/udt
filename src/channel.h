@@ -211,7 +211,7 @@ private:
 
    char* m_pcChannelBuf;                // buffer for temporally storage of in/out data
 
-   bool m_bEndianess;			// endianess
+   bool m_bEndianess;                   // endianess
 
 private:
    void setChannelOpt();

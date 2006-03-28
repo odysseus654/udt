@@ -51,26 +51,26 @@ struct CUDTSocket
    ~CUDTSocket();
 
    enum UDTSTATUS {INIT = 1, OPENED, LISTENING, CONNECTED, CLOSED};
-   UDTSTATUS m_Status;                  // current socket state
+   UDTSTATUS m_Status;                       // current socket state
 
-   timeval m_TimeStamp;                 // time when the socket is closed
+   timeval m_TimeStamp;                      // time when the socket is closed
 
-   int m_iIPversion;                    // IP version
-   sockaddr* m_pSelfAddr;               // pointer to the local address of the socket
-   sockaddr* m_pPeerAddr;               // pointer to the peer address of the socket
+   int m_iIPversion;                         // IP version
+   sockaddr* m_pSelfAddr;                    // pointer to the local address of the socket
+   sockaddr* m_pPeerAddr;                    // pointer to the peer address of the socket
 
-   UDTSOCKET m_Socket;                  // socket ID
-   UDTSOCKET m_ListenSocket;            // ID of the listener socket; 0 means this is an independent socket
+   UDTSOCKET m_Socket;                       // socket ID
+   UDTSOCKET m_ListenSocket;                 // ID of the listener socket; 0 means this is an independent socket
 
-   CUDT* m_pUDT;                        // pointer to the UDT entity
+   CUDT* m_pUDT;                             // pointer to the UDT entity
 
    std::set<UDTSOCKET>* m_pQueuedSockets;    // set of connections waiting for accept()
    std::set<UDTSOCKET>* m_pAcceptSockets;    // set of accept()ed connections
 
-   pthread_cond_t m_AcceptCond;         // used to block "accept" call
-   pthread_mutex_t m_AcceptLock;        // mutex associated to m_AcceptCond
+   pthread_cond_t m_AcceptCond;              // used to block "accept" call
+   pthread_mutex_t m_AcceptLock;             // mutex associated to m_AcceptCond
 
-   unsigned int m_uiBackLog;            // maximum number of connections in queue
+   unsigned int m_uiBackLog;                 // maximum number of connections in queue
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -144,13 +144,13 @@ public:
 private:
    std::map<UDTSOCKET, CUDTSocket*> m_Sockets;       // stores all the socket structures
 
-   pthread_mutex_t m_ControlLock;               // used to synchronize UDT API
+   pthread_mutex_t m_ControlLock;                    // used to synchronize UDT API
 
-   pthread_mutex_t m_IDLock;                    // used to synchronize ID generation
-   UDTSOCKET m_SocketID;                        // seed to generate a new unique socket ID
+   pthread_mutex_t m_IDLock;                         // used to synchronize ID generation
+   UDTSOCKET m_SocketID;                             // seed to generate a new unique socket ID
 
 private:
-   pthread_key_t m_TLSError;                    // thread local error record (last error)
+   pthread_key_t m_TLSError;                         // thread local error record (last error)
    static void TLSDestroy(void* e) {delete (CUDTException*)e;}
 
 private:

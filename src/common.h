@@ -137,8 +137,8 @@ public:
    ~CGuard();
 
 private:
-   pthread_mutex_t& m_Mutex;    // Alias name of the mutex to be protected
-   int m_iLocked;               // Locking status
+   pthread_mutex_t& m_Mutex;            // Alias name of the mutex to be protected
+   int m_iLocked;                       // Locking status
 
    void operator = (const CGuard&) {}
 };
@@ -184,8 +184,8 @@ public:
    {return (m_iMaxSeqNo - seq > inc) ? seq + inc : seq - m_iMaxSeqNo + inc;}
 
 public:
-   static const int32_t m_iSeqNoTH;        	// threshold for comparing seq. no.
-   static const int32_t m_iMaxSeqNo;       	// maximum sequence number used in UDT
+   static const int32_t m_iSeqNoTH;             // threshold for comparing seq. no.
+   static const int32_t m_iMaxSeqNo;            // maximum sequence number used in UDT
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -199,7 +199,7 @@ public:
    {return (ackno == m_iMaxAckSeqNo - 1) ? 0 : ackno + 1;}
 
 public:
-   static const int32_t m_iMaxAckSeqNo;    	// maximum ACK sub-sequence number used in UDT
+   static const int32_t m_iMaxAckSeqNo;         // maximum ACK sub-sequence number used in UDT
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -230,8 +230,8 @@ public:
    {return (msgno == m_iMaxMsgNo - 1) ? 0 : msgno + 1;}
 
 public:
-   static const int32_t m_iMsgNoTH;         	// threshold for comparing msg. no.
-   static const int32_t m_iMaxMsgNo;       	// maximum message number used in UDT
+   static const int32_t m_iMsgNoTH;             // threshold for comparing msg. no.
+   static const int32_t m_iMaxMsgNo;            // maximum message number used in UDT
 };
 
 

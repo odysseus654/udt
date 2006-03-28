@@ -135,10 +135,10 @@ private:
       int m_iLength;                    // length of the block
 
       timeval m_OriginTime;             // original request time
-      int m_iTTL;			// time to live
+      int m_iTTL;                       // time to live
       int32_t m_iMsgNo;                 // message number
       int32_t m_iSeqNo;                 // sequence number of first packet
-      int m_iInOrder;		        // flag indicating if the block should be delivered in order
+      int m_iInOrder;                   // flag indicating if the block should be delivered in order
 
       int m_iHandle;                    // a unique handle to represent this senidng request
       UDT_MEM_ROUTINE m_pMemRoutine;    // function to process buffer after sending
@@ -372,13 +372,13 @@ private:
    {
       char* m_pcData;	                // location of the message in the protocol buffer
       int32_t m_iMsgNo;	                // message number
-      int32_t m_iStartSeq;		// sequence number of the first packet in the message
+      int32_t m_iStartSeq;              // sequence number of the first packet in the message
       int32_t m_iEndSeq;                // sequence number of the last packet in the message
       int m_iSizeDiff;	                // the size difference of the last packet (that may be an irregular sized packet)
       int m_iLength;	                // length of this message
-      bool m_bValid;			// if the message is valid
-      bool m_bDropped;			// if the message is droped by the sender
-      bool m_bInOrder;			// if the message should be delivered in order
+      bool m_bValid;                    // if the message is valid
+      bool m_bDropped;                  // if the message is droped by the sender
+      bool m_bInOrder;                  // if the message should be delivered in order
    } *m_pMessageList;                   // a list of the received message
 
    int m_iMsgInfoSize;	                // size of the message info list
