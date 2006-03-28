@@ -1051,10 +1051,10 @@ DWORD WINAPI CUDT::sndHandler(LPVOID sender)
 
          // check congestion/flow window limit
          #ifndef CUSTOM_CC
-            if (self->m_iFlowWindowSize > CSeqNo::seqlen((int32_t)self->m_iSndLastAck, CSeqNo::incseq(self->m_iSndCurrSeqNo)) - 1)
+            if (self->m_iFlowWindowSize > CSeqNo::seqlen(const_cast<int32_t&>(self->m_iSndLastAck), CSeqNo::incseq(self->m_iSndCurrSeqNo)) - 1)
          #else
             cwnd = (self->m_iFlowWindowSize < (int)self->m_dCongestionWindow) ? self->m_iFlowWindowSize : (int)self->m_dCongestionWindow;
-            if (cwnd > CSeqNo::seqlen((int32_t)self->m_iSndLastAck, CSeqNo::incseq(self->m_iSndCurrSeqNo)) - 1)
+            if (cwnd > CSeqNo::seqlen(const_cast<int32_t&>(self->m_iSndLastAck), CSeqNo::incseq(self->m_iSndCurrSeqNo)) - 1)
          #endif
          {
             if (0 != (payload = self->m_pSndBuffer->readData(&(datapkt.m_pcData), self->m_iPayloadSize, datapkt.m_iMsgNo)))
@@ -1796,7 +1796,7 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
       if (4 == ctrlpkt.getLength())
       {
          ack = *(int32_t *)ctrlpkt.m_pcData;
-         if (CSeqNo::seqcmp(ack, (int32_t)m_iSndLastAck) > 0)
+         if (CSeqNo::seqcmp(ack, const_cast<int32_t&>(m_iSndLastAck)) > 0)
             m_iSndLastAck = ack;
 
          #ifdef CUSTOM_CC
@@ -1817,7 +1817,7 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
       // Got data ACK
       ack = *(int32_t *)ctrlpkt.m_pcData;
 
-      if (CSeqNo::seqcmp(ack, (int32_t)m_iSndLastAck) > 0)
+      if (CSeqNo::seqcmp(ack, const_cast<int32_t&>(m_iSndLastAck)) > 0)
          m_iSndLastAck = ack;
 
       // protect packet retransmission
@@ -1984,14 +1984,14 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
       {
          if (0 != (losslist[i] & 0x80000000))
          {
-            if (CSeqNo::seqcmp(losslist[i] & 0x7FFFFFFF, (int32_t)m_iSndLastAck) >= 0)
+            if (CSeqNo::seqcmp(losslist[i] & 0x7FFFFFFF, const_cast<int32_t&>(m_iSndLastAck)) >= 0)
                m_iTraceSndLoss += m_pSndLossList->insert(losslist[i] & 0x7FFFFFFF, losslist[i + 1]);
-            else if (CSeqNo::seqcmp(losslist[i + 1], (int32_t)m_iSndLastAck) >= 0)
-               m_iTraceSndLoss += m_pSndLossList->insert((int32_t)m_iSndLastAck, losslist[i + 1]);
+            else if (CSeqNo::seqcmp(losslist[i + 1], const_cast<int32_t&>(m_iSndLastAck)) >= 0)
+               m_iTraceSndLoss += m_pSndLossList->insert(const_cast<int32_t&>(m_iSndLastAck), losslist[i + 1]);
 
             ++ i;
          }
-         else if (CSeqNo::seqcmp(losslist[i], (int32_t)m_iSndLastAck) >= 0)
+         else if (CSeqNo::seqcmp(losslist[i], const_cast<int32_t&>(m_iSndLastAck)) >= 0)
          {
             m_iTraceSndLoss += m_pSndLossList->insert(losslist[i], losslist[i]);
          }
@@ -2913,7 +2913,7 @@ void CUDT::sample(CPerfMon* perf, bool clear)
    perf->usPktSndPeriod = m_ullInterval / double(m_ullCPUFrequency);
    perf->pktFlowWindow = m_iFlowWindowSize;
    perf->pktCongestionWindow = (int)m_dCongestionWindow;
-   perf->pktFlightSize = CSeqNo::seqlen((int32_t)m_iSndLastAck, m_iSndCurrSeqNo);
+   perf->pktFlightSize = CSeqNo::seqlen(const_cast<int32_t&>(m_iSndLastAck), m_iSndCurrSeqNo);
    perf->msRTT = m_iRTT/1000.0;
    perf->mbpsBandwidth = m_iBandwidth * m_iPayloadSize * 8.0 / 1000000.0;
 
