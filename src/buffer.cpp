@@ -34,7 +34,7 @@ The receiving buffer is a logically circular memeory block.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/23/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/05/2006
 *****************************************************************************/
 
 #include <cstring>
@@ -72,7 +72,7 @@ CSndBuffer::~CSndBuffer()
 
       // process user data according with the routine provided by applications
       if (NULL != m_pBlock->m_pMemRoutine)
-         m_pBlock->m_pMemRoutine(m_pBlock->m_pcData, m_pBlock->m_iLength);
+         m_pBlock->m_pMemRoutine(m_pBlock->m_pcData, m_pBlock->m_iLength, m_pBlock->m_pContext);
 
       delete m_pBlock;
       m_pBlock = pb;
@@ -85,7 +85,7 @@ CSndBuffer::~CSndBuffer()
    #endif
 }
 
-void CSndBuffer::addBuffer(const char* data, const int& len, const int& handle, const UDT_MEM_ROUTINE func, const int& ttl, const int32_t& seqno, const bool& order)
+void CSndBuffer::addBuffer(const char* data, const int& len, const int& handle, const UDT_MEM_ROUTINE func, void* context, const int& ttl, const int32_t& seqno, const bool& order)
 {
    CGuard bufferguard(m_BufLock);
 
@@ -104,6 +104,7 @@ void CSndBuffer::addBuffer(const char* data, const int& len, const int& handle, 
       m_pBlock->m_iInOrder <<= 29;
       m_pBlock->m_iHandle = handle;
       m_pBlock->m_pMemRoutine = func;
+      m_pBlock->m_pContext = context;
       m_pBlock->m_next = NULL;
       m_pLastBlock = m_pBlock;
       m_pCurrSendBlk = m_pBlock;
@@ -130,6 +131,7 @@ void CSndBuffer::addBuffer(const char* data, const int& len, const int& handle, 
       m_pLastBlock->m_iInOrder <<= 29;
       m_pLastBlock->m_iHandle = handle;
       m_pLastBlock->m_pMemRoutine = func;
+      m_pLastBlock->m_pContext = context;
       m_pLastBlock->m_next = NULL;
       if (NULL == m_pCurrSendBlk)
          m_pCurrSendBlk = m_pLastBlock;
@@ -264,7 +266,7 @@ void CSndBuffer::ackData(const int& len, const int& payloadsize)
 
       // process user data according with the routine provided by applications
       if (NULL != m_pBlock->m_pMemRoutine)
-         m_pBlock->m_pMemRoutine(m_pBlock->m_pcData, m_pBlock->m_iLength);
+         m_pBlock->m_pMemRoutine(m_pBlock->m_pcData, m_pBlock->m_iLength, m_pBlock->m_pContext);
 
       delete m_pBlock;
       m_pBlock = m_pCurrAckBlk;
@@ -307,7 +309,7 @@ bool CSndBuffer::getOverlappedResult(const int& handle, int& progress)
    return true;
 }
 
-void CSndBuffer::releaseBuffer(char* buf, int)
+void CSndBuffer::releaseBuffer(char* buf, int, void*)
 {
    delete [] buf;
 }
@@ -630,12 +632,16 @@ int CRcvBuffer::ackData(const int& len)
          m_iLastAckPos += m_iUserBufAck + len - m_iUserBufSize;
          m_iMaxOffset -= m_iUserBufAck + len - m_iUserBufSize;
 
+         // process received data using user-defined function
+         if (NULL != m_pMemRoutine)
+            m_pMemRoutine(m_pcUserBuf, m_iUserBufSize, m_pContext);
+
          // the overlapped IO is completed, a pending buffer should be activated
          m_pcUserBuf = NULL;
          m_iUserBufSize = 0;
          if (NULL != m_pPendingBlock)
          {
-            registerUserBuf(m_pPendingBlock->m_pcData, m_pPendingBlock->m_iLength, m_pPendingBlock->m_iHandle, m_pPendingBlock->m_pMemRoutine);
+            registerUserBuf(m_pPendingBlock->m_pcData, m_pPendingBlock->m_iLength, m_pPendingBlock->m_iHandle, m_pPendingBlock->m_pMemRoutine, m_pPendingBlock->m_pContext);
             m_iPendingSize -= m_pPendingBlock->m_iLength;
             m_pPendingBlock = m_pPendingBlock->m_next;
             if (NULL == m_pPendingBlock)
@@ -657,7 +663,7 @@ int CRcvBuffer::ackData(const int& len)
    return ret;
 }
 
-int CRcvBuffer::registerUserBuf(char* buf, const int& len, const int& handle, const UDT_MEM_ROUTINE func)
+int CRcvBuffer::registerUserBuf(char* buf, const int& len, const int& handle, const UDT_MEM_ROUTINE func, void* context)
 {
    if (NULL != m_pcUserBuf)
    {
@@ -668,6 +674,7 @@ int CRcvBuffer::registerUserBuf(char* buf, const int& len, const int& handle, co
       nb->m_iLength = len;
       nb->m_iHandle = handle;
       nb->m_pMemRoutine = func;
+      nb->m_pContext = context;
       nb->m_next = NULL;
 
       if (NULL == m_pPendingBlock)
@@ -684,6 +691,8 @@ int CRcvBuffer::registerUserBuf(char* buf, const int& len, const int& handle, co
    m_iUserBufSize = len;
    m_pcUserBuf = buf;
    m_iHandle = handle;
+   m_pMemRoutine = func;
+   m_pContext = context;
 
    // find the furthest "dirty" data that need to be copied
    int currwritepos = (m_iLastAckPos + m_iMaxOffset) % m_iSize;

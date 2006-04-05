@@ -32,7 +32,7 @@ reference: UDT programming manual and socket programming reference
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/23/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/05/2006
 *****************************************************************************/
 
 #ifndef WIN32
@@ -1212,13 +1212,13 @@ int CUDT::shutdown(UDTSOCKET, int)
    }
 }
 
-int CUDT::send(UDTSOCKET u, const char* buf, int len, int, int* handle, UDT_MEM_ROUTINE routine)
+int CUDT::send(UDTSOCKET u, const char* buf, int len, int, int* handle, UDT_MEM_ROUTINE routine, void* context)
 {
    try
    {
       CUDT* udt = s_UDTUnited.lookup(u);
 
-      return udt->send((char*)buf, len, handle, routine);
+      return udt->send((char*)buf, len, handle, routine, context);
    }
    catch (CUDTException e)
    {
@@ -1237,13 +1237,13 @@ int CUDT::send(UDTSOCKET u, const char* buf, int len, int, int* handle, UDT_MEM_
    }
 }
 
-int CUDT::recv(UDTSOCKET u, char* buf, int len, int, int* handle, UDT_MEM_ROUTINE routine)
+int CUDT::recv(UDTSOCKET u, char* buf, int len, int, int* handle, UDT_MEM_ROUTINE routine, void* context)
 {
    try
    {
       CUDT* udt = s_UDTUnited.lookup(u);
 
-      return udt->recv(buf, len, handle, routine);
+      return udt->recv(buf, len, handle, routine, context);
    }
    catch (CUDTException e)
    {
@@ -1495,14 +1495,14 @@ int shutdown(UDTSOCKET u, int how)
    return CUDT::shutdown(u, how);
 }
 
-int send(UDTSOCKET u, const char* buf, int len, int flags, int* handle, UDT_MEM_ROUTINE routine)
+int send(UDTSOCKET u, const char* buf, int len, int flags, int* handle, UDT_MEM_ROUTINE routine, void* context)
 {
-   return CUDT::send(u, buf, len, flags, handle, routine);
+   return CUDT::send(u, buf, len, flags, handle, routine, context);
 }
 
-int recv(UDTSOCKET u, char* buf, int len, int flags, int* handle, UDT_MEM_ROUTINE routine)
+int recv(UDTSOCKET u, char* buf, int len, int flags, int* handle, UDT_MEM_ROUTINE routine, void* context)
 {
-   return CUDT::recv(u, buf, len, flags, handle, routine);
+   return CUDT::recv(u, buf, len, flags, handle, routine, context);
 }
 
 int sendmsg(UDTSOCKET u, const char* buf, int len, int ttl, bool inorder)

@@ -30,7 +30,7 @@ This header file contains the definition of UDT buffer structure and operations.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/23/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/05/2006
 *****************************************************************************/
 
 #ifndef __UDT_BUFFER_H__
@@ -54,13 +54,14 @@ public:
       //    1) [in] len: size of the block.
       //    2) [in] handle: handle of this request IO.
       //    3) [in] func: routine to process the buffer after IO completed.
-      //    4) [in] ttl: time to live in milliseconds
-      //    5) [in] seqno: sequence number of the first packet in the block, for DGRAM only
-      //    6) [in] order: if the block should be delivered in order, for DGRAM only
+      //    4) [in] context: context parameter for the buffer process routine
+      //    5) [in] ttl: time to live in milliseconds
+      //    6) [in] seqno: sequence number of the first packet in the block, for DGRAM only
+      //    7) [in] order: if the block should be delivered in order, for DGRAM only
       // Returned value:
       //    None.
 
-   void addBuffer(const char* data, const int& len, const int& handle, const UDT_MEM_ROUTINE func, const int& ttl = -1, const int32_t& seqno = 0, const bool& order = false);
+   void addBuffer(const char* data, const int& len, const int& handle, const UDT_MEM_ROUTINE func, void* context, const int& ttl = -1, const int32_t& seqno = 0, const bool& order = false);
 
       // Functionality:
       //    Find data position to pack a DATA packet from the furthest reading point.
@@ -124,7 +125,7 @@ public:
       // Returned value:
       //    Current size of the data in the sending list
 
-  static void releaseBuffer(char* buf, int);
+  static void releaseBuffer(char* buf, int, void*);
 
 private:
    pthread_mutex_t m_BufLock;           // used to synchronize buffer operation
@@ -142,6 +143,7 @@ private:
 
       int m_iHandle;                    // a unique handle to represent this senidng request
       UDT_MEM_ROUTINE m_pMemRoutine;    // function to process buffer after sending
+      void* m_pContext;                 // context parameter for the memory processing routine
 
       Block* m_next;                    // next block
    } *m_pBlock, *m_pLastBlock, *m_pCurrSendBlk, *m_pCurrAckBlk;
@@ -226,10 +228,12 @@ public:
       //    0) [in] buf: pointer to the user buffer.
       //    1) [in] len: size of the user buffer.
       //    2) [in] handle: descriptor of this overlapped receiving.
+      //    3) [in] func: buffer process routine after an overlapped IO is completed.
+      //    3) [in] context parameter for the buffer process routine.
       // Returned value:
       //    Size of data that has been received by now.
 
-   int registerUserBuf(char* buf, const int& len, const int& handle, const UDT_MEM_ROUTINE func);
+   int registerUserBuf(char* buf, const int& len, const int& handle, const UDT_MEM_ROUTINE func, void* context);
 
       // Functionality:
       //    remove the user buffer from the protocol buffer.
@@ -350,7 +354,8 @@ private:
    int m_iUserBufSize;                  // size of the user buffer
    int m_iUserBufAck;                   // last ACKed position of the user buffer
    int m_iHandle;                       // unique handle to represet this IO request
-   UDT_MEM_ROUTINE m_MemProcess;        // function to process user buffer after receiving
+   UDT_MEM_ROUTINE m_pMemRoutine;       // function to process user buffer after receiving
+   void* m_pContext;                    // context parameter for the buffer processing routine
 
    struct Block
    {
@@ -359,6 +364,7 @@ private:
 
       int m_iHandle;                    // a unique handle to represent this receiving request
       UDT_MEM_ROUTINE m_pMemRoutine;    // function to process buffer after a complete receiving
+      void* m_pContext;                 // context parameter for the buffer processing routine
 
       Block* m_next;                    // next block
    } *m_pPendingBlock, *m_pLastBlock;

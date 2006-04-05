@@ -30,7 +30,7 @@ This header file contains the definition of UDT buffer structure and operations.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/23/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/05/2006
 *****************************************************************************/
 
 #ifndef __UDT_CORE_H__
@@ -72,8 +72,8 @@ public: //API
    static int getsockopt(UDTSOCKET u, int level, UDTOpt optname, void* optval, int* optlen);
    static int setsockopt(UDTSOCKET u, int level, UDTOpt optname, const void* optval, int optlen);
    static int shutdown(UDTSOCKET u, int how);
-   static int send(UDTSOCKET u, const char* buf, int len, int flags = 0, int* handle = NULL, UDT_MEM_ROUTINE routine = NULL);
-   static int recv(UDTSOCKET u, char* buf, int len, int flags = 0, int* handle = NULL, UDT_MEM_ROUTINE routine = NULL);
+   static int send(UDTSOCKET u, const char* buf, int len, int flags = 0, int* handle = NULL, UDT_MEM_ROUTINE routine = NULL, void* context = NULL);
+   static int recv(UDTSOCKET u, char* buf, int len, int flags = 0, int* handle = NULL, UDT_MEM_ROUTINE routine = NULL, void* context = NULL);
    static int sendmsg(UDTSOCKET u, const char* buf, int len, int ttl = -1, bool inorder = false);
    static int recvmsg(UDTSOCKET u, char* buf, int len);
    static long long int sendfile(UDTSOCKET u, std::ifstream& ifs, const long long int& offset, long long int& size, const int& block = 366000);
@@ -143,7 +143,7 @@ private:
       // Returned value:
       //    Actual size of data sent.
 
-   int send(char* data, const int& len,  int* overlapped = NULL, const UDT_MEM_ROUTINE func = NULL);
+   int send(char* data, const int& len,  int* overlapped = NULL, const UDT_MEM_ROUTINE func = NULL, void* context = NULL);
 
       // Functionality:
       //    Request UDT to receive data to a memory block "data" with size of "len".
@@ -155,7 +155,7 @@ private:
       // Returned value:
       //    Actual size of data received.
 
-   int recv(char* data, const int& len, int* overlapped = NULL, const UDT_MEM_ROUTINE func = NULL);
+   int recv(char* data, const int& len, int* overlapped = NULL, const UDT_MEM_ROUTINE func = NULL, void* context = NULL);
 
       // Functionality:
       //    send a message of a memory block "data" with size of "len".
@@ -370,7 +370,8 @@ private: // Receiving related data
    volatile bool m_bReadBuf;                    // Application has called "recv" but has not finished
    volatile char* m_pcTempData;                 // Pointer to the buffer that application want to put received data into
    volatile int m_iTempLen;                     // Size of the "m_pcTempData"
-   volatile UDT_MEM_ROUTINE m_iTempRoutine;     // pointer ot a routine function to process "m_pcTempData"
+   volatile UDT_MEM_ROUTINE m_pTempRoutine;     // pointer to a routine function to process "m_pcTempData"
+   volatile void* m_pTempContext;		// context parameter for "m_pTempRoutine"
 
    int32_t m_iUserBufBorder;                    // Sequence number of last packet that will fulfill a user buffer
 

@@ -19,6 +19,7 @@ void* recvdata(void*);
 DWORD WINAPI recvdata(LPVOID);
 #endif
 
+
 int main(int argc, char* argv[])
 {
    if ((1 != argc) && ((2 != argc) || (0 == atoi(argv[1]))))
@@ -122,14 +123,16 @@ DWORD WINAPI recvdata(LPVOID usocket)
 
    int handle;
 
+int i = 0;
    while (true)
    {
-      if (UDT::ERROR == UDT::recv(recver, data, size, 0, &handle, NULL))
+      if (UDT::ERROR == UDT::recv(recver, data, size, 0, &handle))
       //if (UDT::ERROR == UDT::recvmsg(recver, data, size))
       {
          cout << "recv:" << UDT::getlasterror().getErrorMessage() << endl;
          break;
       }
+i++;
    }
 
    delete [] data;

@@ -30,7 +30,7 @@ This is the (only) header file of the UDT API, needed for programming with UDT.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/24/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/05/2006
 *****************************************************************************/
 
 #ifndef _UDT_H_
@@ -66,7 +66,7 @@ written by
    #define UDT_API
 #endif
 
-typedef void (*UDT_MEM_ROUTINE)(char*, int);
+typedef void (*UDT_MEM_ROUTINE)(char*, int, void*);
 
 typedef int UDTSOCKET;
 
@@ -217,9 +217,9 @@ UDT_API int setsockopt(UDTSOCKET u, int level, SOCKOPT optname, const void* optv
 
 UDT_API int shutdown(UDTSOCKET u, int how);
 
-UDT_API int send(UDTSOCKET u, const char* buf, int len, int flags = 0, int* handle = NULL, UDT_MEM_ROUTINE routine = NULL);
+UDT_API int send(UDTSOCKET u, const char* buf, int len, int flags = 0, int* handle = NULL, UDT_MEM_ROUTINE routine = NULL, void* context = NULL);
 
-UDT_API int recv(UDTSOCKET u, char* buf, int len, int flags = 0, int* handle = NULL, UDT_MEM_ROUTINE routine = NULL);
+UDT_API int recv(UDTSOCKET u, char* buf, int len, int flags = 0, int* handle = NULL, UDT_MEM_ROUTINE routine = NULL, void* context = NULL);
 
 UDT_API int sendmsg(UDTSOCKET u, const char* buf, int len, int ttl = -1, bool inorder = false);
 

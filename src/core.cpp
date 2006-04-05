@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/23/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/05/2006
 *****************************************************************************/
 
 #ifndef WIN32
@@ -1287,7 +1287,7 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
          // Still no?! Register the application buffer.
          if (!self->m_bReadBuf)
          {
-            offset = self->m_pRcvBuffer->registerUserBuf(const_cast<char*>(self->m_pcTempData), const_cast<int&>(self->m_iTempLen), self->m_iRcvHandle, self->m_iTempRoutine);
+            offset = self->m_pRcvBuffer->registerUserBuf(const_cast<char*>(self->m_pcTempData), const_cast<int&>(self->m_iTempLen), self->m_iRcvHandle, self->m_pTempRoutine, (void*)(self->m_pTempContext));
             // there is no seq. wrap for user buffer border. If it exceeds the max. seq., we just ignore it.
             self->m_iUserBufBorder = self->m_iRcvLastAck + (int32_t)ceil(double(self->m_iTempLen - offset) / self->m_iPayloadSize);
          }
@@ -2140,7 +2140,7 @@ void CUDT::flowControl(const int& recvrate)
    }
 }
 
-int CUDT::send(char* data, const int& len, int* overlapped, const UDT_MEM_ROUTINE func)
+int CUDT::send(char* data, const int& len, int* overlapped, const UDT_MEM_ROUTINE func, void* context)
 {
    if (SOCK_DGRAM == m_iSockType)
       throw CUDTException(5, 10, 0);
@@ -2260,11 +2260,11 @@ int CUDT::send(char* data, const int& len, int* overlapped, const UDT_MEM_ROUTIN
    // insert the user buffer into the sening list
    #ifndef WIN32
       pthread_mutex_lock(&m_SendDataLock);
-      m_pSndBuffer->addBuffer(data, len, handle, r);
+      m_pSndBuffer->addBuffer(data, len, handle, r, context);
       pthread_mutex_unlock(&m_SendDataLock);
    #else
       WaitForSingleObject(m_SendDataLock, INFINITE);
-      m_pSndBuffer->addBuffer(data, len, handle, r);
+      m_pSndBuffer->addBuffer(data, len, handle, r, context);
       ReleaseMutex(m_SendDataLock);
    #endif
 
@@ -2284,7 +2284,7 @@ int CUDT::send(char* data, const int& len, int* overlapped, const UDT_MEM_ROUTIN
    return len;
 }
 
-int CUDT::recv(char* data, const int& len, int* overlapped, UDT_MEM_ROUTINE func)
+int CUDT::recv(char* data, const int& len, int* overlapped, UDT_MEM_ROUTINE func, void* context)
 {
    if (SOCK_DGRAM == m_iSockType)
       throw CUDTException(5, 10, 0);
@@ -2380,7 +2380,8 @@ int CUDT::recv(char* data, const int& len, int* overlapped, UDT_MEM_ROUTINE func
 
    m_pcTempData = data;
    m_iTempLen = len;
-   m_iTempRoutine = func;
+   m_pTempRoutine = func;
+   m_pTempContext = context;
    m_bReadBuf = true;
 
    #ifndef WIN32
@@ -2503,11 +2504,11 @@ int CUDT::sendmsg(const char* data, const int& len, const int& msttl, const bool
    // insert the user buffer into the sening list
    #ifndef WIN32
       pthread_mutex_lock(&m_SendDataLock);
-      m_pSndBuffer->addBuffer(data, len, handle, r, msttl, m_iSndCurrSeqNo, inorder);
+      m_pSndBuffer->addBuffer(data, len, handle, r, NULL, msttl, m_iSndCurrSeqNo, inorder);
       pthread_mutex_unlock(&m_SendDataLock);
    #else
       WaitForSingleObject(m_SendDataLock, INFINITE);
-      m_pSndBuffer->addBuffer(data, len, handle, r, msttl, m_iSndCurrSeqNo, inorder);
+      m_pSndBuffer->addBuffer(data, len, handle, r, NULL, msttl, m_iSndCurrSeqNo, inorder);
       ReleaseMutex(m_SendDataLock);
    #endif
 
@@ -2693,14 +2694,14 @@ long long int CUDT::sendfile(ifstream& ifs, const long long int& offset, const l
          pthread_mutex_lock(&m_SendDataLock);
          while (!m_bBroken && m_bConnected && (m_pSndBuffer->getCurrBufSize() >= m_iSndQueueLimit))
             usleep(10);
-         m_pSndBuffer->addBuffer(tempbuf, unitsize, 0, CSndBuffer::releaseBuffer);
+         m_pSndBuffer->addBuffer(tempbuf, unitsize, 0, CSndBuffer::releaseBuffer, NULL);
          pthread_cond_signal(&m_SendDataCond);
          pthread_mutex_unlock(&m_SendDataLock);
       #else
          WaitForSingleObject(m_SendDataLock, INFINITE);
          while (!m_bBroken && m_bConnected && (m_pSndBuffer->getCurrBufSize() >= m_iSndQueueLimit))
             Sleep(1);
-         m_pSndBuffer->addBuffer(tempbuf, unitsize, 0, CSndBuffer::releaseBuffer);
+         m_pSndBuffer->addBuffer(tempbuf, unitsize, 0, CSndBuffer::releaseBuffer, NULL);
          SetEvent(m_SendDataCond);
          ReleaseMutex(m_SendDataLock);
       #endif
@@ -2735,14 +2736,14 @@ long long int CUDT::sendfile(ifstream& ifs, const long long int& offset, const l
          pthread_mutex_lock(&m_SendDataLock);
          while (!m_bBroken && m_bConnected && (m_pSndBuffer->getCurrBufSize() >= m_iSndQueueLimit))
             usleep(10);
-         m_pSndBuffer->addBuffer(tempbuf, (int)(size - unitsize * (count - 1)), 0, CSndBuffer::releaseBuffer);
+         m_pSndBuffer->addBuffer(tempbuf, (int)(size - unitsize * (count - 1)), 0, CSndBuffer::releaseBuffer, NULL);
          pthread_cond_signal(&m_SendDataCond);
          pthread_mutex_unlock(&m_SendDataLock);
       #else
          WaitForSingleObject(m_SendDataLock, INFINITE);
          while (!m_bBroken && m_bConnected && (m_pSndBuffer->getCurrBufSize() >= m_iSndQueueLimit))
             Sleep(1);
-         m_pSndBuffer->addBuffer(tempbuf, (int)(size - unitsize * (count - 1)), 0, CSndBuffer::releaseBuffer);
+         m_pSndBuffer->addBuffer(tempbuf, (int)(size - unitsize * (count - 1)), 0, CSndBuffer::releaseBuffer, NULL);
          SetEvent(m_SendDataCond);
          ReleaseMutex(m_SendDataLock);
       #endif
