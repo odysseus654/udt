@@ -1598,7 +1598,7 @@ void CUDT::sendCtrl(const int& pkttype, void* lparam, void* rparam, const int& s
 
          m_iRcvLastAck = ack;
 
-         if (m_pRcvBuffer->ackData(acksize * m_iPayloadSize - m_pIrrPktList->currErrorSize(m_iRcvLastAck)))
+         if (m_pRcvBuffer->ackData(acksize * m_iPayloadSize - m_pIrrPktList->currErrorSize(m_iRcvLastAck)) && m_bSynRecving)
          {
             //singal an blocking overlapped IO. 
             #ifndef WIN32
@@ -2403,11 +2403,13 @@ int CUDT::recv(char* data, const int& len, int* overlapped, UDT_MEM_ROUTINE func
    m_bReadBuf = true;
 
    #ifndef WIN32
-      pthread_cond_wait(&m_OverlappedRecvCond, &m_OverlappedRecvLock);
+      while (m_bReadBuf && !m_bBroken)
+         pthread_cond_wait(&m_OverlappedRecvCond, &m_OverlappedRecvLock);
       pthread_mutex_unlock(&m_OverlappedRecvLock);
    #else
       ReleaseMutex(m_OverlappedRecvLock);
-      WaitForSingleObject(m_OverlappedRecvCond, INFINITE);
+      while (m_bReadBuf && !m_bBroken)
+         WaitForSingleObject(m_OverlappedRecvCond, INFINITE);
    #endif
 
    if (!m_bSynRecving)
