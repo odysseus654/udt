@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 04/05/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/06/2006
 *****************************************************************************/
 
 #ifndef WIN32
@@ -2365,9 +2365,27 @@ int CUDT::recv(char* data, const int& len, int* overlapped, UDT_MEM_ROUTINE func
       WaitForSingleObject(m_OverlappedRecvLock, INFINITE);
    #endif
 
+   #ifndef WIN32
+      pthread_mutex_lock(&m_HandleLock);
+   #else
+      WaitForSingleObject(m_HandleLock, INFINITE);
+   #endif
+   if (-1 == m_iRcvHandle)
+      m_iRcvHandle = -(1 << 30);
+   // "recv" handle descriptor is NEGATIVE and INCREASING
+   *overlapped = ++ m_iRcvHandle;
+   #ifndef WIN32
+      pthread_mutex_unlock(&m_HandleLock);
+   #else
+      ReleaseMutex(m_HandleLock);
+   #endif
+
    if (len <= m_pRcvBuffer->getRcvDataSize())
    {
       m_pRcvBuffer->readBuffer(data, len);
+
+      if (NULL != func)
+         func(data, len, context);
 
       #ifndef WIN32
          pthread_mutex_unlock(&m_OverlappedRecvLock);
@@ -2383,21 +2401,6 @@ int CUDT::recv(char* data, const int& len, int* overlapped, UDT_MEM_ROUTINE func
    m_pTempRoutine = func;
    m_pTempContext = context;
    m_bReadBuf = true;
-
-   #ifndef WIN32
-      pthread_mutex_lock(&m_HandleLock);
-   #else
-      WaitForSingleObject(m_HandleLock, INFINITE);
-   #endif
-   if (-1 == m_iRcvHandle)
-      m_iRcvHandle = -(1 << 30);
-   // "recv" handle descriptor is NEGATIVE and INCREASING
-   *overlapped = ++ m_iRcvHandle;
-   #ifndef WIN32
-      pthread_mutex_unlock(&m_HandleLock);
-   #else
-      ReleaseMutex(m_HandleLock);
-   #endif
 
    #ifndef WIN32
       pthread_cond_wait(&m_OverlappedRecvCond, &m_OverlappedRecvLock);
