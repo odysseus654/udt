@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 04/06/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/07/2006
 *****************************************************************************/
 
 #ifndef WIN32
@@ -1025,12 +1025,13 @@ DWORD WINAPI CUDT::sndHandler(LPVOID sender)
             continue;
 
          int32_t seqpair[2];
+         int msglen;
 
-         payload = self->m_pSndBuffer->readData(&(datapkt.m_pcData), offset, self->m_iPayloadSize, datapkt.m_iMsgNo, seqpair[0], seqpair[1]);
+         payload = self->m_pSndBuffer->readData(&(datapkt.m_pcData), offset, self->m_iPayloadSize, datapkt.m_iMsgNo, seqpair[0], msglen);
 
          if (-1 == payload)
          {
-            seqpair[1] = CSeqNo::incseq(seqpair[0], seqpair[1] / self->m_iPayloadSize);
+            seqpair[1] = CSeqNo::incseq(seqpair[0], msglen / self->m_iPayloadSize);
 
             self->sendCtrl(7, &datapkt.m_iMsgNo, seqpair, 8);
 

@@ -51,7 +51,7 @@ public:
    virtual ~CCC() {}
 
 public:
-   static const int m_iCCID = 0;
+   //static const int m_iCCID = 0;
 
 public:
 

@@ -30,7 +30,7 @@ This header file contains the definition of UDT buffer structure and operations.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/23/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/07/2006
 *****************************************************************************/
 
 #include <cmath>
@@ -255,7 +255,7 @@ int CPktTimeWindow::getPktRcvSpeed() const
    int lower = median >> 3;
 
    // median filtering
-   for (int k = 0, n = m_iAWSize; k < n; ++ k)
+   for (int k = 0, l = m_iAWSize; k < l; ++ k)
       if ((m_piPktWindow[k] < upper) && (m_piPktWindow[k] > lower))
       {
          ++ count;
@@ -312,7 +312,7 @@ int CPktTimeWindow::getBandwidth() const
    int lower = median >> 3;
 
    // median filtering
-   for (int k = 0, n = m_iPWSize; k < n; ++ k)
+   for (int k = 0, l = m_iPWSize; k < l; ++ k)
       if ((m_piProbeWindow[k] < upper) && (m_piProbeWindow[k] > lower))
       {
          ++ count;

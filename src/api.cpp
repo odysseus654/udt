@@ -32,7 +32,7 @@ reference: UDT programming manual and socket programming reference
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 04/05/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/07/2006
 *****************************************************************************/
 
 #ifndef WIN32
@@ -821,61 +821,61 @@ CUDTSocket* CUDTUnited::locate(const UDTSOCKET u, const sockaddr* peer)
    map<UDTSOCKET, CUDTSocket*>::iterator i = m_Sockets.find(u);
 
    // look up the "peer" address in queued sockets set
-   for (set<UDTSOCKET>::iterator j = i->second->m_pQueuedSockets->begin(); j != i->second->m_pQueuedSockets->end(); ++ j)
+   for (set<UDTSOCKET>::iterator j1 = i->second->m_pQueuedSockets->begin(); j1 != i->second->m_pQueuedSockets->end(); ++ j1)
    {
-      map<UDTSOCKET, CUDTSocket*>::iterator k = m_Sockets.find(*j);
+      map<UDTSOCKET, CUDTSocket*>::iterator k1 = m_Sockets.find(*j1);
 
       if (AF_INET == i->second->m_iIPversion)
       {
          // compare IPv4 address
-         if ((((sockaddr_in*)peer)->sin_port == ((sockaddr_in*)k->second->m_pPeerAddr)->sin_port) && (((sockaddr_in*)peer)->sin_addr.s_addr == ((sockaddr_in*)k->second->m_pPeerAddr)->sin_addr.s_addr))
-            return k->second;
+         if ((((sockaddr_in*)peer)->sin_port == ((sockaddr_in*)k1->second->m_pPeerAddr)->sin_port) && (((sockaddr_in*)peer)->sin_addr.s_addr == ((sockaddr_in*)k1->second->m_pPeerAddr)->sin_addr.s_addr))
+            return k1->second;
       }
       else
       {
          // compare IPv6 address
-         if (((sockaddr_in6*)peer)->sin6_port == ((sockaddr_in6*)k->second->m_pPeerAddr)->sin6_port)
+         if (((sockaddr_in6*)peer)->sin6_port == ((sockaddr_in6*)k1->second->m_pPeerAddr)->sin6_port)
          {
             int* addr1 = (int*)&(((sockaddr_in6*)peer)->sin6_addr);
-            int* addr2 = (int*)&(((sockaddr_in6*)k->second->m_pPeerAddr)->sin6_addr);
+            int* addr2 = (int*)&(((sockaddr_in6*)k1->second->m_pPeerAddr)->sin6_addr);
 
-            int m = 4;
-            for (; m > 0; -- m)
-               if (addr1[m] != addr2[m])
+            int m1 = 4;
+            for (; m1 > 0; -- m1)
+               if (addr1[m1] != addr2[m1])
                   break;
 
-            if (m > 0)
-               return k->second;
+            if (m1 > 0)
+               return k1->second;
          }
       }
    }
 
    // look up the "peer" address in accepted sockets
-   for (set<UDTSOCKET>::iterator j = i->second->m_pAcceptSockets->begin(); j != i->second->m_pAcceptSockets->end(); ++ j)
+   for (set<UDTSOCKET>::iterator j2 = i->second->m_pAcceptSockets->begin(); j2 != i->second->m_pAcceptSockets->end(); ++ j2)
    {
-      map<UDTSOCKET, CUDTSocket*>::iterator k = m_Sockets.find(*j);
+      map<UDTSOCKET, CUDTSocket*>::iterator k2 = m_Sockets.find(*j2);
 
       if (AF_INET == i->second->m_iIPversion)
       {
          // compare IPv4 address
-         if ((((sockaddr_in*)peer)->sin_port == ((sockaddr_in*)k->second->m_pPeerAddr)->sin_port) && (((sockaddr_in*)peer)->sin_addr.s_addr == ((sockaddr_in*)k->second->m_pPeerAddr)->sin_addr.s_addr))
-            return k->second;
+         if ((((sockaddr_in*)peer)->sin_port == ((sockaddr_in*)k2->second->m_pPeerAddr)->sin_port) && (((sockaddr_in*)peer)->sin_addr.s_addr == ((sockaddr_in*)k2->second->m_pPeerAddr)->sin_addr.s_addr))
+            return k2->second;
       }
       else
       {
          // compare IPv6 address
-         if (((sockaddr_in6*)peer)->sin6_port == ((sockaddr_in6*)k->second->m_pPeerAddr)->sin6_port)
+         if (((sockaddr_in6*)peer)->sin6_port == ((sockaddr_in6*)k2->second->m_pPeerAddr)->sin6_port)
          {
             int* addr1 = (int*)&(((sockaddr_in6*)peer)->sin6_addr);
-            int* addr2 = (int*)&(((sockaddr_in6*)k->second->m_pPeerAddr)->sin6_addr);
+            int* addr2 = (int*)&(((sockaddr_in6*)k2->second->m_pPeerAddr)->sin6_addr);
 
-            int m = 4;
-            for (; m > 0; -- m)
-               if (addr1[m] != addr2[m])
+            int m2 = 4;
+            for (; m2 > 0; -- m2)
+               if (addr1[m2] != addr2[m2])
                   break;
 
-            if (m > 0)
-               return k->second;
+            if (m2 > 0)
+               return k2->second;
          }
       }
    }
@@ -921,8 +921,8 @@ void CUDTUnited::checkBrokenSockets()
    }
 
    // remove those timeout sockets
-   for (set<UDTSOCKET>::iterator i = tbr.begin(); i != tbr.end(); ++ i)
-      removeSocket(*i);
+   for (set<UDTSOCKET>::iterator k = tbr.begin(); k != tbr.end(); ++ k)
+      removeSocket(*k);
 }
 
 void CUDTUnited::removeSocket(const UDTSOCKET u)
