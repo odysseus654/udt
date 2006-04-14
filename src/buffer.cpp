@@ -34,7 +34,7 @@ The receiving buffer is a logically circular memeory block.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 04/06/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/13/2006
 *****************************************************************************/
 
 #include <cstring>
@@ -565,12 +565,19 @@ void CRcvBuffer::moveData(int offset, const int& len)
    if (m_iLastAckPos + m_iMaxOffset <= m_iSize)
       memmove(m_pcData + m_iLastAckPos + offset, m_pcData + m_iLastAckPos + offset + len, m_iMaxOffset - offset - len);
    else if (m_iLastAckPos + offset > m_iSize)
-      memmove(m_pcData + (m_iLastAckPos + offset) % m_iSize, m_pcData + (m_iLastAckPos + offset + len) % m_iSize, m_iMaxOffset - offset - len);
+      memmove(m_pcData + m_iLastAckPos + offset - m_iSize, m_pcData + m_iLastAckPos + offset + len - m_iSize, m_iMaxOffset - offset - len);
    else if (m_iLastAckPos + offset + len <= m_iSize)
    {
       memmove(m_pcData + m_iLastAckPos + offset, m_pcData + m_iLastAckPos + offset + len, m_iSize - m_iLastAckPos - offset - len);
-      memmove(m_pcData + m_iSize - len, m_pcData, len);
-      memmove(m_pcData, m_pcData + len, m_iLastAckPos + m_iMaxOffset - m_iSize - len);
+      if (m_iLastAckPos + m_iMaxOffset - m_iSize > len)
+      {
+         memmove(m_pcData + m_iSize - len, m_pcData, len);
+         memmove(m_pcData, m_pcData + len, m_iLastAckPos + m_iMaxOffset - m_iSize - len);
+      }
+      else
+      {
+         memmove(m_pcData + m_iSize - len, m_pcData, m_iLastAckPos + m_iMaxOffset - m_iSize);
+      }
    }
    else
    {
