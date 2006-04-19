@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 04/07/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/19/2006
 *****************************************************************************/
 
 #ifndef WIN32
@@ -2406,10 +2406,14 @@ int CUDT::recv(char* data, const int& len, int* overlapped, UDT_MEM_ROUTINE func
    #ifndef WIN32
       while (m_bReadBuf && !m_bBroken)
          pthread_cond_wait(&m_OverlappedRecvCond, &m_OverlappedRecvLock);
+      while (!m_bBroken && (!m_bSynRecving || (0 != m_pRcvBuffer->getPendingQueueSize())))
+         pthread_cond_wait(&m_OverlappedRecvCond, &m_OverlappedRecvLock);
       pthread_mutex_unlock(&m_OverlappedRecvLock);
    #else
       ReleaseMutex(m_OverlappedRecvLock);
       while (m_bReadBuf && !m_bBroken)
+         WaitForSingleObject(m_OverlappedRecvCond, INFINITE);
+      while (!m_bBroken && (!m_bSynRecving || (0 != m_pRcvBuffer->getPendingQueueSize())))
          WaitForSingleObject(m_OverlappedRecvCond, INFINITE);
    #endif
 
