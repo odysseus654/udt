@@ -34,7 +34,7 @@ The receiving buffer is a logically circular memeory block.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 04/13/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 05/05/2006
 *****************************************************************************/
 
 #include <cstring>
@@ -294,10 +294,8 @@ bool CSndBuffer::getOverlappedResult(const int& handle, int& progress)
       }
       else 
       {
-         int end = (m_pLastBlock->m_iHandle >= m_pCurrAckBlk->m_iHandle) ? m_pLastBlock->m_iHandle : m_pLastBlock->m_iHandle + (1 << 30);
-         int h = (handle >= m_pCurrAckBlk->m_iHandle) ? handle : handle + (1 << 30);
-
-         if ((h > m_pCurrAckBlk->m_iHandle) && (h <= end))
+         if (((m_pLastBlock->m_iHandle < m_pCurrAckBlk->m_iHandle) && (handle < m_pCurrAckBlk->m_iHandle) && (m_pLastBlock->m_iHandle <= handle))
+            || ((m_pLastBlock->m_iHandle > m_pCurrAckBlk->m_iHandle) && ((handle < m_pCurrAckBlk->m_iHandle) || (m_pLastBlock->m_iHandle <= handle))))
          {
             progress = 0;
             return false;
@@ -786,10 +784,8 @@ bool CRcvBuffer::getOverlappedResult(const int& handle, int& progress)
 
    if (NULL != m_pPendingBlock)
    {
-      int end = (m_pLastBlock->m_iHandle >= m_pPendingBlock->m_iHandle) ? m_pLastBlock->m_iHandle : m_pLastBlock->m_iHandle + (1 << 30);
-      int h = (handle >= m_pPendingBlock->m_iHandle) ? handle : handle + (1 << 30);
-
-      if ((h >= m_pPendingBlock->m_iHandle) && (h <= end))
+      if (((m_pLastBlock->m_iHandle >= m_pPendingBlock->m_iHandle) && (m_pPendingBlock->m_iHandle <= handle) && (handle <= m_pLastBlock->m_iHandle))
+         || ((m_pLastBlock->m_iHandle < m_pPendingBlock->m_iHandle) && ((m_pPendingBlock->m_iHandle <= handle) || (handle <= m_pLastBlock->m_iHandle))))
          return false;
    }
 
