@@ -685,7 +685,10 @@ int CRcvBuffer::registerUserBuf(char* buf, const int& len, const int& handle, co
       if (NULL == m_pPendingBlock)
          m_pLastBlock = m_pPendingBlock = nb;
       else
+      {
          m_pLastBlock->m_next = nb;
+         m_pLastBlock = nb;
+      }
 
       m_iPendingSize += len;
 
