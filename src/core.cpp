@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 04/19/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 06/22/2006
 *****************************************************************************/
 
 #ifndef WIN32
@@ -557,8 +557,9 @@ DWORD WINAPI CUDT::listenHandler(LPVOID listener)
          {
             // couldn't create a new connection, reject the request
             hs->m_iReqType = 1002;
-            self->m_pChannel->sendto(initpkt, addr);
          }
+
+         self->m_pChannel->sendto(initpkt, addr);
       }
    }
 
@@ -621,6 +622,7 @@ void CUDT::connect(const sockaddr* serv_addr)
    req->m_iMSS = m_iMSS;
    req->m_iFlightFlagSize = m_iFlightFlagSize;
    req->m_iReqType = (!m_bRendezvous) ? 1 : 0;
+   req->m_iPort = 0;
 
    // Random Initial Sequence Number
    timeval currtime;
@@ -663,6 +665,10 @@ void CUDT::connect(const sockaddr* serv_addr)
 
       response.setLength(m_iPayloadSize);
       m_pChannel->recvfrom(response, peer_addr);
+      if (AF_INET == m_iIPversion)
+         addr4.sin_port = res->m_iPort;
+      else
+         addr6.sin6_port = res->m_iPort;
 
       gettimeofday(&currtime, 0);
       if ((currtime.tv_sec - entertime.tv_sec) * 1000000 + (currtime.tv_usec - entertime.tv_usec) > timeo)
