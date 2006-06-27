@@ -260,9 +260,9 @@ int CUDTUnited::newConnection(const UDTSOCKET listen, const sockaddr* peer, CHan
          hs->m_iFlightFlagSize = ns->m_pUDT->m_iFlightFlagSize;
          hs->m_iReqType = -1;
          if (AF_INET == ls->m_iIPversion)
-            hs->m_iPort = ((sockaddr_in*)ns->m_pSelfAddr)->sin_port;
+            hs->m_iPort = ntohs(((sockaddr_in*)ns->m_pSelfAddr)->sin_port);
          else
-            hs->m_iPort = ((sockaddr_in6*)ns->m_pSelfAddr)->sin6_port;
+            hs->m_iPort = ntohs(((sockaddr_in6*)ns->m_pSelfAddr)->sin6_port);
 
          return 0;
 
@@ -382,9 +382,9 @@ int CUDTUnited::newConnection(const UDTSOCKET listen, const sockaddr* peer, CHan
 
    // complete the response HS information with port number
    if (AF_INET == ls->m_iIPversion)
-      hs->m_iPort = ((sockaddr_in*)ns->m_pSelfAddr)->sin_port;
+      hs->m_iPort = ntohs(((sockaddr_in*)ns->m_pSelfAddr)->sin_port);
    else
-      hs->m_iPort = ((sockaddr_in6*)ns->m_pSelfAddr)->sin6_port;
+      hs->m_iPort = ntohs(((sockaddr_in6*)ns->m_pSelfAddr)->sin6_port);
 
    // wake up a waiting accept() call
    #ifndef WIN32

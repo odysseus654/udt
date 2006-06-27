@@ -665,10 +665,6 @@ void CUDT::connect(const sockaddr* serv_addr)
 
       response.setLength(m_iPayloadSize);
       m_pChannel->recvfrom(response, peer_addr);
-      if (AF_INET == m_iIPversion)
-         addr4.sin_port = res->m_iPort;
-      else
-         addr6.sin6_port = res->m_iPort;
 
       gettimeofday(&currtime, 0);
       if ((currtime.tv_sec - entertime.tv_sec) * 1000000 + (currtime.tv_usec - entertime.tv_usec) > timeo)
@@ -687,7 +683,7 @@ void CUDT::connect(const sockaddr* serv_addr)
    delete [] reqdata;
 
    if (1002 == res->m_iReqType)
-   {
+   {	
       // connection request rejected
       delete [] resdata;
       throw CUDTException(1, 2, 0);
@@ -719,6 +715,11 @@ void CUDT::connect(const sockaddr* serv_addr)
       delete [] resdata;
       throw CUDTException(1, 4, 0);
    }
+
+   if (AF_INET == m_iIPversion)
+      addr4.sin_port = htons(res->m_iPort);
+   else
+      addr6.sin6_port = htons(res->m_iPort);
 
    //request accepted, continue connection setup
    m_pChannel->connect(peer_addr);

@@ -49,7 +49,6 @@ written by
    #include <cstring>
    #include <cstdio>
    #include <cerrno>
-   #include <dlfcn.h>
 #else
    #include <winsock2.h>
    #include <ws2tcpip.h>
