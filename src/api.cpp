@@ -32,7 +32,7 @@ reference: UDT programming manual and socket programming reference
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 06/22/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 06/27/2006
 *****************************************************************************/
 
 #ifndef WIN32
