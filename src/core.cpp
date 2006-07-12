@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 06/27/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 07/12/2006
 *****************************************************************************/
 
 #ifndef WIN32
@@ -716,10 +716,13 @@ void CUDT::connect(const sockaddr* serv_addr)
       throw CUDTException(1, 4, 0);
    }
 
-   if (AF_INET == m_iIPversion)
-      addr4.sin_port = htons(res->m_iPort);
-   else
-      addr6.sin6_port = htons(res->m_iPort);
+   if (!m_bRendezvous)
+   {
+      if (AF_INET == m_iIPversion)
+         addr4.sin_port = htons(res->m_iPort);
+      else
+         addr6.sin6_port = htons(res->m_iPort);
+   }
 
    //request accepted, continue connection setup
    m_pChannel->connect(peer_addr);
