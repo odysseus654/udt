@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 07/12/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 07/17/2006
 *****************************************************************************/
 
 #ifndef WIN32
@@ -377,7 +377,7 @@ void CUDT::getOpt(UDTOpt optName, void* optval, int& optlen)
       break;
 
    case UDT_SNDBUF:
-      *(int*)optval = m_iUDTBufSize;
+      *(int*)optval = m_iSndQueueLimit;
       optlen = sizeof(int);
       break;
 
@@ -659,7 +659,7 @@ void CUDT::connect(const sockaddr* serv_addr)
    timeval entertime;
    gettimeofday(&entertime, 0);
 
-   while ((response.getLength() <= 0) || (1 != response.getFlag()) || (0 != response.getType()))
+   while (((response.getLength() <= 0) || (1 != response.getFlag()) || (0 != response.getType())) && (!m_bClosing))
    {
       m_pChannel->sendto(request, serv_addr);
 
@@ -678,6 +678,14 @@ void CUDT::connect(const sockaddr* serv_addr)
          if (response.getLength() <= 0)
             Sleep(1);
       #endif
+   }
+
+   // if the socket is closed before connection...
+   if (m_bClosing)
+   {
+      delete [] reqdata;
+      delete [] resdata;
+      throw CUDTException(1);
    }
 
    delete [] reqdata;
@@ -858,6 +866,9 @@ void CUDT::connect(const sockaddr* peer, CHandShake* hs)
 
 void CUDT::close()
 {
+   if (!m_bConnected)
+      m_bClosing = true;
+
    CGuard cg(m_ConnectionLock);
 
    if (!m_bOpened)
@@ -1530,7 +1541,12 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
       }
       // This is not a regular fixed size packet...
       else if (packet.getLength() != self->m_iPayloadSize)
+      {
          self->m_pIrrPktList->addIrregularPkt(packet.m_iSeqNo, self->m_iPayloadSize - packet.getLength());
+
+         //an irregular sized packet usually indicates the end of a message, so send an ACK immediately
+         self->m_pTimer->rdtsc(nextacktime);
+      }
 
       // Update the current largest sequence number that has been received.
       if (CSeqNo::seqcmp(packet.m_iSeqNo, self->m_iRcvCurrSeqNo) > 0)
@@ -2593,7 +2609,7 @@ bool CUDT::getOverlappedResult(const int& handle, int& progress, const bool& wai
       throw CUDTException(5, 10, 0);
 
    // throw an exception if not connected
-   if ((m_bBroken) && (0 == m_pRcvBuffer->getRcvDataSize()))
+   if (m_bBroken)
       throw CUDTException(2, 1, 0);
    else if (!m_bConnected)
       throw CUDTException(2, 2, 0);
@@ -2612,6 +2628,10 @@ bool CUDT::getOverlappedResult(const int& handle, int& progress, const bool& wai
 
          res = m_pSndBuffer->getOverlappedResult(handle, progress);
       }
+
+      if (m_bBroken)
+         throw CUDTException(2, 1, 0);
+
       return res;
    }
 
@@ -2629,6 +2649,10 @@ bool CUDT::getOverlappedResult(const int& handle, int& progress, const bool& wai
 
       res = m_pRcvBuffer->getOverlappedResult(handle, progress);
    }
+
+   if (m_bBroken)
+      throw CUDTException(2, 1, 0);
+
    return res;
 }
 
