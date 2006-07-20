@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 07/17/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 07/20/2006
 *****************************************************************************/
 
 #ifndef WIN32
@@ -2656,7 +2656,7 @@ bool CUDT::getOverlappedResult(const int& handle, int& progress, const bool& wai
    return res;
 }
 
-long long int CUDT::sendfile(ifstream& ifs, const long long int& offset, const long long int& size, const int& block)
+int64_t CUDT::sendfile(ifstream& ifs, const int64_t& offset, const int64_t& size, const int& block)
 {
    if (SOCK_DGRAM == m_iSockType)
       throw CUDTException(5, 10, 0);
@@ -2700,7 +2700,7 @@ long long int CUDT::sendfile(ifstream& ifs, const long long int& offset, const l
 
    char* tempbuf = NULL;
    int unitsize = block;
-   long long int count = 1;
+   int64_t count = 1;
 
    // positioning...
    try
@@ -2810,7 +2810,7 @@ long long int CUDT::sendfile(ifstream& ifs, const long long int& offset, const l
    return size;
 }
 
-long long int CUDT::recvfile(ofstream& ofs, const long long int& offset, const long long int& size, const int& block)
+int64_t CUDT::recvfile(ofstream& ofs, const int64_t& offset, const int64_t& size, const int& block)
 {
    if (SOCK_DGRAM == m_iSockType)
       throw CUDTException(5, 10, 0);
@@ -2824,7 +2824,7 @@ long long int CUDT::recvfile(ofstream& ofs, const long long int& offset, const l
       return 0;
 
    int unitsize = block;
-   long long int count = 1;
+   int64_t count = 1;
    int recvsize;
    char* tempbuf;
 
