@@ -22,7 +22,7 @@ ifeq ($(arch), IA64)
    CCFLAGS += -DIA64
 endif
 
-LDFLAGS = -L../src -ludt -lstdc++ -lpthread -lm
+LDFLAGS = -L../src -ludt -lstdc++ -lpthread -lm #-static
 
 ifeq ($(os), UNIX)
    LDFLAGS += -lsocket
