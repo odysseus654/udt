@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 07/20/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 09/28/2006
 *****************************************************************************/
 
 #ifndef WIN32
@@ -2348,8 +2348,8 @@ int CUDT::recv(char* data, const int& len, int* overlapped, UDT_MEM_ROUTINE func
                timespec locktime; 
     
                gettimeofday(&currtime, 0); 
-               locktime.tv_sec = currtime.tv_sec + ((int64_t)m_iSndTimeOut * 1000 + currtime.tv_usec) / 1000000; 
-               locktime.tv_nsec = ((int64_t)m_iSndTimeOut * 1000 + currtime.tv_usec) % 1000000 * 1000; 
+               locktime.tv_sec = currtime.tv_sec + ((int64_t)m_iRcvTimeOut * 1000 + currtime.tv_usec) / 1000000; 
+               locktime.tv_nsec = ((int64_t)m_iRcvTimeOut * 1000 + currtime.tv_usec) % 1000000 * 1000; 
     
                pthread_cond_timedwait(&m_RecvDataCond, &m_RecvDataLock, &locktime); 
             }
