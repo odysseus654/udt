@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 09/28/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 10/02/2006
 *****************************************************************************/
 
 #ifndef WIN32
@@ -233,9 +233,11 @@ void CUDT::setOpt(UDTOpt optName, const void* optval, const int&)
       if (m_bOpened)
          throw CUDTException(5, 1, 0);
 
-      m_iMSS = *(int*)optval;
       if (m_iMSS < 28)
          throw CUDTException(5, 3, 0);
+
+      m_iMSS = *(int*)optval;
+
       break;
 
    case UDT_SNDSYN:
@@ -263,27 +265,33 @@ void CUDT::setOpt(UDTOpt optName, const void* optval, const int&)
       if (m_bConnected)
          throw CUDTException(5, 2, 0);
 
-      m_iFlightFlagSize = *(int*)optval;
       if (m_iFlightFlagSize < 1)
          throw CUDTException(5, 3);
+      m_iFlightFlagSize = *(int*)optval;
+
       break;
 
    case UDT_SNDBUF:
       if (m_bOpened)
          throw CUDTException(5, 1, 0);
 
-      m_iSndQueueLimit = *(int*)optval;
       if (m_iSndQueueLimit <= 0)
          throw CUDTException(5, 3, 0);
+      m_iSndQueueLimit = *(int*)optval;
       break;
 
    case UDT_RCVBUF:
       if (m_bOpened)
          throw CUDTException(5, 1, 0);
 
-      m_iUDTBufSize = *(int*)optval;
-      if (m_iUDTBufSize < (m_iMSS - 28) * 16)
+      if (m_iUDTBufSize <= 0)
          throw CUDTException(5, 3, 0);
+
+      if (m_iUDTBufSize > (m_iMSS - 28) * 16)
+         m_iUDTBufSize = *(int*)optval;
+      else
+         m_iUDTBufSize = (m_iMSS - 28) * 16;
+
       break;
 
    case UDT_LINGER:
@@ -295,6 +303,7 @@ void CUDT::setOpt(UDTOpt optName, const void* optval, const int&)
          throw CUDTException(5, 1, 0);
 
       m_iUDPSndBufSize = *(int*)optval;
+
       break;
 
    case UDP_RCVBUF:
@@ -309,6 +318,7 @@ void CUDT::setOpt(UDTOpt optName, const void* optval, const int&)
          throw CUDTException(5, 1, 0);
 
       m_iMaxMsg = *(int*)optval;
+
       break;
 
    case UDT_MSGTTL:
@@ -316,6 +326,7 @@ void CUDT::setOpt(UDTOpt optName, const void* optval, const int&)
          throw CUDTException(5, 1, 0);
 
       m_iMsgTTL = *(int*)optval;
+
       break;
 
    case UDT_RENDEZVOUS:
@@ -323,6 +334,7 @@ void CUDT::setOpt(UDTOpt optName, const void* optval, const int&)
          throw CUDTException(5, 1, 0);
 
       m_bRendezvous = *(bool *)optval;
+
       break;
 
    case UDT_SNDTIMEO: 
