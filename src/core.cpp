@@ -340,11 +340,11 @@ void CUDT::setOpt(UDTOpt optName, const void* optval, const int&)
    case UDT_SNDTIMEO: 
       m_iSndTimeOut = *(int*)optval; 
       break; 
-    
+
    case UDT_RCVTIMEO: 
       m_iRcvTimeOut = *(int*)optval; 
       break; 
-    
+
    default:
       throw CUDTException(5, 0, 0);
    }
@@ -754,7 +754,7 @@ void CUDT::connect(const sockaddr* serv_addr)
    m_iPktSize = m_iMSS - 28;
    m_iPayloadSize = m_iPktSize - CPacket::m_iPktHdrSize;
 
-   m_iPeerISN = res->m_iISN;      
+   m_iPeerISN = res->m_iISN;
 
    m_iRcvLastAck = res->m_iISN;
    m_iRcvLastAckAck = res->m_iISN;

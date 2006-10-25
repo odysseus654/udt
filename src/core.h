@@ -426,6 +426,7 @@ private: // Thread handlers
 private: // congestion control
    void rateControl();
    void flowControl(const int& recvrate);
+
 private: // Generation and processing of control packet
    void sendCtrl(const int& pkttype, void* lparam = NULL, void* rparam = NULL, const int& size = 0);
    void processCtrl(CPacket& ctrlpkt);
