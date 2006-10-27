@@ -233,7 +233,7 @@ void CUDT::setOpt(UDTOpt optName, const void* optval, const int&)
       if (m_bOpened)
          throw CUDTException(5, 1, 0);
 
-      if (m_iMSS < 28)
+      if (*(int*)optval < 28)
          throw CUDTException(5, 3, 0);
 
       m_iMSS = *(int*)optval;
@@ -265,7 +265,7 @@ void CUDT::setOpt(UDTOpt optName, const void* optval, const int&)
       if (m_bConnected)
          throw CUDTException(5, 2, 0);
 
-      if (m_iFlightFlagSize < 1)
+      if (*(int*)optval <= 0)
          throw CUDTException(5, 3);
       m_iFlightFlagSize = *(int*)optval;
 
@@ -275,19 +275,20 @@ void CUDT::setOpt(UDTOpt optName, const void* optval, const int&)
       if (m_bOpened)
          throw CUDTException(5, 1, 0);
 
-      if (m_iSndQueueLimit <= 0)
+      if (*(int*)optval <= 0)
          throw CUDTException(5, 3, 0);
       m_iSndQueueLimit = *(int*)optval;
+
       break;
 
    case UDT_RCVBUF:
       if (m_bOpened)
          throw CUDTException(5, 1, 0);
 
-      if (m_iUDTBufSize <= 0)
+      if (*(int*)optval <= 0)
          throw CUDTException(5, 3, 0);
 
-      if (m_iUDTBufSize > (m_iMSS - 28) * 16)
+      if (*(int*)optval > (m_iMSS - 28) * 16)
          m_iUDTBufSize = *(int*)optval;
       else
          m_iUDTBufSize = (m_iMSS - 28) * 16;
