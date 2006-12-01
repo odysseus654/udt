@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 10/02/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 12/01/2006
 *****************************************************************************/
 
 #ifndef WIN32
@@ -1106,14 +1106,8 @@ DWORD WINAPI CUDT::sndHandler(LPVOID sender)
                         pthread_cond_wait(&(self->m_SendDataCond), &(self->m_SendDataLock));
                      pthread_mutex_unlock(&(self->m_SendDataLock));
                   #else
-                     WaitForSingleObject(self->m_SendDataLock, INFINITE);
                      while ((0 == self->m_pSndBuffer->getCurrBufSize()) && (!self->m_bClosing))
-                     {
-                        ReleaseMutex(self->m_SendDataLock);
                         WaitForSingleObject(self->m_SendDataCond, INFINITE);
-                        WaitForSingleObject(self->m_SendDataLock, INFINITE);
-                     }
-                     ReleaseMutex(self->m_SendDataLock);
                   #endif
 
                   #ifdef NO_BUSY_WAITING
@@ -2298,15 +2292,7 @@ int CUDT::send(char* data, const int& len, int* overlapped, const UDT_MEM_ROUTIN
    }
 
    // insert the user buffer into the sening list
-   #ifndef WIN32
-      pthread_mutex_lock(&m_SendDataLock);
-      m_pSndBuffer->addBuffer(data, len, handle, r, context);
-      pthread_mutex_unlock(&m_SendDataLock);
-   #else
-      WaitForSingleObject(m_SendDataLock, INFINITE);
-      m_pSndBuffer->addBuffer(data, len, handle, r, context);
-      ReleaseMutex(m_SendDataLock);
-   #endif
+   m_pSndBuffer->addBuffer(data, len, handle, r, context);
 
    // signal the sending thread in case that it is waiting
    #ifndef WIN32
@@ -2551,15 +2537,7 @@ int CUDT::sendmsg(const char* data, const int& len, const int& msttl, const bool
    r = CSndBuffer::releaseBuffer;
 
    // insert the user buffer into the sening list
-   #ifndef WIN32
-      pthread_mutex_lock(&m_SendDataLock);
-      m_pSndBuffer->addBuffer(data, len, handle, r, NULL, msttl, m_iSndCurrSeqNo, inorder);
-      pthread_mutex_unlock(&m_SendDataLock);
-   #else
-      WaitForSingleObject(m_SendDataLock, INFINITE);
-      m_pSndBuffer->addBuffer(data, len, handle, r, NULL, msttl, m_iSndCurrSeqNo, inorder);
-      ReleaseMutex(m_SendDataLock);
-   #endif
+   m_pSndBuffer->addBuffer(data, len, handle, r, NULL, msttl, m_iSndCurrSeqNo, inorder);
 
    // signal the sending thread in case that it is waiting
    #ifndef WIN32
@@ -2712,8 +2690,8 @@ int64_t CUDT::sendfile(ifstream& ifs, const int64_t& offset, const int64_t& size
    }
 
    char* tempbuf = NULL;
-   int unitsize = block;
-   int64_t count = 1;
+   int64_t tosend = size;
+   int unitsize;
 
    // positioning...
    try
@@ -2726,8 +2704,10 @@ int64_t CUDT::sendfile(ifstream& ifs, const int64_t& offset, const int64_t& size
    }
 
    // sending block by block
-   while (unitsize * count <= size)
+   while (tosend > 0)
    {
+      unitsize = (tosend >= block) ? block : tosend;
+
       try
       {
          tempbuf = new char[unitsize];
@@ -2748,65 +2728,25 @@ int64_t CUDT::sendfile(ifstream& ifs, const int64_t& offset, const int64_t& size
       }
 
       #ifndef WIN32
-         pthread_mutex_lock(&m_SendDataLock);
          while (!m_bBroken && m_bConnected && (m_pSndBuffer->getCurrBufSize() >= m_iSndQueueLimit))
             usleep(10);
          m_pSndBuffer->addBuffer(tempbuf, unitsize, 0, CSndBuffer::releaseBuffer, NULL);
+
+         pthread_mutex_lock(&m_SendDataLock);
          pthread_cond_signal(&m_SendDataCond);
          pthread_mutex_unlock(&m_SendDataLock);
       #else
-         WaitForSingleObject(m_SendDataLock, INFINITE);
          while (!m_bBroken && m_bConnected && (m_pSndBuffer->getCurrBufSize() >= m_iSndQueueLimit))
             Sleep(1);
          m_pSndBuffer->addBuffer(tempbuf, unitsize, 0, CSndBuffer::releaseBuffer, NULL);
+
          SetEvent(m_SendDataCond);
-         ReleaseMutex(m_SendDataLock);
       #endif
 
       if (m_bBroken)
          throw CUDTException(2, 1, 0);
 
-      ++ count;
-   }
-   if (size - unitsize * (count - 1) > 0)
-   {
-      try
-      {
-         tempbuf = new char[(int)(size - unitsize * (count - 1))];
-      }
-      catch (...)
-      {
-         throw CUDTException(3, 2, 0);
-      }
-
-      try
-      {
-         ifs.read(tempbuf, (streamsize)(size - unitsize * (count - 1)));
-      }
-      catch (...)
-      {
-         delete [] tempbuf;
-         throw CUDTException(4, 2);
-      }
-
-      #ifndef WIN32
-         pthread_mutex_lock(&m_SendDataLock);
-         while (!m_bBroken && m_bConnected && (m_pSndBuffer->getCurrBufSize() >= m_iSndQueueLimit))
-            usleep(10);
-         m_pSndBuffer->addBuffer(tempbuf, (int)(size - unitsize * (count - 1)), 0, CSndBuffer::releaseBuffer, NULL);
-         pthread_cond_signal(&m_SendDataCond);
-         pthread_mutex_unlock(&m_SendDataLock);
-      #else
-         WaitForSingleObject(m_SendDataLock, INFINITE);
-         while (!m_bBroken && m_bConnected && (m_pSndBuffer->getCurrBufSize() >= m_iSndQueueLimit))
-            Sleep(1);
-         m_pSndBuffer->addBuffer(tempbuf, (int)(size - unitsize * (count - 1)), 0, CSndBuffer::releaseBuffer, NULL);
-         SetEvent(m_SendDataCond);
-         ReleaseMutex(m_SendDataLock);
-      #endif
-
-      if (m_bBroken)
-         throw CUDTException(2, 1, 0);
+      tosend -= unitsize;
    }
 
    // Wait until all the data is sent out
@@ -2836,10 +2776,10 @@ int64_t CUDT::recvfile(ofstream& ofs, const int64_t& offset, const int64_t& size
    if (size <= 0)
       return 0;
 
-   int unitsize = block;
-   int64_t count = 1;
+   char* tempbuf = NULL;
+   int64_t torecv = size;
+   int unitsize;
    int recvsize;
-   char* tempbuf;
 
    try
    {
@@ -2867,8 +2807,10 @@ int64_t CUDT::recvfile(ofstream& ofs, const int64_t& offset, const int64_t& size
    int overlapid;
 
    // receiving...
-   while (unitsize * count <= size)
+   while (torecv > 0)
    {
+      unitsize = (torecv >= block) ? block : torecv;
+
       try
       {
          recvsize = recv(tempbuf, unitsize, &overlapid);
@@ -2877,7 +2819,7 @@ int64_t CUDT::recvfile(ofstream& ofs, const int64_t& offset, const int64_t& size
          if (recvsize < unitsize)
          {
             m_bSynRecving = syn;
-            return unitsize * (count - 1) + recvsize;
+            return size - torecv + recvsize;
          }
       }
       catch (CUDTException e)
@@ -2891,31 +2833,7 @@ int64_t CUDT::recvfile(ofstream& ofs, const int64_t& offset, const int64_t& size
          throw CUDTException(4, 4);
       }
 
-      ++ count;
-   }
-   if (size - unitsize * (count - 1) > 0)
-   {
-      try
-      {
-         recvsize = recv(tempbuf, (int)(size - unitsize * (count - 1)), &overlapid);
-         ofs.write(tempbuf, recvsize);
-
-         if (recvsize < (int)(size - unitsize * (count - 1)))
-         {
-            m_bSynRecving = syn;
-            return unitsize * (count - 1) + recvsize;
-         }
-      }
-      catch (CUDTException e)
-      {
-         delete [] tempbuf;
-         throw e;
-      }
-      catch (...)
-      {
-         delete [] tempbuf;
-         throw CUDTException(4, 4);
-      }
+      torecv -= unitsize;
    }
 
    // recover the original receiving mode

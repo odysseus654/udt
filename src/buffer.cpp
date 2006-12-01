@@ -34,7 +34,7 @@ The receiving buffer is a logically circular memeory block.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 09/06/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 12/01/2006
 *****************************************************************************/
 
 #include <cstring>
@@ -136,9 +136,9 @@ void CSndBuffer::addBuffer(const char* data, const int& len, const int& handle, 
          m_pCurrSendBlk = m_pLastBlock;
    }
 
-   m_iCurrBufSize += len;
-
    m_iNextMsgNo = CMsgNo::incmsg(m_iNextMsgNo);
+
+   m_iCurrBufSize += len;
 }
 
 int CSndBuffer::readData(char** data, const int& len, int32_t& msgno)
