@@ -65,8 +65,10 @@ void CCC::setRTO(const int& usRTO)
 void CCC::sendCustomMsg(CPacket& pkt) const
 {
    CUDT* u = CUDT::getUDTHandle(m_UDT);
-   if (NULL != u)
-      *(u->m_pChannel) << pkt;
+
+///////////////////////////////??????????????????????????***********************************
+//   if (NULL != u)
+//      *(u->m_pChannel) << pkt;
 }
 
 const CPerfMon* CCC::getPerfInfo()

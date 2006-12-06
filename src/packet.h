@@ -47,11 +47,14 @@ class CChannel;
 class CPacket
 {
 friend class CChannel;
+friend class CSndQueue;
+friend class CHash;
 
 public:
    int32_t& m_iSeqNo;                   // alias: sequence number
    int32_t& m_iMsgNo;                   // alias: message number
    int32_t& m_iTimeStamp;               // alias: timestamp
+   int32_t& m_iID;			// alias: socket ID
    char*& m_pcData;                     // alias: data/control information
 
    static const int m_iPktHdrSize;	// packet header size
@@ -163,7 +166,7 @@ public:
    int32_t getMsgSeq() const;
 
 protected:
-   uint32_t m_nHeader[3];               // The 96-bit header field
+   uint32_t m_nHeader[4];               // The 128-bit header field
    iovec m_PacketVector[2];             // The 2-demension vector of UDT packet [header, data]
 
    int32_t __pad;
@@ -182,6 +185,7 @@ struct CHandShake
    int32_t m_iFlightFlagSize;   // flow control window size
    int32_t m_iReqType;          // connection request type: -1: response, 1: initial request, 0: rendezvous request
    int32_t m_iPort;		// new socket port
+   int32_t m_iID;		// socket ID
 };
 
 

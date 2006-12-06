@@ -135,7 +135,7 @@ written by
 #include "packet.h"
 
 
-const int CPacket::m_iPktHdrSize = 12;
+const int CPacket::m_iPktHdrSize = 16;
 
 
 // Set up the aliases in the constructure
@@ -143,6 +143,7 @@ CPacket::CPacket():
 m_iSeqNo((int32_t&)(m_nHeader[0])),
 m_iMsgNo((int32_t&)(m_nHeader[1])),
 m_iTimeStamp((int32_t&)(m_nHeader[2])),
+m_iID((int32_t&)(m_nHeader[3])),
 m_pcData((char*&)(m_PacketVector[1].iov_base))
 {
    m_PacketVector[0].iov_base = (char *)m_nHeader;

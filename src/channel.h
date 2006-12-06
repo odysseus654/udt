@@ -197,6 +197,11 @@ public:
 
    void getPeerAddr(sockaddr* addr) const;
 
+
+   int sendto(const sockaddr* addr, const CPacket& packet);
+   int recvfrom(sockaddr* addr, CPacket& packet);
+
+
 private:
    int m_iIPversion;                    // IP version
 

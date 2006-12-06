@@ -53,6 +53,8 @@ class UDT_API CUDT
 friend struct CUDTSocket;
 friend class CUDTUnited;
 friend class CCC;
+friend class CSndQueue;
+friend class CRcvQueue;
 
 private: // constructor and desctructor
    CUDT();
@@ -257,6 +259,9 @@ private:
    UDTSOCKET m_SocketID;                        // UDT socket number
    int m_iSockType;                             // Type of the UDT connection (SOCK_STREAM or SOCK_DGRAM)
 
+   // peer id, for multiplexer
+   UDTSOCKET m_PeerID;
+
 private: // Version
    const int m_iVersion;                        // UDT version, for compatibility use
 
@@ -266,7 +271,7 @@ private: // Threads, data channel, and timing facility
 #endif
    pthread_t m_SndThread;                       // Sending thread
    pthread_t m_RcvThread;                       // Receiving thread
-   CChannel* m_pChannel;                        // UDP channel
+   //CChannel* m_pChannel;                        // UDP channel
    CTimer* m_pTimer;                            // Timing facility
    uint64_t m_ullCPUFrequency;                  // CPU clock frequency, used for Timer
 
@@ -339,7 +344,6 @@ private: // Sending related data
    int m_iNAKCount;                             // NAK counter
    int m_iDecRandom;                            // random threshold on decrease by number of loss events
    int m_iAvgNAKNum;                            // average number of NAKs per congestion
-   int m_iDecCount;				// number of rate decrease in the current congestion period
 
    timeval m_LastSYNTime;                       // the timestamp when last rate control occured
    bool m_bLoss;                                // if there is any loss during last RC period
@@ -457,6 +461,32 @@ private: // Trace
 
 private: // internal data
    char* m_pcTmpBuf;
+
+public: // for udp multiplexer
+   int pack(CPacket& packet, uint64_t& ts);
+   int process(CPacket& packet);
+   int listen(sockaddr* addr, CPacket& packet);
+
+   uint64_t nextacktime;
+   uint64_t nextnaktime;
+   uint64_t nextexptime;
+   #ifdef CUSTOM_CC
+      uint64_t nextccacktime;
+   #endif
+
+   // SYN interval, in clock cycles
+   uint64_t ullsynint;
+ 
+   // ACK, NAK, and EXP intervals, in clock cycles
+   uint64_t ullackint;
+   uint64_t ullnakint;
+   uint64_t ullexpint;
+
+   int pktcount;
+
+   CSndQueue* m_pSndQueue;
+   CRcvQueue* m_pRcvQueue;
+   sockaddr* m_pPeerAddr;
 };
 
 

@@ -55,7 +55,9 @@ written by
 #endif
 #include "channel.h"
 #include "packet.h"
+#include <iostream>
 
+using namespace std;
 
 #ifdef WIN32
    #define socklen_t int
@@ -346,6 +348,10 @@ void CChannel::setChannelOpt()
        (0 != setsockopt(m_iSocket, SOL_SOCKET, SO_SNDBUF, (char *)&m_iSndBufSize, sizeof(int))))
       throw CUDTException(1, 3, NET_ERROR);
 
+
+   return;
+
+
    timeval tv;
    tv.tv_sec = 0;
    #if defined (BSD) || defined (OSX)
@@ -371,4 +377,50 @@ void CChannel::setChannelOpt()
       if (setsockopt(m_iSocket, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv, sizeof(timeval)) < 0)
          throw CUDTException(1, 3, NET_ERROR);
    #endif
+}
+
+
+int CChannel::sendto(const sockaddr* addr, const CPacket& packet)
+{
+   msghdr mh;
+   mh.msg_name = (sockaddr*)addr;
+   mh.msg_namelen = sizeof(sockaddr_in);
+   mh.msg_iov = (iovec*)packet.m_PacketVector;
+   mh.msg_iovlen = 2;
+   mh.msg_control = NULL;
+   mh.msg_controllen = 0;
+   mh.msg_flags = 0;
+
+//cout << "sending msg " << mh.msg_iov[0].iov_len << " " << mh.msg_iov[1].iov_len << endl;
+ 
+   int res = sendmsg(m_iSocket, &mh, 0);
+
+//cout << "sent in cchannel " << res << endl;
+if (res <= 0)
+{
+    cout << " ================================================ ";
+    perror("sendmsg");
+}
+
+   return res;
+}
+
+int CChannel::recvfrom(sockaddr* addr, CPacket& packet)
+{
+   msghdr mh;   
+   mh.msg_name = addr;
+   mh.msg_namelen = sizeof(sockaddr_in);
+   mh.msg_iov = packet.m_PacketVector;
+   mh.msg_iovlen = 2;
+   mh.msg_control = NULL;
+   mh.msg_controllen = 0;
+   mh.msg_flags = 0;
+    
+   int res = recvmsg(m_iSocket, &mh, 0);
+
+//cout << res << " recved " << packet.getType() << endl;
+
+   packet.setLength(res - CPacket::m_iPktHdrSize);
+
+   return res;
 }

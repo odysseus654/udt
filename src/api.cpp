@@ -125,6 +125,8 @@ m_SocketID(1 << 30)
       if (0 != WSAStartup(wVersionRequested, &wsaData))
          throw CUDTException(1, 0,  WSAGetLastError());
    #endif
+
+   m_vMultiplexer.clear();
 }
 
 CUDTUnited::~CUDTUnited()
@@ -142,6 +144,8 @@ CUDTUnited::~CUDTUnited()
    #else
       TlsFree(m_TLSError);
    #endif
+
+   m_vMultiplexer.clear();
 
    // Global destruction code
    #ifdef WIN32
@@ -318,7 +322,8 @@ int CUDTUnited::newConnection(const UDTSOCKET listen, const sockaddr* peer, CHan
 
    try
    {
-      ns->m_pUDT->open();
+      /// gu add for udt-m, bind to the same addr of listening socket
+      ns->m_pUDT->open(ls->m_pSelfAddr);
       ns->m_pUDT->connect(peer, hs);
    }
    catch (...)
@@ -328,7 +333,7 @@ int CUDTUnited::newConnection(const UDTSOCKET listen, const sockaddr* peer, CHan
    }
 
    // copy address information of local node
-   ns->m_pUDT->m_pChannel->getSockAddr(ns->m_pSelfAddr);
+   //ns->m_pUDT->m_pChannel->getSockAddr(ns->m_pSelfAddr);
 
    // protect the m_Sockets structure.
    #ifndef WIN32
@@ -436,7 +441,7 @@ int CUDTUnited::bind(const UDTSOCKET u, const sockaddr* name, const int& namelen
    s->m_Status = CUDTSocket::OPENED;
 
    // copy address information of local node
-   s->m_pUDT->m_pChannel->getSockAddr(s->m_pSelfAddr);
+   //s->m_pUDT->m_pChannel->getSockAddr(s->m_pSelfAddr);
 
    return 0;
 }
@@ -617,14 +622,14 @@ int CUDTUnited::connect(const UDTSOCKET u, const sockaddr* name, const int& name
    s->m_Status = CUDTSocket::CONNECTED;
 
    // copy address information of local node
-   s->m_pUDT->m_pChannel->getSockAddr(s->m_pSelfAddr);
+   //s->m_pUDT->m_pChannel->getSockAddr(s->m_pSelfAddr);
 
    // record peer address
    if (AF_INET == s->m_iIPversion)
       s->m_pPeerAddr = (sockaddr*)(new sockaddr_in);
    else
       s->m_pPeerAddr = (sockaddr*)(new sockaddr_in6);
-   s->m_pUDT->m_pChannel->getPeerAddr(s->m_pPeerAddr);
+   //s->m_pUDT->m_pChannel->getPeerAddr(s->m_pPeerAddr);
 
    return 0;
 }
@@ -1446,6 +1451,7 @@ CUDT* CUDT::getUDTHandle(UDTSOCKET u)
 
 namespace UDT
 {
+
 UDTSOCKET socket(int af, int type, int protocol)
 {
    return CUDT::socket(af, type, protocol);
