@@ -339,6 +339,7 @@ private: // Sending related data
    int m_iNAKCount;                             // NAK counter
    int m_iDecRandom;                            // random threshold on decrease by number of loss events
    int m_iAvgNAKNum;                            // average number of NAKs per congestion
+   int m_iDecCount;				// number of rate decrease in the current congestion period
 
    timeval m_LastSYNTime;                       // the timestamp when last rate control occured
    bool m_bLoss;                                // if there is any loss during last RC period
