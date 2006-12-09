@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 12/05/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 12/09/2006
 *****************************************************************************/
 
 #ifndef WIN32
@@ -1143,7 +1143,7 @@ DWORD WINAPI CUDT::sndHandler(LPVOID sender)
                else
                {
                   timeout.tv_sec = now.tv_sec + 1;
-                  timeout.tv_nsec = now.tv_usec * 1000;
+                  timeout.tv_nsec = (now.tv_usec + 10000 - 1000000) * 1000;
                }
                pthread_cond_timedwait(&self->m_WindowCond, &self->m_WindowLock, &timeout);
             #else
@@ -1209,7 +1209,7 @@ DWORD WINAPI CUDT::sndHandler(LPVOID sender)
                else
                {
                   timeout.tv_sec = now.tv_sec + 1;
-                  timeout.tv_nsec = now.tv_usec * 1000;
+                  timeout.tv_nsec = (now.tv_usec + 10000 - 1000000) * 1000;
                }
                if (0 == pthread_cond_timedwait(&self->m_WindowCond, &self->m_WindowLock, &timeout))
                   break;
