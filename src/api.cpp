@@ -668,11 +668,7 @@ int CUDTUnited::close(const UDTSOCKET u)
       #endif
    }
 
-   // garbage collection should not try to close this instance
-   s->m_TimeStamp.tv_sec = -1;
-
-   CUDT* udt = s->m_pUDT;
-   udt->close();
+   s->m_pUDT->close();
 
    // a socket will not be immediated removed when it is closed
    // in order to prevent other methods from accessing invalid address

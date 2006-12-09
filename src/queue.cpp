@@ -52,12 +52,6 @@ CSndUList::~CSndUList()
    pthread_mutex_destroy(&m_ListLock);
 }
 
-void CSndUList::init()
-{
-   m_pUList = NULL;
-   m_pLast = NULL;
-}
-
 void CSndUList::insert(const int64_t& ts, const int32_t& id, const CUDT* u)
 {
    CGuard listguard(m_ListLock);
@@ -65,7 +59,8 @@ void CSndUList::insert(const int64_t& ts, const int32_t& id, const CUDT* u)
    if (NULL == m_pUList)
    {
       CUDTList* n = new CUDTList;
-      CTimer::rdtsc(n->m_llTimeStamp);
+
+      n->m_llTimeStamp = ts;
       n->m_iID = id;
       n->m_pUDT = (CUDT*)u;
 
@@ -81,7 +76,7 @@ void CSndUList::insert(const int64_t& ts, const int32_t& id, const CUDT* u)
    }
 
    CUDTList* n = new CUDTList;
-   CTimer::rdtsc(n->m_llTimeStamp);
+   n->m_llTimeStamp = ts;
    n->m_iID = id;
    n->m_pUDT = (CUDT*)u;
 
@@ -110,6 +105,8 @@ void CSndUList::insert(const int64_t& ts, const int32_t& id, const CUDT* u)
 
    n->m_pPrev = p;
    n->m_pNext = p->m_pNext;
+   if (NULL != p->m_pNext)
+      p->m_pNext->m_pPrev = n;
    p->m_pNext = n;
 }
 
@@ -124,10 +121,11 @@ void CSndUList::remove(const int32_t& id)
    {
       CUDTList* n = m_pUList;
       m_pUList = m_pUList->m_pNext;
-      if (m_pLast == n)
+      if (NULL == m_pUList)
          m_pLast = NULL;
       else
-         n->m_pNext->m_pPrev = NULL;
+         m_pUList->m_pPrev = NULL;
+
       delete n;
       return;
    }
@@ -221,20 +219,21 @@ void* CSndQueue::enQueue(void* param)
          if (currtime < self->m_pSndUList->m_pUList->m_llTimeStamp)
             self->m_pTimer->sleepto(self->m_pSndUList->m_pUList->m_llTimeStamp);
 
+         CUDTList* cp = self->m_pSndUList->m_pUList;
+
          uint64_t ts;
 
-//cout << "sending " << self->m_pSndUList->m_pUList->m_pUDT->m_SocketID << " " << self->m_pSndUList->m_pUList->m_pUDT->m_bConnected << endl;
-
-         int ps = self->m_pSndUList->m_pUList->m_pUDT->pack(self->m_pUnitQueue[self->m_iTailPtr].m_Packet, ts);
+         int ps = cp->m_pUDT->pack(self->m_pUnitQueue[self->m_iTailPtr].m_Packet, ts);
 
          bool empty = (self->m_iHeadPtr == self->m_iTailPtr);
 
          if (ps > 0)
          {
-            self->m_pUnitQueue[self->m_iTailPtr].m_pAddr = self->m_pSndUList->m_pUList->m_pUDT->m_pPeerAddr;
+            self->m_pUnitQueue[self->m_iTailPtr].m_pAddr = cp->m_pUDT->m_pPeerAddr;
 
-            ++ self->m_iTailPtr;
-            if (self->m_iQueueLen == self->m_iTailPtr)
+            if (self->m_iQueueLen != self->m_iTailPtr + 1)
+               ++ self->m_iTailPtr;
+            else
                self->m_iTailPtr = 0;
 
             if (empty)
@@ -245,17 +244,14 @@ void* CSndQueue::enQueue(void* param)
             }
          }
 
-         int32_t id = self->m_pSndUList->m_pUList->m_iID;
-         CUDT* u = self->m_pSndUList->m_pUList->m_pUDT;
-
-         self->m_pSndUList->remove(id);
+         self->m_pSndUList->remove(cp->m_iID);
          if (ts > 0)
-            self->m_pSndUList->insert(ts, id, u);
+            self->m_pSndUList->insert(ts, cp->m_iID, cp->m_pUDT);
       }
       else
       {
          pthread_mutex_lock(&self->m_WindowLock);
-         if (NULL == self->m_pSndUList)
+         if (NULL == self->m_pSndUList->m_pUList)
             pthread_cond_wait(&self->m_WindowCond, &self->m_WindowLock);
          pthread_mutex_unlock(&self->m_WindowLock);
       }
@@ -270,17 +266,7 @@ void* CSndQueue::deQueue(void* param)
 
    while (true)
    {
-//cout << self->m_iHeadPtr << " " << self->m_iTailPtr << endl;
-
-      if (self->m_iPQHeadPtr != self->m_iPQTailPtr)
-      {
-         self->m_pChannel->sendto(self->m_pPassiveQueue[self->m_iPQHeadPtr].m_pAddr, self->m_pPassiveQueue[self->m_iPQHeadPtr].m_Packet);
-
-         ++ self->m_iPQHeadPtr;
-         if (self->m_iQueueLen == self->m_iPQHeadPtr)
-            self->m_iPQHeadPtr = 0;
-      }
-      else if (self->m_iHeadPtr != self->m_iTailPtr)
+      if (self->m_iHeadPtr != self->m_iTailPtr)
       {
          self->m_pChannel->sendto(self->m_pUnitQueue[self->m_iHeadPtr].m_pAddr, self->m_pUnitQueue[self->m_iHeadPtr].m_Packet);
 
@@ -304,33 +290,36 @@ int CSndQueue::sendto(const sockaddr* addr, const CPacket& packet)
 {
    m_pChannel->sendto(addr, packet);
 
-//cout << "sndqueue sendto " << packet.getLength() << " " << packet.getType() << endl;
-
    return packet.getLength();
 }
 
 
 //
-void CRcvUList::init()
+CRcvUList::CRcvUList():
+m_pUList(NULL),
+m_pLast(NULL)
 {
-   m_pUList = NULL;
-   m_pLast = NULL;
+   pthread_mutex_init(&m_ListLock, NULL);
+}
+
+CRcvUList::~CRcvUList()
+{
+   pthread_mutex_destroy(&m_ListLock);
 }
 
 void CRcvUList::insert(const int32_t& id, const CUDT* u)
 {
-//   cout << "RCVULIST insert " << id << " " << long(u) << endl;
+   CGuard listguard(m_ListLock);
 
    if (NULL == m_pUList)
    {
-      m_pUList = new CUDTList;
-      CTimer::rdtsc(m_pUList->m_llTimeStamp);
-      m_pUList->m_iID = id;
-      m_pUList->m_pUDT = (CUDT*)u;
+      CUDTList* n = new CUDTList;
+      CTimer::rdtsc(n->m_llTimeStamp);
+      n->m_iID = id;
+      n->m_pUDT = (CUDT*)u;
+      n->m_pPrev = n->m_pNext = NULL;
 
-      m_pUList->m_pPrev = m_pUList->m_pNext = NULL;
-
-      m_pLast = m_pUList;
+      m_pLast = m_pUList = n;
 
       return;
    }
@@ -347,7 +336,7 @@ void CRcvUList::insert(const int32_t& id, const CUDT* u)
 
 void CRcvUList::remove(const int32_t& id)
 {
-//cout << "RCVULIST remove " << id << endl;
+   CGuard listguard(m_ListLock);
 
    if (NULL == m_pUList)
       return;
@@ -373,7 +362,7 @@ void CRcvUList::remove(const int32_t& id)
          p->m_pNext = n->m_pNext;
          if (NULL != n->m_pNext)
             n->m_pNext->m_pPrev = p;
-         if (m_pLast == n)
+         else
             m_pLast = p;
          delete n;
          return;
@@ -385,6 +374,16 @@ void CRcvUList::remove(const int32_t& id)
 
 
 //
+CHash::CHash()
+{
+   pthread_mutex_init(&m_ListLock, NULL);
+}
+
+CHash::~CHash()
+{
+   pthread_mutex_destroy(&m_ListLock);
+}
+
 void CHash::init(const int& size)
 {
    m_pBucket = new (CBucket*)[size];
@@ -397,6 +396,8 @@ void CHash::init(const int& size)
 
 CUDT* CHash::lookup(const int32_t& id)
 {
+   CGuard hashguard(m_ListLock);
+
    CBucket* b = m_pBucket[id % m_iHashSize];
 
    while (NULL != b)
@@ -411,6 +412,8 @@ CUDT* CHash::lookup(const int32_t& id)
 
 int CHash::retrieve(const int32_t& id, CPacket& packet)
 {
+   CGuard hashguard(m_ListLock);
+
    CBucket* b = m_pBucket[id % m_iHashSize];
 
    while (NULL != b)
@@ -419,9 +422,6 @@ int CHash::retrieve(const int32_t& id, CPacket& packet)
       {
          memcpy(packet.m_nHeader, b->m_pUnit->m_Packet.m_nHeader, 16);
          memcpy(packet.m_pcData, b->m_pUnit->m_Packet.m_pcData, b->m_pUnit->m_Packet.getLength());
-
-//int* p = (int*)(b->m_pUnit->m_Packet.m_pcData);
-//cout << "RETRIEVE UNIT " << p[0] << " " << p[1] << " " << p[2] << " " << p[3] << endl;
 
          packet.setLength(b->m_pUnit->m_Packet.getLength());
 
@@ -443,6 +443,8 @@ int CHash::retrieve(const int32_t& id, CPacket& packet)
 
 void CHash::setUnit(const int32_t& id, CUnit* unit)
 {
+   CGuard hashguard(m_ListLock);
+
    CBucket* b = m_pBucket[id % m_iHashSize];
 
    while (NULL != b)
@@ -462,9 +464,6 @@ void CHash::setUnit(const int32_t& id, CUnit* unit)
          memcpy(b->m_pUnit->m_Packet.m_pcData, unit->m_Packet.m_pcData, unit->m_Packet.getLength());
          b->m_pUnit->m_Packet.setLength(unit->m_Packet.getLength());
 
-//int* p = (int*)(unit->m_Packet.m_pcData);
-//cout << "SET UNIT " << p[0] << " " << p[1] << " " << p[2] << " " << p[3] << endl;
-
          return;
       }
 
@@ -474,6 +473,8 @@ void CHash::setUnit(const int32_t& id, CUnit* unit)
 
 void CHash::insert(const int32_t& id, const CUDT* u)
 {
+   CGuard hashguard(m_ListLock);
+
    CBucket* b = m_pBucket[id % m_iHashSize];
 
    CBucket* n = new CBucket;
@@ -487,6 +488,8 @@ void CHash::insert(const int32_t& id, const CUDT* u)
 
 void CHash::remove(const int32_t& id)
 {
+   CGuard hashguard(m_ListLock);
+
    CBucket* b = m_pBucket[id % m_iHashSize];
 
    if (NULL == b)
@@ -494,9 +497,8 @@ void CHash::remove(const int32_t& id)
 
    if (id == b->m_iID)
    {
-      CBucket* n = b;
-      b = b->m_pNext;
-      delete n;
+      m_pBucket[id % m_iHashSize] = b->m_pNext;
+      delete b;
 
       return;
    }
@@ -561,16 +563,15 @@ CRcvQueue::~CRcvQueue()
 
 void CRcvQueue::init(const int& qsize, const int& mss, const int& hsize, const CChannel* cc)
 {
-//cout << "initilize " << qsize << " " << mss << " " << hsize << endl;
-
    m_iQueueLen = qsize;
 
-   m_pUnitQueue = new CUnit[qsize];
+   m_pUnitQueue = new CUnit[qsize * 2];
    for (int i = 0; i < m_iQueueLen; ++ i)
    {
       m_pUnitQueue[i].m_bValid = false;
       m_pUnitQueue[i].m_Packet.m_pcData = new char[mss];
       m_pUnitQueue[i].m_pAddr = (sockaddr*)new sockaddr_in;
+      m_pUnitQueue[i].tmp = long(m_pUnitQueue[i].m_Packet.m_pcData);
    }
 
    m_pActiveQueue = new CUnit*[qsize];
@@ -583,14 +584,10 @@ void CRcvQueue::init(const int& qsize, const int& mss, const int& hsize, const C
 
    m_pRcvUList = new CRcvUList;
 
-   //cout << "INIT -------------------" << long(this) << " " << long(m_pChannel) << endl;
-
    pthread_create(&m_enQThread, NULL, CRcvQueue::enQueue, this);
    pthread_detach(m_enQThread);
    pthread_create(&m_deQThread, NULL, CRcvQueue::deQueue, this);
    pthread_detach(m_deQThread);
-
-   //cout << "INIT ++++++++++++++++++" << long(this) << " " << long(m_pChannel) << endl;
 }
 
 void* CRcvQueue::enQueue(void* param)
@@ -609,14 +606,10 @@ void* CRcvQueue::enQueue(void* param)
             self->m_iPtr = 0;
       }
 
-      self->m_pUnitQueue[self->m_iPtr].m_Packet.setLength(1460);
+      self->m_pUnitQueue[self->m_iPtr].m_Packet.setLength(1500);
 
-//cout << "reading packet in CRcvQueue::enQueue " << self->m_iPtr << endl;
       if (self->m_pChannel->recvfrom(self->m_pUnitQueue[self->m_iPtr].m_pAddr, self->m_pUnitQueue[self->m_iPtr].m_Packet) <= 0)
          continue;
-
-
-//cout << "recv " << self->m_pUnitQueue[self->m_iPtr].m_Packet.getType() << " " << self->m_pUnitQueue[self->m_iPtr].m_Packet.getLength() << " " << self->m_pUnitQueue[self->m_iPtr].m_Packet.getFlag() << endl;
 
       if ((self->m_iAQTailPtr == self->m_iAQHeadPtr) && (self->m_iPQTailPtr == self->m_iPQHeadPtr))
          empty = true;
@@ -624,25 +617,27 @@ void* CRcvQueue::enQueue(void* param)
       if (0 == self->m_pUnitQueue[self->m_iPtr].m_Packet.getFlag())
       {
          // queue is full, disgard the packet
-         if ((self->m_iAQTailPtr + 1 == self->m_iAQHeadPtr) || ((self->m_iAQTailPtr == self->m_iQueueLen) && (self->m_iAQHeadPtr == 0)))
+         if ((self->m_iAQTailPtr + 1 == self->m_iAQHeadPtr) || ((self->m_iAQTailPtr == self->m_iQueueLen - 1) && (self->m_iAQHeadPtr == 0)))
             continue;
 
          self->m_pActiveQueue[self->m_iAQTailPtr] = self->m_pUnitQueue + self->m_iPtr;
-         ++ self->m_iAQTailPtr;
-         if (self->m_iQueueLen == self->m_iAQTailPtr)
-            self->m_iAQTailPtr = 0;
 
-//cout << "AQ = " << self->m_iAQTailPtr << endl;
+         if (self->m_iQueueLen != self->m_iAQTailPtr + 1)
+            ++ self->m_iAQTailPtr;
+         else
+            self->m_iAQTailPtr = 0;
       }
       else
       {
          // queue is full, disgard the packet
-         if ((self->m_iPQTailPtr + 1 == self->m_iPQHeadPtr) || ((self->m_iPQTailPtr == self->m_iQueueLen) && (self->m_iPQHeadPtr == 0)))
+         if ((self->m_iPQTailPtr + 1 == self->m_iPQHeadPtr) || ((self->m_iPQTailPtr == self->m_iQueueLen - 1) && (self->m_iPQHeadPtr == 0)))
             continue;
 
          self->m_pPassiveQueue[self->m_iPQTailPtr] = self->m_pUnitQueue + self->m_iPtr;
-         ++ self->m_iPQTailPtr;
-         if (self->m_iQueueLen == self->m_iPQTailPtr)
+
+         if (self->m_iQueueLen != self->m_iPQTailPtr + 1)
+            ++ self->m_iPQTailPtr;
+         else
             self->m_iPQTailPtr = 0;
       }
 
@@ -671,61 +666,50 @@ void* CRcvQueue::deQueue(void* param)
          if ((0 == id) && (-1 != self->m_ListenerID))
             id = self->m_ListenerID;
 
-//cout << "IDDDDDD: " << id << endl;
-
          CUDT* u = self->m_pHash->lookup(id);
-/*
-if (NULL == u)
-   cout << "NULL u \n";
-else
-   cout << "??????? " << u->m_SocketID << " " << u->m_bConnected << " " << u->m_bListening << endl;
-*/
+
          if (NULL != u)
          {
-            if (u->m_bConnected)
+            if (u->m_bConnected && !u->m_bBroken)
                u->process(self->m_pPassiveQueue[self->m_iPQHeadPtr]->m_Packet);
             else if (u->m_bListening)
-            {
-//cout << "processing connection request~\n";
                u->listen(self->m_pPassiveQueue[self->m_iPQHeadPtr]->m_pAddr, self->m_pPassiveQueue[self->m_iPQHeadPtr]->m_Packet);
-            }
             else
-            {
                self->m_pHash->setUnit(id, self->m_pPassiveQueue[self->m_iPQHeadPtr]);
-            }
 
             self->m_pRcvUList->remove(id);
-            self->m_pRcvUList->insert(id, u);
+            if (u->m_bConnected && !u->m_bBroken)
+               self->m_pRcvUList->insert(id, u);
          }
 
          self->m_pPassiveQueue[self->m_iPQHeadPtr]->m_bValid = false;
 
-         ++ self->m_iPQHeadPtr;
-         if (self->m_iQueueLen == self->m_iPQHeadPtr)
+         if (self->m_iQueueLen != self->m_iPQHeadPtr + 1)
+            ++ self->m_iPQHeadPtr;
+         else
             self->m_iPQHeadPtr = 0;
       }
       else if (self->m_iAQTailPtr != self->m_iAQHeadPtr)
       {
          int32_t id = self->m_pActiveQueue[self->m_iAQHeadPtr]->m_Packet.m_iID;
 
-//cout << "RCV AQ " << id << endl;
-
          CUDT* u = self->m_pHash->lookup(id);
 
          if (NULL != u)
          {
-            u->process(self->m_pActiveQueue[self->m_iAQHeadPtr]->m_Packet);
+            if (u->m_bConnected && !u->m_bBroken)
+               u->process(self->m_pActiveQueue[self->m_iAQHeadPtr]->m_Packet);
 
             self->m_pRcvUList->remove(id);
-            self->m_pRcvUList->insert(id, u);
+            if (u->m_bConnected && !u->m_bBroken)
+               self->m_pRcvUList->insert(id, u);
          }
-//         else
-//            cout << "U ++ NULL!!!\n";
 
          self->m_pActiveQueue[self->m_iAQHeadPtr]->m_bValid = false;
 
-         ++ self->m_iAQHeadPtr;
-         if (self->m_iQueueLen == self->m_iAQHeadPtr)
+         if (self->m_iQueueLen != self->m_iAQHeadPtr + 1)
+            ++ self->m_iAQHeadPtr;
+         else
             self->m_iAQHeadPtr = 0;
       }
       else
@@ -742,7 +726,7 @@ else
          else
          {
             timeout.tv_sec = now.tv_sec + 1;
-            timeout.tv_nsec = now.tv_usec * 1000;
+            timeout.tv_nsec = (now.tv_usec + 10000 - 1000000) * 1000;
          }
 
          if (0 == pthread_cond_timedwait(&self->m_QueueCond, &self->m_QueueLock, &timeout))
@@ -761,11 +745,17 @@ else
          CPacket packet;
          packet.setLength(0);
 
-         if (u->m_bConnected)
+         if (u->m_bConnected && !u->m_bBroken)
+         {
             u->process(packet);
 
-         self->m_pRcvUList->remove(id);
-         self->m_pRcvUList->insert(id, u);
+            self->m_pRcvUList->remove(id);
+            self->m_pRcvUList->insert(id, u);
+         }
+         else
+         {
+            self->m_pRcvUList->remove(id);
+         }
 
          ul = self->m_pRcvUList->m_pUList;
       }
@@ -786,9 +776,6 @@ int CRcvQueue::recvfrom(sockaddr* addr, CPacket& packet, const int32_t& id)
       pthread_cond_timedwait(&m_PassCond, &m_PassLock, &timeout);
 
    int res = m_pHash->retrieve(id, packet);
-
-//int* p = (int*)(packet.m_pcData);
-//cout << "READ it " << packet.getLength() << " " << p[0] << " " << p[1] << " " << p[2] << " " << p[3] << endl;
 
    return res;
 }

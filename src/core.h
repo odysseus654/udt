@@ -419,15 +419,6 @@ private: // synchronization: mutexes and conditions
    void destroySynch();
    void releaseSynch();
 
-private: // Thread handlers
-   #ifndef WIN32
-      static void* sndHandler(void* sender);
-      static void* rcvHandler(void* recver);
-   #else
-      static DWORD WINAPI sndHandler(LPVOID sender);
-      static DWORD WINAPI rcvHandler(LPVOID recver);
-   #endif
-
 private: // congestion control
    void rateControl();
    void flowControl(const int& recvrate);
@@ -475,12 +466,12 @@ public: // for udp multiplexer
    #endif
 
    // SYN interval, in clock cycles
-   uint64_t ullsynint;
+   volatile uint64_t ullsynint;
  
    // ACK, NAK, and EXP intervals, in clock cycles
-   uint64_t ullackint;
-   uint64_t ullnakint;
-   uint64_t ullexpint;
+   volatile uint64_t ullackint;
+   volatile uint64_t ullnakint;
+   volatile uint64_t ullexpint;
 
    int pktcount;
 

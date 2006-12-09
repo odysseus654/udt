@@ -49,6 +49,8 @@ struct CUnit
    CPacket m_Packet;
 
    bool m_bValid;
+
+   long tmp;
 };
 
 struct CUDTList
@@ -69,7 +71,6 @@ public:
    CSndUList();
    ~CSndUList();
 
-   void init();
    void insert(const int64_t& ts, const int32_t& id, const CUDT* u);
    void remove(const int32_t& id);
 
@@ -83,18 +84,28 @@ private:
    pthread_cond_t* m_pWindowCond;
 };
 
-struct CRcvUList
+class CRcvUList
 {
-   void init();
+public:
+   CRcvUList();
+   ~CRcvUList();
+
    void insert(const int32_t& id, const CUDT* u);
    void remove(const int32_t& id);
 
    CUDTList* m_pUList;
    CUDTList* m_pLast;
+
+private:
+   pthread_mutex_t m_ListLock;
 };
 
-struct CHash
+class CHash
 {
+public:
+   CHash();
+   ~CHash();
+
    void init(const int& size);
    CUDT* lookup(const int32_t& id);
    int retrieve(const int32_t& id, CPacket& packet);
@@ -113,6 +124,9 @@ struct CHash
    } **m_pBucket;
 
    int m_iHashSize;
+
+private:
+   pthread_mutex_t m_ListLock;
 };
 
 

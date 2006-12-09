@@ -90,6 +90,7 @@ m_pcChannelBuf(NULL)
 
 CChannel::~CChannel()
 {
+cout << "channel destroyed\n";
    delete [] m_pcChannelBuf;
 }
 
@@ -121,6 +122,8 @@ void CChannel::open(const sockaddr* addr)
 
 void CChannel::disconnect() const
 {
+cout << "??????????????????????????????????\n";
+
    #ifndef WIN32
       close(m_iSocket);
    #else
@@ -417,6 +420,9 @@ int CChannel::recvfrom(sockaddr* addr, CPacket& packet)
    mh.msg_flags = 0;
     
    int res = recvmsg(m_iSocket, &mh, 0);
+
+   if (res <= 0)
+      perror("recvfrom/recvmsg");
 
 //cout << res << " recved " << packet.getType() << endl;
 
