@@ -108,6 +108,30 @@ void CChannel::open(const sockaddr* addr)
 
       if (0 != bind(m_iSocket, addr, namelen))
          throw CUDTException(1, 3, NET_ERROR);
+	  cout << "socket bound " << endl;
+   }
+   else
+   {
+      addrinfo hints;
+      addrinfo* res;
+
+      memset(&hints, 0, sizeof(struct addrinfo));
+
+      hints.ai_flags = AI_PASSIVE;
+      hints.ai_family = m_iIPversion;
+      hints.ai_socktype = SOCK_DGRAM;
+
+      char* service = "0";
+
+      if (0 != getaddrinfo(NULL, service, &hints, &res))
+		  throw CUDTException(1, 3, NET_ERROR);
+
+      if (0 != bind(m_iSocket, res->ai_addr, res->ai_addrlen))
+		  throw CUDTException(1, 3, NET_ERROR);
+
+      freeaddrinfo(res);
+
+	  cout << "socket bound to 0\n";
    }
 
    try
@@ -122,8 +146,6 @@ void CChannel::open(const sockaddr* addr)
 
 void CChannel::disconnect() const
 {
-cout << "??????????????????????????????????\n";
-
    #ifndef WIN32
       close(m_iSocket);
    #else
@@ -351,10 +373,6 @@ void CChannel::setChannelOpt()
        (0 != setsockopt(m_iSocket, SOL_SOCKET, SO_SNDBUF, (char *)&m_iSndBufSize, sizeof(int))))
       throw CUDTException(1, 3, NET_ERROR);
 
-
-   return;
-
-
    timeval tv;
    tv.tv_sec = 0;
    #if defined (BSD) || defined (OSX)
@@ -385,6 +403,7 @@ void CChannel::setChannelOpt()
 
 int CChannel::sendto(const sockaddr* addr, const CPacket& packet)
 {
+#ifndef WIN32
    msghdr mh;
    mh.msg_name = (sockaddr*)addr;
    mh.msg_namelen = sizeof(sockaddr_in);
@@ -394,22 +413,17 @@ int CChannel::sendto(const sockaddr* addr, const CPacket& packet)
    mh.msg_controllen = 0;
    mh.msg_flags = 0;
 
-//cout << "sending msg " << mh.msg_iov[0].iov_len << " " << mh.msg_iov[1].iov_len << endl;
- 
-   int res = sendmsg(m_iSocket, &mh, 0);
-
-//cout << "sent in cchannel " << res << endl;
-if (res <= 0)
-{
-    cout << " ================================================ ";
-    perror("sendmsg");
-}
-
-   return res;
+   return sendmsg(m_iSocket, &mh, 0);
+#else
+   DWORD size = 0;
+   int res = WSASendTo(m_iSocket, (LPWSABUF)packet.m_PacketVector, 2, &size, 0, addr, sizeof(sockaddr_in), NULL, NULL);
+   return (res == 0) ? size : -1;
+#endif
 }
 
 int CChannel::recvfrom(sockaddr* addr, CPacket& packet)
 {
+#ifndef WIN32
    msghdr mh;   
    mh.msg_name = addr;
    mh.msg_namelen = sizeof(sockaddr_in);
@@ -420,13 +434,21 @@ int CChannel::recvfrom(sockaddr* addr, CPacket& packet)
    mh.msg_flags = 0;
     
    int res = recvmsg(m_iSocket, &mh, 0);
-
-   if (res <= 0)
-      perror("recvfrom/recvmsg");
-
-//cout << res << " recved " << packet.getType() << endl;
-
    packet.setLength(res - CPacket::m_iPktHdrSize);
 
    return res;
+#else
+   DWORD size = CPacket::m_iPktHdrSize + packet.getLength();
+   DWORD flag = 0;
+   int addrsize = sizeof(sockaddr_in);
+   int res = WSARecvFrom(m_iSocket, (LPWSABUF)packet.m_PacketVector, 2, &size, &flag, addr, &addrsize, NULL, NULL);
+   if (res != 0)
+   {
+	   cout << "WSARecvFrom error " << NET_ERROR << endl;
+      return -1;
+   }
+//cout << "recv it! " << size << endl;
+   packet.setLength(size - CPacket::m_iPktHdrSize);
+   return size;
+#endif
 }

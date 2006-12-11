@@ -18,7 +18,7 @@
 				Name="VCCLCompilerTool"
 				AdditionalOptions="/RTC1"
 				Optimization="0"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;UDT_EXPORTS;TRACE;NO_BUSY_WAITING"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;UDT_EXPORTS;TRACE"
 				MinimalRebuild="TRUE"
 				BasicRuntimeChecks="3"
 				SmallerTypeCheck="TRUE"
@@ -151,6 +151,9 @@
 				RelativePath="..\src\packet.cpp">
 			</File>
 			<File
+				RelativePath="..\src\queue.cpp">
+			</File>
+			<File
 				RelativePath="..\src\window.cpp">
 			</File>
 		</Filter>
@@ -180,6 +183,9 @@
 			</File>
 			<File
 				RelativePath="..\src\packet.h">
+			</File>
+			<File
+				RelativePath="..\src\queue.h">
 			</File>
 			<File
 				RelativePath="..\src\udt.h">

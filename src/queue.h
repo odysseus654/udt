@@ -37,7 +37,7 @@ written by
 #ifndef __UDT_QUEUE_H__
 #define __UDT_QUEUE_H__
 
-#include <pthread.h>
+#include "common.h"
 #include "packet.h"
 #include "channel.h"
 
@@ -142,8 +142,13 @@ public:
    void init(const int& size, const CChannel* cc);
 
 public:
+#ifndef WIN32
    static void* enQueue(void* param);
    static void* deQueue(void* param);
+#else
+   static DWORD WINAPI enQueue(LPVOID param);
+   static DWORD WINAPI deQueue(LPVOID param);
+#endif
 
    int sendto(const sockaddr* addr, const CPacket& packet);
 
@@ -192,8 +197,13 @@ public:
 public:
    void init(const int& size, const int& mss, const int& hsize, const CChannel* cc);
 
+#ifndef WIN32
    static void* enQueue(void* param);
    static void* deQueue(void* param);
+#else
+   static DWORD WINAPI enQueue(LPVOID param);
+   static DWORD WINAPI deQueue(LPVOID param);
+#endif
 
    int recvfrom(sockaddr* addr, CPacket& packet, const int32_t& id);
 

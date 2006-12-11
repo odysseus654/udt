@@ -44,12 +44,20 @@ CSndUList::CSndUList():
 m_pUList(NULL),
 m_pLast(NULL)
 {
-   pthread_mutex_init(&m_ListLock, NULL);
+   #ifndef WIN32
+      pthread_mutex_init(&m_ListLock, NULL);
+   #else
+      m_ListLock = CreateMutex(NULL, false, NULL);
+   #endif
 }
 
 CSndUList::~CSndUList()
 {
+#ifndef WIN32
    pthread_mutex_destroy(&m_ListLock);
+#else
+   CloseHandle(m_ListLock);
+#endif
 }
 
 void CSndUList::insert(const int64_t& ts, const int32_t& id, const CUDT* u)
@@ -68,9 +76,13 @@ void CSndUList::insert(const int64_t& ts, const int32_t& id, const CUDT* u)
 
       m_pLast = m_pUList = n;
 
+#ifndef WIN32
       pthread_mutex_lock(m_pWindowLock);
       pthread_cond_signal(m_pWindowCond);
       pthread_mutex_unlock(m_pWindowLock);
+#else
+      SetEvent(*m_pWindowCond);
+#endif
 
       return;
    }
@@ -159,20 +171,36 @@ m_pSndUList(NULL),
 m_pChannel(NULL),
 m_pTimer(NULL)
 {
+#ifndef WIN32
    pthread_cond_init(&m_QueueCond, NULL);
    pthread_mutex_init(&m_QueueLock, NULL);
 
    pthread_cond_init(&m_WindowCond, NULL);
    pthread_mutex_init(&m_WindowLock, NULL);
+#else
+   m_QueueLock = CreateMutex(NULL, false, NULL);
+   m_QueueCond = CreateEvent(NULL, false, false, NULL);
+
+   m_WindowLock = CreateMutex(NULL, false, NULL);
+   m_WindowCond = CreateEvent(NULL, false, false, NULL);
+#endif
 }
 
 CSndQueue::~CSndQueue()
 {
+#ifndef WIN32
    pthread_cond_destroy(&m_QueueCond);
    pthread_mutex_destroy(&m_QueueLock);
 
    pthread_cond_destroy(&m_WindowCond);
    pthread_mutex_destroy(&m_WindowLock);
+#else
+   CloseHandle(m_QueueLock);
+   CloseHandle(m_QueueCond);
+
+   CloseHandle(m_WindowLock);
+   CloseHandle(m_WindowCond);
+#endif
 
    if (NULL == m_pUnitQueue)
       return;
@@ -199,13 +227,22 @@ void CSndQueue::init(const int& size, const CChannel* cc)
    m_pSndUList->m_pWindowLock = &m_WindowLock;
    m_pSndUList->m_pWindowCond = &m_WindowCond;
 
+#ifndef WIN32
    pthread_create(&m_enQThread, NULL, CSndQueue::enQueue, this);
    pthread_detach(m_enQThread);
    pthread_create(&m_deQThread, NULL, CSndQueue::deQueue, this);
    pthread_detach(m_deQThread);
+#else
+   m_enQThread = CreateThread(NULL, 0, CSndQueue::enQueue, this, 0, NULL);
+   m_deQThread = CreateThread(NULL, 0, CSndQueue::deQueue, this, 0, NULL);
+#endif
 }
 
+#ifndef WIN32
 void* CSndQueue::enQueue(void* param)
+#else
+DWORD WINAPI CSndQueue::enQueue(LPVOID param)
+#endif
 {
    CSndQueue* self = (CSndQueue*)param;
 
@@ -219,17 +256,18 @@ void* CSndQueue::enQueue(void* param)
          if (currtime < self->m_pSndUList->m_pUList->m_llTimeStamp)
             self->m_pTimer->sleepto(self->m_pSndUList->m_pUList->m_llTimeStamp);
 
-         CUDTList* cp = self->m_pSndUList->m_pUList;
+         int32_t id = self->m_pSndUList->m_pUList->m_iID;
+         CUDT* u = self->m_pSndUList->m_pUList->m_pUDT;
 
          uint64_t ts;
 
-         int ps = cp->m_pUDT->pack(self->m_pUnitQueue[self->m_iTailPtr].m_Packet, ts);
+         int ps = u->pack(self->m_pUnitQueue[self->m_iTailPtr].m_Packet, ts);
 
          bool empty = (self->m_iHeadPtr == self->m_iTailPtr);
 
          if (ps > 0)
          {
-            self->m_pUnitQueue[self->m_iTailPtr].m_pAddr = cp->m_pUDT->m_pPeerAddr;
+            self->m_pUnitQueue[self->m_iTailPtr].m_pAddr = u->m_pPeerAddr;
 
             if (self->m_iQueueLen != self->m_iTailPtr + 1)
                ++ self->m_iTailPtr;
@@ -238,29 +276,41 @@ void* CSndQueue::enQueue(void* param)
 
             if (empty)
             {
+#ifndef WIN32
                pthread_mutex_lock(&self->m_QueueLock);
                pthread_cond_signal(&self->m_QueueCond);
                pthread_mutex_unlock(&self->m_QueueLock);
+#else
+               SetEvent(self->m_QueueCond);
+#endif
             }
          }
 
-         self->m_pSndUList->remove(cp->m_iID);
+         self->m_pSndUList->remove(id);
          if (ts > 0)
-            self->m_pSndUList->insert(ts, cp->m_iID, cp->m_pUDT);
+            self->m_pSndUList->insert(ts, id, u);
       }
       else
       {
+#ifndef WIN32
          pthread_mutex_lock(&self->m_WindowLock);
          if (NULL == self->m_pSndUList->m_pUList)
             pthread_cond_wait(&self->m_WindowCond, &self->m_WindowLock);
          pthread_mutex_unlock(&self->m_WindowLock);
+#else
+         WaitForSingleObject(self->m_WindowCond, INFINITE);
+#endif
       }
    }
 
    return NULL;
 }
 
+#ifndef WIN32
 void* CSndQueue::deQueue(void* param)
+#else
+DWORD WINAPI CSndQueue::deQueue(LPVOID param)
+#endif
 {
    CSndQueue* self = (CSndQueue*)param;
 
@@ -276,10 +326,14 @@ void* CSndQueue::deQueue(void* param)
       }
       else
       {
+#ifndef WIN32
          pthread_mutex_lock(&self->m_QueueLock);
          if ((self->m_iPQHeadPtr == self->m_iPQTailPtr) && (self->m_iHeadPtr == self->m_iTailPtr))
             pthread_cond_wait(&self->m_QueueCond, &self->m_QueueLock);
          pthread_mutex_unlock(&self->m_QueueLock);
+#else
+         WaitForSingleObject(self->m_QueueCond, INFINITE);
+#endif
       }
    }
 
@@ -299,12 +353,20 @@ CRcvUList::CRcvUList():
 m_pUList(NULL),
 m_pLast(NULL)
 {
+#ifndef WIN32
    pthread_mutex_init(&m_ListLock, NULL);
+#else
+   m_ListLock = CreateMutex(NULL, false, NULL);
+#endif
 }
 
 CRcvUList::~CRcvUList()
 {
+#ifndef WIN32
    pthread_mutex_destroy(&m_ListLock);
+#else
+   CloseHandle(m_ListLock);
+#endif
 }
 
 void CRcvUList::insert(const int32_t& id, const CUDT* u)
@@ -376,17 +438,25 @@ void CRcvUList::remove(const int32_t& id)
 //
 CHash::CHash()
 {
+#ifndef WIN32
    pthread_mutex_init(&m_ListLock, NULL);
+#else
+   
+#endif
 }
 
 CHash::~CHash()
 {
+#ifndef WIN32
    pthread_mutex_destroy(&m_ListLock);
+#else
+   CloseHandle(m_ListLock);
+#endif
 }
 
 void CHash::init(const int& size)
 {
-   m_pBucket = new (CBucket*)[size];
+   m_pBucket = new CBucket* [size];
 
    for (int i = 0; i < size; ++ i)
       m_pBucket[i] = NULL;
@@ -536,8 +606,13 @@ m_pHash(NULL),
 m_pChannel(NULL),
 m_ListenerID(-1)
 {
+#ifndef WIN32
    pthread_cond_init(&m_QueueCond, NULL);
    pthread_mutex_init(&m_QueueLock, NULL);
+#else
+   m_QueueLock = CreateMutex(NULL, false, NULL);
+   m_QueueCond = CreateEvent(NULL, false, false, NULL);
+#endif
 }
 
 CRcvQueue::~CRcvQueue()
@@ -557,8 +632,13 @@ CRcvQueue::~CRcvQueue()
    if (NULL != m_pPassiveQueue)
       delete [] m_pPassiveQueue;
 
+#ifndef WIN32
    pthread_cond_destroy(&m_QueueCond);
    pthread_mutex_destroy(&m_QueueLock);
+#else
+   CloseHandle(m_QueueLock);
+   CloseHandle(m_QueueCond);
+#endif
 }
 
 void CRcvQueue::init(const int& qsize, const int& mss, const int& hsize, const CChannel* cc)
@@ -584,13 +664,22 @@ void CRcvQueue::init(const int& qsize, const int& mss, const int& hsize, const C
 
    m_pRcvUList = new CRcvUList;
 
+#ifndef WIN32
    pthread_create(&m_enQThread, NULL, CRcvQueue::enQueue, this);
    pthread_detach(m_enQThread);
    pthread_create(&m_deQThread, NULL, CRcvQueue::deQueue, this);
    pthread_detach(m_deQThread);
+#else
+   m_enQThread = CreateThread(NULL, 0, CRcvQueue::enQueue, this, 0, NULL);
+   m_deQThread = CreateThread(NULL, 0, CRcvQueue::deQueue, this, 0, NULL);
+#endif
 }
 
+#ifndef WIN32
 void* CRcvQueue::enQueue(void* param)
+#else
+DWORD WINAPI CRcvQueue::enQueue(LPVOID param)
+#endif
 {
    CRcvQueue* self = (CRcvQueue*)param;
 
@@ -645,7 +734,11 @@ void* CRcvQueue::enQueue(void* param)
 
       if (empty)
       {
+#ifndef WIN32
          pthread_cond_signal(&self->m_QueueCond);
+#else
+         SetEvent(self->m_QueueCond);
+#endif
          empty = false;
       }
    }
@@ -653,7 +746,11 @@ void* CRcvQueue::enQueue(void* param)
    return NULL;
 }
 
+#ifndef WIN32
 void* CRcvQueue::deQueue(void* param)
+#else
+DWORD WINAPI CRcvQueue::deQueue(LPVOID param)
+#endif
 {
    CRcvQueue* self = (CRcvQueue*)param;
 
@@ -714,6 +811,7 @@ void* CRcvQueue::deQueue(void* param)
       }
       else
       {
+#ifndef WIN32
          timespec timeout;
          timeval now;
 
@@ -731,6 +829,9 @@ void* CRcvQueue::deQueue(void* param)
 
          if (0 == pthread_cond_timedwait(&self->m_QueueCond, &self->m_QueueLock, &timeout))
             continue;
+#else
+         WaitForSingleObject(self->m_QueueCond, 1);
+#endif
       }
 
       CUDTList* ul = self->m_pRcvUList->m_pUList;
@@ -766,14 +867,20 @@ void* CRcvQueue::deQueue(void* param)
 
 int CRcvQueue::recvfrom(sockaddr* addr, CPacket& packet, const int32_t& id)
 {
-   timeval now;
-   timespec timeout;
-   gettimeofday(&now, 0);
-   timeout.tv_sec = now.tv_sec + 1;
-   timeout.tv_nsec = now.tv_usec * 1000;
-
    if (m_pHash->retrieve(id, packet) < 0)
+   {
+#ifndef WIN32
+      timeval now;
+      timespec timeout;
+      gettimeofday(&now, 0);
+      timeout.tv_sec = now.tv_sec + 1;
+      timeout.tv_nsec = now.tv_usec * 1000;
+
       pthread_cond_timedwait(&m_PassCond, &m_PassLock, &timeout);
+#else
+      WaitForSingleObject(m_PassCond, 1);
+#endif
+   }
 
    int res = m_pHash->retrieve(id, packet);
 

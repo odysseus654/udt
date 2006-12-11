@@ -704,6 +704,8 @@ void CUDT::connect(const sockaddr* serv_addr)
       response.setLength(m_iPayloadSize);
       m_pRcvQueue->recvfrom(peer_addr, response, m_SocketID);
 
+	  //cout << "response! " << response.getLength() << " " << response.getFlag() << " " << response.getType() << endl;
+
       gettimeofday(&currtime, 0);
       if ((currtime.tv_sec - entertime.tv_sec) * 1000000 + (currtime.tv_usec - entertime.tv_usec) > timeo)
       {
@@ -2384,6 +2386,7 @@ void CUDT::initSynch()
       m_RecvLock = CreateMutex(NULL, false, NULL);
       m_AckLock = CreateMutex(NULL, false, NULL);
       m_ConnectionLock = CreateMutex(NULL, false, NULL);
+	  cout << "++++++++++++ " << long(m_ConnectionLock) << endl;
       m_WindowLock = CreateMutex(NULL, false, NULL);
       m_WindowCond = CreateEvent(NULL, false, false, NULL);
       m_HandleLock = CreateMutex(NULL, false, NULL);
