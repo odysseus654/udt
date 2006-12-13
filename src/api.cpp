@@ -333,7 +333,7 @@ int CUDTUnited::newConnection(const UDTSOCKET listen, const sockaddr* peer, CHan
    }
 
    // copy address information of local node
-   //ns->m_pUDT->m_pChannel->getSockAddr(ns->m_pSelfAddr);
+   ns->m_pUDT->m_pSndQueue->m_pChannel->getSockAddr(ns->m_pSelfAddr);
 
    // protect the m_Sockets structure.
    #ifndef WIN32
@@ -379,7 +379,7 @@ int CUDTUnited::newConnection(const UDTSOCKET listen, const sockaddr* peer, CHan
    {
       ns->m_pUDT->close();
       if (error > 1)
-          m_Sockets.erase(ns->m_Socket);
+         m_Sockets.erase(ns->m_Socket);
       delete ns;
 
       return -1;
@@ -441,7 +441,7 @@ int CUDTUnited::bind(const UDTSOCKET u, const sockaddr* name, const int& namelen
    s->m_Status = CUDTSocket::OPENED;
 
    // copy address information of local node
-   //s->m_pUDT->m_pChannel->getSockAddr(s->m_pSelfAddr);
+   s->m_pUDT->m_pSndQueue->m_pChannel->getSockAddr(s->m_pSelfAddr);
 
    return 0;
 }
@@ -622,14 +622,14 @@ int CUDTUnited::connect(const UDTSOCKET u, const sockaddr* name, const int& name
    s->m_Status = CUDTSocket::CONNECTED;
 
    // copy address information of local node
-   //s->m_pUDT->m_pChannel->getSockAddr(s->m_pSelfAddr);
+   s->m_pUDT->m_pSndQueue->m_pChannel->getSockAddr(s->m_pSelfAddr);
 
    // record peer address
    if (AF_INET == s->m_iIPversion)
       s->m_pPeerAddr = (sockaddr*)(new sockaddr_in);
    else
       s->m_pPeerAddr = (sockaddr*)(new sockaddr_in6);
-   //s->m_pUDT->m_pChannel->getPeerAddr(s->m_pPeerAddr);
+   s->m_pUDT->m_pSndQueue->m_pChannel->getPeerAddr(s->m_pPeerAddr);
 
    return 0;
 }

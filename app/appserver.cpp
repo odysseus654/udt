@@ -83,7 +83,6 @@ int main(int argc, char* argv[])
 
    while (true)
    {
-cout << "to accept from sock " << serv << endl;
       if (UDT::INVALID_SOCK == (recver = UDT::accept(serv, (sockaddr*)&clientaddr, &addrlen)))
       {
          cout << "accept: " << UDT::getlasterror().getErrorMessage() << endl;

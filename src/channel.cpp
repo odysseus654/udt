@@ -90,7 +90,6 @@ m_pcChannelBuf(NULL)
 
 CChannel::~CChannel()
 {
-cout << "channel destroyed\n";
    delete [] m_pcChannelBuf;
 }
 
@@ -108,10 +107,10 @@ void CChannel::open(const sockaddr* addr)
 
       if (0 != bind(m_iSocket, addr, namelen))
          throw CUDTException(1, 3, NET_ERROR);
-	  cout << "socket bound " << endl;
    }
    else
    {
+      //sendto or WSASendTo will also automatically bind the socket
       addrinfo hints;
       addrinfo* res;
 
@@ -130,8 +129,6 @@ void CChannel::open(const sockaddr* addr)
 		  throw CUDTException(1, 3, NET_ERROR);
 
       freeaddrinfo(res);
-
-	  cout << "socket bound to 0\n";
    }
 
    try
@@ -415,7 +412,7 @@ int CChannel::sendto(const sockaddr* addr, const CPacket& packet)
 
    return sendmsg(m_iSocket, &mh, 0);
 #else
-   DWORD size = 0;
+   DWORD size = CPacket::m_iPktHdrSize + packet.getLength();
    int res = WSASendTo(m_iSocket, (LPWSABUF)packet.m_PacketVector, 2, &size, 0, addr, sizeof(sockaddr_in), NULL, NULL);
    return (res == 0) ? size : -1;
 #endif
@@ -441,13 +438,11 @@ int CChannel::recvfrom(sockaddr* addr, CPacket& packet)
    DWORD size = CPacket::m_iPktHdrSize + packet.getLength();
    DWORD flag = 0;
    int addrsize = sizeof(sockaddr_in);
+
    int res = WSARecvFrom(m_iSocket, (LPWSABUF)packet.m_PacketVector, 2, &size, &flag, addr, &addrsize, NULL, NULL);
    if (res != 0)
-   {
-	   cout << "WSARecvFrom error " << NET_ERROR << endl;
       return -1;
-   }
-//cout << "recv it! " << size << endl;
+
    packet.setLength(size - CPacket::m_iPktHdrSize);
    return size;
 #endif

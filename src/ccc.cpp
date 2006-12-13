@@ -66,9 +66,8 @@ void CCC::sendCustomMsg(CPacket& pkt) const
 {
    CUDT* u = CUDT::getUDTHandle(m_UDT);
 
-///////////////////////////////??????????????????????????***********************************
-//   if (NULL != u)
-//      *(u->m_pChannel) << pkt;
+   if (NULL != u)
+      u->m_pSndQueue->sendto(u->m_pPeerAddr, pkt);
 }
 
 const CPerfMon* CCC::getPerfInfo()

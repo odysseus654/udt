@@ -518,7 +518,7 @@ void CUDT::open(const sockaddr* addr)
 
    if (0 == s_UDTUnited.m_vMultiplexer.size())
       nm = true;
-   else if (((sockaddr_in*)addr)->sin_port != 0)
+   else if ((NULL != addr) && (((sockaddr_in*)addr)->sin_port != 0))
    {
       nm = true;
 
@@ -704,8 +704,6 @@ void CUDT::connect(const sockaddr* serv_addr)
       response.setLength(m_iPayloadSize);
       m_pRcvQueue->recvfrom(peer_addr, response, m_SocketID);
 
-	  //cout << "response! " << response.getLength() << " " << response.getFlag() << " " << response.getType() << endl;
-
       gettimeofday(&currtime, 0);
       if ((currtime.tv_sec - entertime.tv_sec) * 1000000 + (currtime.tv_usec - entertime.tv_usec) > timeo)
       {
@@ -814,9 +812,9 @@ void CUDT::connect(const sockaddr* serv_addr)
       m_pCC->init();
    #endif
 
-   uint64_t ts;
-   CTimer::rdtsc(ts);
-   m_pSndQueue->m_pSndUList->insert(ts, m_SocketID, this);
+   //uint64_t ts;
+   //CTimer::rdtsc(ts);
+   //m_pSndQueue->m_pSndUList->insert(ts, m_SocketID, this);
    m_pRcvQueue->m_pRcvUList->insert(m_SocketID, this);
 
    m_pPeerAddr = (sockaddr*)new sockaddr_in;
@@ -891,9 +889,9 @@ void CUDT::connect(const sockaddr* peer, CHandShake* hs)
       m_pCC->init();
    #endif
 
-   uint64_t ts;
-   CTimer::rdtsc(ts);
-   m_pSndQueue->m_pSndUList->insert(ts, m_SocketID, this);
+   //uint64_t ts;
+   //CTimer::rdtsc(ts);
+   //m_pSndQueue->m_pSndUList->insert(ts, m_SocketID, this);
    m_pRcvQueue->m_pRcvUList->insert(m_SocketID, this);
 
    m_pPeerAddr = (sockaddr*)new sockaddr_in;
@@ -908,7 +906,7 @@ void CUDT::close()
    if (!m_bConnected)
       m_bClosing = true;
 
-   CGuard cg(m_ConnectionLock);
+//   CGuard cg(m_ConnectionLock);
 
    if (!m_bOpened)
       return;
@@ -930,6 +928,8 @@ void CUDT::close()
          gettimeofday(&t2, 0);
       }
    }
+
+   CGuard cg(m_ConnectionLock);
 
    #ifdef CUSTOM_CC
       m_pCC->close();
@@ -1310,7 +1310,8 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
 
       uint64_t ts;
       CTimer::rdtsc(ts);
-      m_pSndQueue->m_pSndUList->insert(ts, m_SocketID, this);
+	  if (!m_pSndQueue->m_pSndUList->find(m_SocketID))
+         m_pSndQueue->m_pSndUList->insert(ts, m_SocketID, this);
 
 
       #ifndef WIN32
@@ -1461,15 +1462,12 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
 
       // Wake up the waiting sender (avoiding deadlock on an infinite sleeping)
       m_pSndLossList->insert(const_cast<int32_t&>(m_iSndLastAck), const_cast<int32_t&>(m_iSndLastAck));
-      m_pTimer->interrupt();
+	  
+	  //gu add!!!
+ 	  m_pSndQueue->m_pSndUList->update(m_SocketID, this);
+	  m_pSndQueue->m_pTimer->interrupt();
 
-
-      uint64_t ts;
-      CTimer::rdtsc(ts);
-      m_pSndQueue->m_pSndUList->insert(ts, m_SocketID, this);
-
-
-      // loss received during this SYN
+	  // loss received during this SYN
       m_bLoss = true;
 
       ++ m_iRecvNAK;
@@ -1717,7 +1715,8 @@ int CUDT::send(char* data, const int& len, int* overlapped, const UDT_MEM_ROUTIN
 
    uint64_t ts;
    CTimer::rdtsc(ts);
-   m_pSndQueue->m_pSndUList->insert(ts, m_SocketID, this);
+   if (!m_pSndQueue->m_pSndUList->find(m_SocketID))
+      m_pSndQueue->m_pSndUList->insert(ts, m_SocketID, this);
 
 
    // UDT either sends nothing or sends all 
@@ -1949,7 +1948,8 @@ int CUDT::sendmsg(const char* data, const int& len, const int& msttl, const bool
 
    uint64_t ts;
    CTimer::rdtsc(ts);
-   m_pSndQueue->m_pSndUList->insert(ts, m_SocketID, this);
+   if (!m_pSndQueue->m_pSndUList->find(m_SocketID))
+      m_pSndQueue->m_pSndUList->insert(ts, m_SocketID, this);
 
 
    return len;   
@@ -2386,7 +2386,6 @@ void CUDT::initSynch()
       m_RecvLock = CreateMutex(NULL, false, NULL);
       m_AckLock = CreateMutex(NULL, false, NULL);
       m_ConnectionLock = CreateMutex(NULL, false, NULL);
-	  cout << "++++++++++++ " << long(m_ConnectionLock) << endl;
       m_WindowLock = CreateMutex(NULL, false, NULL);
       m_WindowCond = CreateEvent(NULL, false, false, NULL);
       m_HandleLock = CreateMutex(NULL, false, NULL);
@@ -2723,9 +2722,9 @@ int CUDT::process(CPacket& packet)
 
          m_pSndLossList->insert(const_cast<int32_t&>(m_iSndLastAck), csn);
 
-         uint64_t ts;
-         CTimer::rdtsc(ts);
-         m_pSndQueue->m_pSndUList->insert(ts, m_SocketID, this);
+		 // gu add
+		 m_pSndQueue->m_pTimer->interrupt();
+	     m_pSndQueue->m_pSndUList->update(m_SocketID, this);
 
          #ifdef CUSTOM_CC
             m_pCC->onTimeout();

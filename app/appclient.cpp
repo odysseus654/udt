@@ -81,7 +81,7 @@ int main(int argc, char* argv[])
    CreateThread(NULL, 0, monitor, &client, 0, NULL);
 #endif
 
-   for (int i = 0; i < 1000; i ++)
+   for (int i = 0; i < 10; i ++)
    {
       if (UDT::ERROR == UDT::send(client, data, size, 0, &handle))
       //if (UDT::ERROR == UDT::sendmsg(client, data, size))

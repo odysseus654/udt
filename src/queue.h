@@ -73,6 +73,9 @@ public:
 
    void insert(const int64_t& ts, const int32_t& id, const CUDT* u);
    void remove(const int32_t& id);
+   bool find(const int32_t& id);
+   void update(const int32_t& id, const CUDT* u);
+   int pop(int32_t& id, CUDT*& u);
 
    CUDTList* m_pUList;
    CUDTList* m_pLast;
@@ -133,6 +136,7 @@ private:
 class CSndQueue
 {
 friend class CUDT;
+friend class CUDTUnited;
 
 public:
    CSndQueue();
@@ -189,6 +193,7 @@ private:
 class CRcvQueue
 {
 friend class CUDT;
+friend class CUDTUnited;
 
 public:
    CRcvQueue();

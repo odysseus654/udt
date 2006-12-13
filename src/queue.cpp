@@ -63,7 +63,7 @@ CSndUList::~CSndUList()
 void CSndUList::insert(const int64_t& ts, const int32_t& id, const CUDT* u)
 {
    CGuard listguard(m_ListLock);
-
+//cout << "insert uuu!!!!!!!!!!!!!!!!\n";
    if (NULL == m_pUList)
    {
       CUDTList* n = new CUDTList;
@@ -81,6 +81,7 @@ void CSndUList::insert(const int64_t& ts, const int32_t& id, const CUDT* u)
       pthread_cond_signal(m_pWindowCond);
       pthread_mutex_unlock(m_pWindowLock);
 #else
+	  //cout << "insert a new u, windowcond signaled\n";
       SetEvent(*m_pWindowCond);
 #endif
 
@@ -157,6 +158,104 @@ void CSndUList::remove(const int32_t& id)
    }
 }
 
+bool CSndUList::find(const int32_t& id)
+{
+   CGuard listguard(m_ListLock);
+
+   CUDTList* p = m_pUList;
+
+   while (NULL != p)
+   {
+      if (id == p->m_iID)
+         return true;
+	  p = p->m_pNext;
+   }
+
+   return false;
+}
+
+void CSndUList::update(const int32_t& id, const CUDT* u)
+{
+   CGuard listguard(m_ListLock);
+//cout << "update!!!!!!!!!!!!!!!!\n";
+   if (NULL == m_pUList)
+   {
+      CUDTList* n = new CUDTList;
+
+      n->m_llTimeStamp = 1;
+      n->m_iID = id;
+      n->m_pUDT = (CUDT*)u;
+
+      n->m_pPrev = n->m_pNext = NULL;
+
+      m_pLast = m_pUList = n;
+
+#ifndef WIN32
+      pthread_mutex_lock(m_pWindowLock);
+      pthread_cond_signal(m_pWindowCond);
+      pthread_mutex_unlock(m_pWindowLock);
+#else
+	  //cout << "insert a new u, windowcond signaled\n";
+      SetEvent(*m_pWindowCond);
+#endif
+
+      return;
+   }
+
+   if (id == m_pUList->m_iID)
+   {
+      m_pUList->m_llTimeStamp = 1;
+      return;
+   }
+
+   // remove id
+   CUDTList* p = m_pUList->m_pNext;
+   while (NULL != p)
+   {
+      if (id == p->m_iID)
+      {
+         p->m_pPrev->m_pNext = p->m_pNext;
+         if (NULL != p->m_pNext)
+            p->m_pNext->m_pPrev = p->m_pPrev;
+         delete p;
+      }
+
+      p = p->m_pNext;
+   }
+
+   // insert at head
+   CUDTList* n = new CUDTList;
+   n->m_llTimeStamp = 1;
+   n->m_iID = id;
+   n->m_pUDT = (CUDT*)u;
+   n->m_pPrev = NULL;
+   n->m_pNext = m_pUList;
+   m_pUList = n;
+   if (NULL == n->m_pNext)
+      m_pLast = n;
+}
+
+int CSndUList::pop(int32_t& id, CUDT*& u)
+{
+   CGuard listguard(m_ListLock);
+
+   if (NULL == m_pUList)
+      return -1;
+
+   id = m_pUList->m_iID;
+   u = m_pUList->m_pUDT;
+
+   CUDTList* n = m_pUList;
+   m_pUList = m_pUList->m_pNext;
+   if (NULL == m_pUList)
+      m_pLast = NULL;
+   else
+      m_pUList->m_pPrev = NULL;
+
+   delete n;
+
+   return id;
+}
 
 //
 CSndQueue::CSndQueue():
@@ -252,12 +351,12 @@ DWORD WINAPI CSndQueue::enQueue(LPVOID param)
       {
          uint64_t currtime;
          CTimer::rdtsc(currtime);
-
          if (currtime < self->m_pSndUList->m_pUList->m_llTimeStamp)
             self->m_pTimer->sleepto(self->m_pSndUList->m_pUList->m_llTimeStamp);
 
-         int32_t id = self->m_pSndUList->m_pUList->m_iID;
-         CUDT* u = self->m_pSndUList->m_pUList->m_pUDT;
+         int32_t id;
+         CUDT* u;
+		 self->m_pSndUList->pop(id, u);
 
          uint64_t ts;
 
@@ -286,7 +385,6 @@ DWORD WINAPI CSndQueue::enQueue(LPVOID param)
             }
          }
 
-         self->m_pSndUList->remove(id);
          if (ts > 0)
             self->m_pSndUList->insert(ts, id, u);
       }
@@ -318,6 +416,7 @@ DWORD WINAPI CSndQueue::deQueue(LPVOID param)
    {
       if (self->m_iHeadPtr != self->m_iTailPtr)
       {
+		 //cout << "dequeue....\n";
          self->m_pChannel->sendto(self->m_pUnitQueue[self->m_iHeadPtr].m_pAddr, self->m_pUnitQueue[self->m_iHeadPtr].m_Packet);
 
          ++ self->m_iHeadPtr;
@@ -328,11 +427,11 @@ DWORD WINAPI CSndQueue::deQueue(LPVOID param)
       {
 #ifndef WIN32
          pthread_mutex_lock(&self->m_QueueLock);
-         if ((self->m_iPQHeadPtr == self->m_iPQTailPtr) && (self->m_iHeadPtr == self->m_iTailPtr))
+         if (self->m_iHeadPtr == self->m_iTailPtr)
             pthread_cond_wait(&self->m_QueueCond, &self->m_QueueLock);
          pthread_mutex_unlock(&self->m_QueueLock);
 #else
-         WaitForSingleObject(self->m_QueueCond, INFINITE);
+         WaitForSingleObject(self->m_QueueCond, 1);
 #endif
       }
    }
@@ -867,7 +966,9 @@ DWORD WINAPI CRcvQueue::deQueue(LPVOID param)
 
 int CRcvQueue::recvfrom(sockaddr* addr, CPacket& packet, const int32_t& id)
 {
-   if (m_pHash->retrieve(id, packet) < 0)
+   int res;
+
+   if ((res = m_pHash->retrieve(id, packet)) < 0)
    {
 #ifndef WIN32
       timeval now;
@@ -881,8 +982,10 @@ int CRcvQueue::recvfrom(sockaddr* addr, CPacket& packet, const int32_t& id)
       WaitForSingleObject(m_PassCond, 1);
 #endif
    }
+   else
+      return res;
 
-   int res = m_pHash->retrieve(id, packet);
+   res = m_pHash->retrieve(id, packet);
 
    return res;
 }
