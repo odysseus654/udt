@@ -2,7 +2,7 @@
 Copyright © 2001 - 2006, The Board of Trustees of the University of Illinois.
 All Rights Reserved.
 
-UDP-based Data Transfer Library (UDT) version 3
+UDP-based Data Transfer Library (UDT) special version UDT-m
 
 Laboratory for Advanced Computing (LAC)
 National Center for Data Mining (NCDM)
@@ -30,7 +30,7 @@ This is the (only) header file of the UDT API, needed for programming with UDT.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 07/20/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 12/12/2006
 *****************************************************************************/
 
 #ifndef _UDT_H_

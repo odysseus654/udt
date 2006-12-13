@@ -263,9 +263,6 @@ m_pUnitQueue(NULL),
 m_iQueueLen(0),
 m_iHeadPtr(0),
 m_iTailPtr(0),
-m_pPassiveQueue(NULL),
-m_iPQHeadPtr(0),
-m_iPQTailPtr(0),
 m_pSndUList(NULL),
 m_pChannel(NULL),
 m_pTimer(NULL)
@@ -313,15 +310,9 @@ CSndQueue::~CSndQueue()
 void CSndQueue::init(const int& size, const CChannel* cc)
 {
    m_iQueueLen = size;
-
    m_pUnitQueue = new CUnit[size];
-
-   m_pPassiveQueue = new CUnit[size];
-
    m_pChannel = (CChannel*)cc;
-
    m_pTimer = new CTimer;
-
    m_pSndUList = new CSndUList;
    m_pSndUList->m_pWindowLock = &m_WindowLock;
    m_pSndUList->m_pWindowCond = &m_WindowCond;
@@ -750,7 +741,6 @@ void CRcvQueue::init(const int& qsize, const int& mss, const int& hsize, const C
       m_pUnitQueue[i].m_bValid = false;
       m_pUnitQueue[i].m_Packet.m_pcData = new char[mss];
       m_pUnitQueue[i].m_pAddr = (sockaddr*)new sockaddr_in;
-      m_pUnitQueue[i].tmp = long(m_pUnitQueue[i].m_Packet.m_pcData);
    }
 
    m_pActiveQueue = new CUnit*[qsize];
