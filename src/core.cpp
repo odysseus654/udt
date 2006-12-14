@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 12/09/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 12/13/2006
 *****************************************************************************/
 
 #ifndef WIN32
@@ -2005,7 +2005,7 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
             srand(m_iLastDecSeq);
             m_iDecRandom = (int)(rand() * double(m_iAvgNAKNum) / (RAND_MAX + 1.0)) + 1;
          }
-         else if ((m_iNAKCount ++ < 5) && (0 == (++ m_iNAKCount % m_iDecRandom)))
+         else if ((m_iDecCount ++ < 5) && (0 == (++ m_iNAKCount % m_iDecRandom)))
          {
             // 0.875^5 = 0.51, rate should not be decreased by more than half within a congestion period
 
