@@ -355,11 +355,14 @@ void CSndQueue::init(const int& size, const CChannel* c)
          CUDT* u;
          self->m_pSndUList->pop(id, u);
 
+         while ((self->m_iTailPtr + 1 == self->m_iHeadPtr) || ((self->m_iTailPtr == self->m_iQueueLen - 1) && (self->m_iHeadPtr == 0)))
+         {
+            cout << "shityshity\n";
+         }
+
          // pack a packet from the socket
          uint64_t ts;
          int ps = u->pack(self->m_pUnitQueue[self->m_iTailPtr].m_Packet, ts);
-
-         bool empty = (self->m_iHeadPtr == self->m_iTailPtr);
 
          if (ps > 0)
          {
@@ -371,17 +374,16 @@ void CSndQueue::init(const int& size, const CChannel* c)
             else
                self->m_iTailPtr = 0;
 
-            if (empty)
-            {
-               // activate the dequeue process
-               #ifndef WIN32
-                  pthread_mutex_lock(&self->m_QueueLock);
+            // activate the dequeue process
+            #ifndef WIN32
+               pthread_mutex_lock(&self->m_QueueLock);
+               if ((self->m_iHeadPtr + 1 == self->m_iTailPtr) || (0 == self->m_iTailPtr))
                   pthread_cond_signal(&self->m_QueueCond);
-                  pthread_mutex_unlock(&self->m_QueueLock);
-               #else
+               pthread_mutex_unlock(&self->m_QueueLock);
+            #else
+               if ((self->m_iHeadPtr + 1 == self->m_iTailPtr) || (0 == self->m_iTailPtr))
                   SetEvent(self->m_QueueCond);
-               #endif
-            }
+            #endif
          }
 
          // insert a new entry, ts is the next processing time
@@ -421,8 +423,9 @@ void CSndQueue::init(const int& size, const CChannel* c)
          self->m_pChannel->sendto(self->m_pUnitQueue[self->m_iHeadPtr].m_pAddr, self->m_pUnitQueue[self->m_iHeadPtr].m_Packet);
 
          // and remove it from the queue
-         ++ self->m_iHeadPtr;
-         if (self->m_iQueueLen == self->m_iHeadPtr)
+         if (self->m_iQueueLen != self->m_iHeadPtr + 1)
+            ++ self->m_iHeadPtr;
+         else
             self->m_iHeadPtr = 0;
       }
       else

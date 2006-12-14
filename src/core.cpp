@@ -534,7 +534,12 @@ void CUDT::open(const sockaddr* addr)
    if (nm)
    {
       CMultiplexer m;
-      m.m_pChannel = new CChannel();
+      m.m_pChannel = new CChannel(m_iIPversion);
+      m.m_pChannel->setSndBufSize(m_iUDPSndBufSize);
+      m.m_pChannel->setRcvBufSize(m_iUDPRcvBufSize);
+
+cout << "channel " << m_iUDPSndBufSize << " " << m_iUDPRcvBufSize << endl;
+
       m.m_pChannel->open(addr);
 
       sockaddr_in sa;
@@ -542,10 +547,10 @@ void CUDT::open(const sockaddr* addr)
       m.m_iPort = ntohs(sa.sin_port);
 
       m.m_pSndQueue = new CSndQueue;
-      m.m_pSndQueue->init(10000, m.m_pChannel);
+      m.m_pSndQueue->init(100000, m.m_pChannel);
       m.m_pRcvQueue = new CRcvQueue;
 
-      m.m_pRcvQueue->init(10000, 1500, 100, m.m_pChannel);
+      m.m_pRcvQueue->init(100000, 1500, 100, m.m_pChannel);
 
       m.m_iRefCount = 1;
 
@@ -582,26 +587,26 @@ void CUDT::open(const sockaddr* addr)
    // Now UDT is opened.
    m_bOpened = true;
 
-   ullsynint = m_iSYNInterval * m_ullCPUFrequency;
+   m_ullSYNInt = m_iSYNInterval * m_ullCPUFrequency;
    
    // ACK, NAK, and EXP intervals, in clock cycles
-   ullackint = ullsynint;
-   ullnakint = (m_iRTT + 4 * m_iRTTVar) * m_ullCPUFrequency;
-   ullexpint = (m_iRTT + 4 * m_iRTTVar) * m_ullCPUFrequency + ullsynint;
+   m_ullACKInt = m_ullSYNInt;
+   m_ullNAKInt = (m_iRTT + 4 * m_iRTTVar) * m_ullCPUFrequency;
+   m_ullEXPInt = (m_iRTT + 4 * m_iRTTVar) * m_ullCPUFrequency + m_ullSYNInt;
 
    // Set up the timers.
-   m_pTimer->rdtsc(nextacktime);
-   nextacktime += ullackint;
-   m_pTimer->rdtsc(nextnaktime);
-   nextnaktime += ullnakint;
-   m_pTimer->rdtsc(nextexptime);
-   nextexptime += ullexpint;
+   m_pTimer->rdtsc(m_ullNextACKTime);
+   m_ullNextACKTime += m_ullACKInt;
+   m_pTimer->rdtsc(m_ullNextNAKTime);
+   m_ullNextNAKTime += m_ullNAKInt;
+   m_pTimer->rdtsc(m_ullNextEXPTime);
+   m_ullNextEXPTime += m_ullEXPInt;
    #ifdef CUSTOM_CC
-      m_pTimer->rdtsc(nextccacktime);
-      nextccacktime += m_pCC->m_iACKPeriod * 1000 * m_ullCPUFrequency;
+      m_pTimer->rdtsc(m_ullNextCCACKTime);
+      m_ullNextCCACKTime += m_pCC->m_iACKPeriod * 1000 * m_ullCPUFrequency;
    #endif
 
-   pktcount = 0;
+   m_iPktCount = 0;
 }
 
 void CUDT::listen()
@@ -1424,6 +1429,7 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
 
             m_iAvgNAKNum = (int)ceil((double)m_iAvgNAKNum * 0.875 + (double)m_iNAKCount * 0.125) + 1;
             m_iNAKCount = 1;
+            m_iDecCount = 1;
 
             m_iLastDecSeq = m_iSndCurrSeqNo;
 
@@ -1431,8 +1437,10 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
             srand(m_iLastDecSeq);
             m_iDecRandom = (int)(rand() * double(m_iAvgNAKNum) / (RAND_MAX + 1.0)) + 1;
          }
-         else if (0 == (++ m_iNAKCount % m_iDecRandom))
+         else if ((m_iDecCount ++ < 5) && (0 == (++ m_iNAKCount % m_iDecRandom)))
          {
+            // 0.875^5 = 0.51, rate should not be decreased by more than half within a congestion period
+
             m_ullInterval = (uint64_t)ceil(m_ullInterval * 1.125);
 
             m_iLastDecSeq = m_iSndCurrSeqNo;
@@ -2646,53 +2654,54 @@ int CUDT::process(CPacket& packet)
       }
    }
 
+
    m_pTimer->rdtsc(currtime);
    int32_t loss = m_pRcvLossList->getFirstLostSeq();
 
    // Query the timers if any of them is expired.
-   if ((currtime > nextacktime) || (loss >= m_iUserBufBorder) || ((m_iRcvCurrSeqNo >= m_iUserBufBorder - 1) && (loss < 0)))
+   if ((currtime > m_ullNextACKTime) || (loss >= m_iUserBufBorder) || ((m_iRcvCurrSeqNo >= m_iUserBufBorder - 1) && (loss < 0)))
    {
       // ACK timer expired, or user buffer is fulfilled.
       sendCtrl(2);
 
       m_pTimer->rdtsc(currtime);
-      nextacktime = currtime + ullackint;
+      m_ullNextACKTime = currtime + m_ullACKInt;
 
       #if defined (NO_BUSY_WAITING) && !defined (CUSTOM_CC)
-         pktcount = 0;
+         m_iPktCount = 0;
       #endif
    }
 
    //send a "light" ACK
    #if defined (CUSTOM_CC)
-      if ((m_pCC->m_iACKInterval > 0) && (m_pCC->m_iACKInterval <= pktcount))
+      if ((m_pCC->m_iACKInterval > 0) && (m_pCC->m_iACKInterval <= m_iPktCount))
       {
          sendCtrl(2, NULL, NULL, 4);
-         pktcount = 0;
+         m_iPktCount = 0;
       }
-      if ((m_pCC->m_iACKPeriod > 0) && (currtime >= nextccacktime))
+      if ((m_pCC->m_iACKPeriod > 0) && (currtime >= m_ullNextCCACKTime))
       {
          sendCtrl(2, NULL, NULL, 4);
-         nextccacktime += m_pCC->m_iACKPeriod * 1000 * m_ullCPUFrequency;
+         m_ullNextCCACKTime += m_pCC->m_iACKPeriod * 1000 * m_ullCPUFrequency;
       }
    #elif defined (NO_BUSY_WAITING)
-      else if (m_iSelfClockInterval <= pktcount)
+      else if (m_iSelfClockInterval <= m_iPktCount)
       {
          sendCtrl(2, NULL, NULL, 4);
-         pktcount = 0;
+         m_iPktCount = 0;
       }
    #endif
 
-   if ((loss >= 0) && (currtime > nextnaktime))
+   if ((loss >= 0) && (currtime > m_ullNextNAKTime))
    {
       // NAK timer expired, and there is loss to be reported.
       sendCtrl(3);
 
       m_pTimer->rdtsc(currtime);
-      nextnaktime = currtime + ullnakint;
+      m_ullNextNAKTime = currtime + m_ullNAKInt;
    }
 
-   if (currtime > nextexptime)
+   if (currtime > m_ullNextEXPTime)
    {
       // Haven't receive any information from the peer, is it dead?!
       // timeout: at least 16 expirations and must be greater than 3 seconds and be less than 30 seconds
@@ -2746,15 +2755,15 @@ int CUDT::process(CPacket& packet)
 
       ++ m_iEXPCount;
 
-      ullexpint = (m_iEXPCount * (m_iRTT + 4 * m_iRTTVar) + m_iSYNInterval) * m_ullCPUFrequency;
+      m_ullEXPInt = (m_iEXPCount * (m_iRTT + 4 * m_iRTTVar) + m_iSYNInterval) * m_ullCPUFrequency;
 
       #ifdef CUSTOM_CC
          if (m_pCC->m_iRTO > 0)
-            ullexpint = m_pCC->m_iRTO * m_ullCPUFrequency;
+            m_ullEXPInt = m_pCC->m_iRTO * m_ullCPUFrequency;
       #endif
 
-      m_pTimer->rdtsc(nextexptime);
-      nextexptime += ullexpint;
+      m_pTimer->rdtsc(m_ullNextEXPTime);
+      m_ullNextEXPTime += m_ullEXPInt;
    }
 
 
@@ -2767,15 +2776,15 @@ int CUDT::process(CPacket& packet)
 
    // Just heard from the peer, reset the expiration count.
    m_iEXPCount = 1;
-   ullexpint = (m_iRTT + 4 * m_iRTTVar) * m_ullCPUFrequency + ullsynint;
+   m_ullEXPInt = (m_iRTT + 4 * m_iRTTVar) * m_ullCPUFrequency + m_ullSYNInt;
    #ifdef CUSTOM_CC
       if (m_pCC->m_iRTO > 0)
-         ullexpint = m_pCC->m_iRTO * m_ullCPUFrequency;
+         m_ullEXPInt = m_pCC->m_iRTO * m_ullCPUFrequency;
    #endif
    if (CSeqNo::incseq(m_iSndCurrSeqNo) == m_iSndLastAck)
    {
-      m_pTimer->rdtsc(nextexptime);
-      nextexptime += ullexpint;
+      m_pTimer->rdtsc(m_ullNextEXPTime);
+      m_ullNextEXPTime += m_ullEXPInt;
    }
 
    // But this is control packet, process it!
@@ -2785,15 +2794,15 @@ int CUDT::process(CPacket& packet)
 
       if ((2 == packet.getType()) || (6 == packet.getType()))
       {
-         ullnakint = (m_iRTT + 4 * m_iRTTVar) * m_ullCPUFrequency;
+         m_ullNAKInt = (m_iRTT + 4 * m_iRTTVar) * m_ullCPUFrequency;
          //do not resent the loss report within too short period
-         if (ullnakint < ullsynint)
-            ullnakint = ullsynint;
+         if (m_ullNAKInt < m_ullSYNInt)
+            m_ullNAKInt = m_ullSYNInt;
       }
 
       m_pTimer->rdtsc(currtime);
       if ((2 <= packet.getType()) && (4 >= packet.getType()))
-         nextexptime = currtime + ullexpint;
+         m_ullNextEXPTime = currtime + m_ullEXPInt;
 
       return 0;
    }
@@ -2815,7 +2824,6 @@ int CUDT::process(CPacket& packet)
 
    // Oops, the speculation is wrong...
    // Put the received data explicitly into the right slot.
-
 
    //!!!! ADDDATA changed the data position, no need for this in this version!!!
    char* pos = packet.m_pcData;
@@ -2852,7 +2860,7 @@ int CUDT::process(CPacket& packet)
       m_pIrrPktList->addIrregularPkt(packet.m_iSeqNo, m_iPayloadSize - packet.getLength());
 
       //an irregular sized packet usually indicates the end of a message, so send an ACK immediately
-      m_pTimer->rdtsc(nextacktime);
+      m_pTimer->rdtsc(m_ullNextACKTime);
    }
 
    // Update the current largest sequence number that has been received.
@@ -2878,7 +2886,7 @@ int CUDT::process(CPacket& packet)
    #endif
 
    #if defined (CUSTOM_CC) || defined (NO_BUSY_WAITING)
-      pktcount ++;
+      m_iPktCount ++;
    #endif
 
    return 1;

@@ -173,6 +173,9 @@ public:
 
    void getLossArray(int32_t* array, int& len, const int& limit, const int& threshold);
 
+
+   void updateTS();
+
 private:
    int32_t* m_piData1;                  // sequence number starts
    int32_t* m_piData2;                  // sequence number ends
@@ -185,6 +188,9 @@ private:
    int m_iTail;                         // last node in the list;
    int m_iLength;                       // loss length
    int m_iSize;                         // size of the static array
+
+// GU NOTE: NAK feedback should be based on the whole list, not on single node
+   timeval m_TimeStamp;			// last NAK feedback time
 };
 
 ////////////////////////////////////////////////////////////////////////////////

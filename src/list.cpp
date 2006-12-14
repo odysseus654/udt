@@ -443,6 +443,8 @@ m_iSize(size)
    m_iLength = 0;
    m_iHead = -1;
    m_iTail = -1;
+
+   gettimeofday(&m_TimeStamp, 0);
 }
 
 CRcvLossList::~CRcvLossList()
@@ -457,6 +459,8 @@ CRcvLossList::~CRcvLossList()
 
 void CRcvLossList::insert(const int32_t& seqno1, const int32_t& seqno2)
 {
+   gettimeofday(&m_TimeStamp, 0);
+
    // Data to be inserted must be larger than all those in the list
    // guaranteed by the UDT receiver
 
@@ -512,6 +516,8 @@ void CRcvLossList::insert(const int32_t& seqno1, const int32_t& seqno2)
 
 bool CRcvLossList::remove(const int32_t& seqno)
 {
+   gettimeofday(&m_TimeStamp, 0);
+
    if (0 == m_iLength)
       return false; 
 
@@ -704,13 +710,16 @@ void CRcvLossList::getLossArray(int32_t* array, int& len, const int& limit, cons
    timeval currtime;
    gettimeofday(&currtime, 0);
 
-   int i  = m_iHead;
-
    len = 0;
+
+   if ((currtime.tv_sec - m_TimeStamp.tv_sec) * 1000000 + currtime.tv_usec - m_TimeStamp.tv_usec < threshold)
+      return;   
+
+   int i  = m_iHead;
 
    while ((len < limit - 1) && (-1 != i))
    {
-      if ((currtime.tv_sec - m_pLastFeedbackTime[i].tv_sec) * 1000000 + currtime.tv_usec - m_pLastFeedbackTime[i].tv_usec > m_piCount[i] * threshold)
+     // if ((currtime.tv_sec - m_pLastFeedbackTime[i].tv_sec) * 1000000 + currtime.tv_usec - m_pLastFeedbackTime[i].tv_usec > m_piCount[i] * threshold)
       {
          array[len] = m_piData1[i];
          if (-1 != m_piData2[i])
@@ -724,13 +733,21 @@ void CRcvLossList::getLossArray(int32_t* array, int& len, const int& limit, cons
          ++ len;
 
          // update the timestamp
-         gettimeofday(m_pLastFeedbackTime + i, 0);
+         //gettimeofday(m_pLastFeedbackTime + i, 0);
          // update how many times this loss has been fed back, the "k" in UDT paper
          ++ m_piCount[i];
       }
 
       i = m_piNext[i];
    }
+
+//   if (len > 0)
+   gettimeofday(&m_TimeStamp, 0);
+}
+
+void CRcvLossList::updateTS()
+{
+   gettimeofday(&m_TimeStamp, 0);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

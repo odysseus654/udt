@@ -343,6 +343,7 @@ private: // Sending related data
    int m_iNAKCount;                             // NAK counter
    int m_iDecRandom;                            // random threshold on decrease by number of loss events
    int m_iAvgNAKNum;                            // average number of NAKs per congestion
+   int m_iDecCount;				// number of decreases in a congestion epoch
 
    timeval m_LastSYNTime;                       // the timestamp when last rate control occured
    bool m_bLoss;                                // if there is any loss during last RC period
@@ -452,31 +453,29 @@ private: // Trace
 private: // internal data
    char* m_pcTmpBuf;
 
-public: // for udp multiplexer
+private:
    int pack(CPacket& packet, uint64_t& ts);
    int process(CPacket& packet);
    int listen(sockaddr* addr, CPacket& packet);
 
-   uint64_t nextacktime;
-   uint64_t nextnaktime;
-   uint64_t nextexptime;
+   uint64_t m_ullNextACKTime;			// Next ACK time, in CPU clock cycles
+   uint64_t m_ullNextNAKTime;			// Next NAK time
+   uint64_t m_ullNextEXPTime;			// Next timeout
    #ifdef CUSTOM_CC
-      uint64_t nextccacktime;
+      uint64_t m_ullNextCCACKTime;		// Next ACK time for custom control
    #endif
 
-   // SYN interval, in clock cycles
-   volatile uint64_t ullsynint;
- 
-   // ACK, NAK, and EXP intervals, in clock cycles
-   volatile uint64_t ullackint;
-   volatile uint64_t ullnakint;
-   volatile uint64_t ullexpint;
+   volatile uint64_t m_ullSYNInt;		// SYN interval
+   volatile uint64_t m_ullACKInt;		// ACK interval
+   volatile uint64_t m_ullNAKInt;		// NAK interval
+   volatile uint64_t m_ullEXPInt;		// EXP interval
 
-   int pktcount;
+   int m_iPktCount;				// packet counter
 
-   CSndQueue* m_pSndQueue;
-   CRcvQueue* m_pRcvQueue;
-   sockaddr* m_pPeerAddr;
+public: // for udp multiplexer
+   CSndQueue* m_pSndQueue;			// packet sending queue
+   CRcvQueue* m_pRcvQueue;			// packet receivinf queue
+   sockaddr* m_pPeerAddr;			// peer address
 };
 
 
