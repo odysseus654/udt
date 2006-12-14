@@ -693,7 +693,6 @@ void CRcvLossList::getLossArray(int32_t* array, int& len, const int& limit, cons
    len = 0;
 
    // do not feedback NAK unless no retransmission is received within a certain interval
-   gettimeofday(&m_TimeStamp, 0);
    if ((currtime.tv_sec - m_TimeStamp.tv_sec) * 1000000 + currtime.tv_usec - m_TimeStamp.tv_usec > threshold)
       return;
 
@@ -714,6 +713,8 @@ void CRcvLossList::getLossArray(int32_t* array, int& len, const int& limit, cons
 
       i = m_piNext[i];
    }
+
+   gettimeofday(&m_TimeStamp, 0);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
