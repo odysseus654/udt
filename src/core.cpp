@@ -569,8 +569,10 @@ void CUDT::open(const sockaddr* addr)
       m.m_pSndQueue->init(100000, m.m_pChannel);
       m.m_pRcvQueue = new CRcvQueue;
 
-      m.m_pRcvQueue->init(100000, 1500, 100, m.m_pChannel);
+      m.m_pRcvQueue->init(100000, m_iPayloadSize, 100, m.m_pChannel);
 
+      m.m_iMTU = m_iMSS;
+      m.m_iIPversion = m_iIPversion;
       m.m_iRefCount = 1;
 
       s_UDTUnited.m_vMultiplexer.insert(s_UDTUnited.m_vMultiplexer.end(), m);

@@ -722,15 +722,16 @@ CRcvQueue::~CRcvQueue()
    #endif
 }
 
-void CRcvQueue::init(const int& qsize, const int& mss, const int& hsize, const CChannel* cc)
+void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, const CChannel* cc)
 {
    m_iQueueLen = qsize;
+   m_iPayloadSize = payload;
 
    m_pUnitQueue = new CUnit[qsize * 2];
    for (int i = 0; i < m_iQueueLen; ++ i)
    {
       m_pUnitQueue[i].m_bValid = false;
-      m_pUnitQueue[i].m_Packet.m_pcData = new char[mss];
+      m_pUnitQueue[i].m_Packet.m_pcData = new char[m_iPayloadSize];
       m_pUnitQueue[i].m_pAddr = (sockaddr*)new sockaddr_in;
    }
 
@@ -776,7 +777,7 @@ void CRcvQueue::init(const int& qsize, const int& mss, const int& hsize, const C
             self->m_iPtr = 0;
       }
 
-      self->m_pUnitQueue[self->m_iPtr].m_Packet.setLength(1500);
+      self->m_pUnitQueue[self->m_iPtr].m_Packet.setLength(self->m_iPayloadSize);
 
       // reading next incoming packet
       if (self->m_pChannel->recvfrom(self->m_pUnitQueue[self->m_iPtr].m_pAddr, self->m_pUnitQueue[self->m_iPtr].m_Packet) <= 0)

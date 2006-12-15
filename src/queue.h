@@ -341,7 +341,7 @@ public:
       // Returned value:
       //    None.
 
-   void init(const int& size, const int& mss, const int& hsize, const CChannel* c);
+   void init(const int& size, const int& payload, const int& hsize, const CChannel* c);
 
       // Functionality:
       //    Read a packet for a specific UDT socket id.
@@ -394,6 +394,8 @@ private:
 
 private:
    volatile UDTSOCKET m_ListenerID;	// The only listening socket that is associated to the queue, if there is one
+
+   int m_iPayloadSize;			// packet payload size
 };
 
 
@@ -405,7 +407,8 @@ public:
    CChannel* m_pChannel;	// The UDP channel for sending and receiving
 
    int m_iPort;			// The UDP port number of this multiplexer
-
+   int m_iIPversion;		// IP version
+   int m_iMTU;			// MTU
    int m_iRefCount;		// number of UDT instances that are associated with this multiplexer
 };
 
