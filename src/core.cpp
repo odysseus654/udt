@@ -1261,6 +1261,7 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
    uint64_t nextexptime;
    #ifdef CUSTOM_CC
       uint64_t nextccacktime;
+      uint64_t nextrto;
    #endif
 
    // SYN interval, in clock cycles
@@ -1281,6 +1282,11 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
    #ifdef CUSTOM_CC
       self->m_pTimer->rdtsc(nextccacktime);
       nextccacktime += self->m_pCC->m_iACKPeriod * 1000 * self->m_ullCPUFrequency;
+      if (self->m_pCC->m_iRTO > 0)
+      {
+         self->m_pTimer->rdtsc(nextrto);
+         nextrto += self->m_pCC->m_iRTO * self->m_ullCPUFrequency;
+      }
    #endif
 
    while (!self->m_bClosing)
@@ -1409,12 +1415,7 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
          if (CSeqNo::incseq(self->m_iSndCurrSeqNo) != self->m_iSndLastAck)
          {
             int32_t csn = self->m_iSndCurrSeqNo;
-
             self->m_pSndLossList->insert(const_cast<int32_t&>(self->m_iSndLastAck), csn);
-
-            #ifdef CUSTOM_CC
-               self->m_pCC->onTimeout();
-            #endif
          }
          else
             self->sendCtrl(1);
@@ -1435,14 +1436,17 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
 
          ullexpint = (self->m_iEXPCount * (self->m_iRTT + 4 * self->m_iRTTVar) + self->m_iSYNInterval) * self->m_ullCPUFrequency;
 
-         #ifdef CUSTOM_CC
-            if (self->m_pCC->m_iRTO > 0)
-               ullexpint = self->m_pCC->m_iRTO * self->m_ullCPUFrequency;
-         #endif
-
          self->m_pTimer->rdtsc(nextexptime);
          nextexptime += ullexpint;
       }
+
+      #ifdef CUSTOM_CC
+         if ((self->m_pCC->m_iRTO > 0) && (currtime > nextrto) && (CSeqNo::incseq(self->m_iSndCurrSeqNo) != self->m_iSndLastAck))
+         {
+            self->m_pCC->onTimeout();
+            nextrto = currtime + self->m_pCC->m_iRTO * self->m_ullCPUFrequency;
+         }
+      #endif
 
       ////////////////////////////////////////////////////////////////////////////////////////////
       // Below is the packet receiving/processing part.
@@ -1470,10 +1474,6 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
       // Just heard from the peer, reset the expiration count.
       self->m_iEXPCount = 1;
       ullexpint = (self->m_iRTT + 4 * self->m_iRTTVar) * self->m_ullCPUFrequency + ullsynint;
-      #ifdef CUSTOM_CC
-         if (self->m_pCC->m_iRTO > 0)
-            ullexpint = self->m_pCC->m_iRTO * self->m_ullCPUFrequency;
-      #endif
       if (CSeqNo::incseq(self->m_iSndCurrSeqNo) == self->m_iSndLastAck)
       {
          self->m_pTimer->rdtsc(nextexptime);
@@ -1499,6 +1499,12 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
 
          continue;
       }
+
+      #ifdef CUSTOM_CC
+         // reset RTO
+         if (self->m_pCC->m_iRTO > 0)
+            nextrto = currtime + self->m_pCC->m_iRTO * self->m_ullCPUFrequency;
+      #endif
 
       // update time/delay information
       self->m_pRcvTimeWindow->onPktArrival();
