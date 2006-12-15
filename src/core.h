@@ -463,6 +463,7 @@ private:
    uint64_t m_ullNextEXPTime;			// Next timeout
    #ifdef CUSTOM_CC
       uint64_t m_ullNextCCACKTime;		// Next ACK time for custom control
+      uint64_t m_ullNextRTO;			// Next RTO
    #endif
 
    volatile uint64_t m_ullSYNInt;		// SYN interval

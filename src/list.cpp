@@ -32,7 +32,7 @@ All the lists are static linked lists in ascending order of sequence numbers.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 12/12/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 12/15/2006
 *****************************************************************************/
 
 #include "list.h"
@@ -298,7 +298,7 @@ void CSndLossList::remove(const int32_t& seqno)
       {
          // target node is not empty, remove part/all of the seqno in the node.
          int temp = loc;
-         loc = (loc + 1) % m_iSize;         
+         loc = (loc + 1) % m_iSize;
 
          if (-1 == m_piData2[temp])
             m_iHead = m_piNext[temp];
@@ -420,16 +420,12 @@ int32_t CSndLossList::getLostSeq()
 CRcvLossList::CRcvLossList(const int& size):
 m_piData1(NULL),
 m_piData2(NULL),
-m_pLastFeedbackTime(NULL),
-m_piCount(NULL),
 m_piNext(NULL),
 m_piPrior(NULL),
 m_iSize(size)
 {
    m_piData1 = new int32_t [m_iSize];
    m_piData2 = new int32_t [m_iSize];
-   m_pLastFeedbackTime = new timeval [m_iSize];
-   m_piCount = new int [m_iSize];
    m_piNext = new int [m_iSize];
    m_piPrior = new int [m_iSize];
 
@@ -451,8 +447,6 @@ CRcvLossList::~CRcvLossList()
 {
    delete [] m_piData1;
    delete [] m_piData2;
-   delete [] m_pLastFeedbackTime;
-   delete [] m_piCount;
    delete [] m_piNext;
    delete [] m_piPrior;
 }
@@ -472,9 +466,6 @@ void CRcvLossList::insert(const int32_t& seqno1, const int32_t& seqno2)
       m_piData1[m_iHead] = seqno1;
       if (seqno2 != seqno1)
          m_piData2[m_iHead] = seqno2;
-
-      gettimeofday(m_pLastFeedbackTime + m_iHead, 0);
-      m_piCount[m_iHead] = 2;
 
       m_piNext[m_iHead] = -1;
       m_piPrior[m_iHead] = -1;
@@ -506,10 +497,6 @@ void CRcvLossList::insert(const int32_t& seqno1, const int32_t& seqno2)
       m_piNext[loc] = -1;
       m_iTail = loc;
    }
-
-   // Initilize time stamp
-   gettimeofday(m_pLastFeedbackTime + loc, 0);
-   m_piCount[loc] = 2;
 
    m_iLength += CSeqNo::seqlen(seqno1, seqno2);
 }
@@ -566,10 +553,6 @@ bool CRcvLossList::remove(const int32_t& seqno)
          // process the sequence end
          if (CSeqNo::seqcmp(m_piData2[loc], CSeqNo::incseq(m_piData1[loc])) > 0)
             m_piData2[i] = m_piData2[loc];
-
-         // replicate the time stamp and report counter
-         m_pLastFeedbackTime[i] = m_pLastFeedbackTime[loc];
-         m_piCount[i] = m_piCount[loc];
 
          // remove the current node
          m_piData1[loc] = -1;
@@ -633,10 +616,6 @@ bool CRcvLossList::remove(const int32_t& seqno)
          m_piData2[i] = -1;
       else
          m_piData2[i] = CSeqNo::decseq(seqno);
-
-      // replicate the time stamp and report counter
-      m_pLastFeedbackTime[loc] = m_pLastFeedbackTime[i];
-      m_piCount[loc] = m_piCount[i];
 
       // update the list pointer
       m_piNext[loc] = m_piNext[i];
@@ -712,41 +691,28 @@ void CRcvLossList::getLossArray(int32_t* array, int& len, const int& limit, cons
 
    len = 0;
 
-   if ((currtime.tv_sec - m_TimeStamp.tv_sec) * 1000000 + currtime.tv_usec - m_TimeStamp.tv_usec < threshold)
-      return;   
+   // do not feedback NAK unless no retransmission is received within a certain interval
+   if ((currtime.tv_sec - m_TimeStamp.tv_sec) * 1000000 + currtime.tv_usec - m_TimeStamp.tv_usec > threshold)
+      return;
 
-   int i  = m_iHead;
+   int i = m_iHead;
 
    while ((len < limit - 1) && (-1 != i))
    {
-     // if ((currtime.tv_sec - m_pLastFeedbackTime[i].tv_sec) * 1000000 + currtime.tv_usec - m_pLastFeedbackTime[i].tv_usec > m_piCount[i] * threshold)
+      array[len] = m_piData1[i];
+      if (-1 != m_piData2[i])
       {
-         array[len] = m_piData1[i];
-         if (-1 != m_piData2[i])
-         {
-            // there are more than 1 loss in the sequence
-            array[len] |= 0x80000000;
-            ++ len;
-            array[len] = m_piData2[i];
-         }
-
+         // there are more than 1 loss in the sequence
+         array[len] |= 0x80000000;
          ++ len;
-
-         // update the timestamp
-         //gettimeofday(m_pLastFeedbackTime + i, 0);
-         // update how many times this loss has been fed back, the "k" in UDT paper
-         ++ m_piCount[i];
+         array[len] = m_piData2[i];
       }
+
+      ++ len;
 
       i = m_piNext[i];
    }
 
-//   if (len > 0)
-   gettimeofday(&m_TimeStamp, 0);
-}
-
-void CRcvLossList::updateTS()
-{
    gettimeofday(&m_TimeStamp, 0);
 }
 

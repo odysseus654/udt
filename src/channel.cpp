@@ -149,177 +149,6 @@ void CChannel::disconnect() const
    #endif
 }
 
-void CChannel::connect(const sockaddr* addr)
-{
-   const int addrlen = (AF_INET == m_iIPversion) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
-
-   if (0 != ::connect(m_iSocket, addr, addrlen))
-      throw CUDTException(1, 4, NET_ERROR);
-}
-
-int CChannel::send(char* buffer, const int& size) const
-{
-   return ::send(m_iSocket, buffer, size, 0);
-}
-
-int CChannel::recv(char* buffer, const int& size) const
-{
-   return ::recv(m_iSocket, buffer, size, 0);
-}
-
-int CChannel::peek(char* buffer, const int& size) const
-{
-   return ::recv(m_iSocket, buffer, size, MSG_PEEK);
-}
-
-const CChannel& CChannel::operator<<(CPacket& packet) const
-{
-   // convert control information into network order
-   if (packet.getFlag())
-      for (int i = 0, n = packet.getLength() / 4; i < n; ++ i)
-         *((uint32_t *)packet.m_pcData + i) = htonl(*((uint32_t *)packet.m_pcData + i));
-
-   // convert packet header into network order
-   packet.m_nHeader[0] = htonl(packet.m_nHeader[0]);
-   packet.m_nHeader[1] = htonl(packet.m_nHeader[1]);
-
-   #ifdef UNIX
-      while (0 == writev(m_iSocket, packet.getPacketVector(), 2)) {}
-   #else
-      writev(m_iSocket, packet.getPacketVector(), 2);
-   #endif
-
-   // convert back into local host order
-   packet.m_nHeader[0] = ntohl(packet.m_nHeader[0]);
-   packet.m_nHeader[1] = ntohl(packet.m_nHeader[1]);
-
-   if (packet.getFlag())
-      for (int j = 0, n = packet.getLength() / 4; j < n; ++ j)
-         *((uint32_t *)packet.m_pcData + j) = ntohl(*((uint32_t *)packet.m_pcData + j));
-
-   return *this;
-}
-
-const CChannel& CChannel::operator>>(CPacket& packet) const
-{
-   // Packet length indicates if the packet is successfully received
-   packet.setLength(readv(m_iSocket, packet.getPacketVector(), 2) - CPacket::m_iPktHdrSize);
-
-   #ifdef UNIX
-      //simulating RCV_TIMEO
-      if (packet.getLength() <= 0)
-      {
-         usleep(10);
-         packet.setLength(readv(m_iSocket, packet.getPacketVector(), 2) - CPacket::m_iPktHdrSize);
-      }
-   #endif
-
-   if (packet.getLength() <= 0)
-      return *this;
-
-   // convert packet header into local host order
-   packet.m_nHeader[0] = ntohl(packet.m_nHeader[0]);
-   packet.m_nHeader[1] = ntohl(packet.m_nHeader[1]);
-
-   // convert control information into local host order
-   if (packet.getFlag())
-      for (int i = 0, n = packet.getLength() / 4; i < n; ++ i)
-         *((uint32_t *)packet.m_pcData + i) = ntohl(*((uint32_t *)packet.m_pcData + i));
-
-   return *this;
-}
-
-int CChannel::sendto(CPacket& packet, const sockaddr* addr) const
-{
-   // convert control information into network order
-   if (packet.getFlag())
-      for (int i = 0, n = packet.getLength() / 4; i < n; ++ i)
-         *((uint32_t *)packet.m_pcData + i) = htonl(*((uint32_t *)packet.m_pcData + i));
-
-   // convert packet header into network order
-   packet.m_nHeader[0] = htonl(packet.m_nHeader[0]);
-   packet.m_nHeader[1] = htonl(packet.m_nHeader[1]);
-
-   char* buf;
-   if (CPacket::m_iPktHdrSize + packet.getLength() <= 9000)
-      buf = m_pcChannelBuf;
-   else
-      buf = new char [CPacket::m_iPktHdrSize + packet.getLength()];
-
-   memcpy(buf, packet.getPacketVector()[0].iov_base, CPacket::m_iPktHdrSize);
-   memcpy(buf + CPacket::m_iPktHdrSize, packet.getPacketVector()[1].iov_base, packet.getLength());
-
-   socklen_t addrsize = (AF_INET == m_iIPversion) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
-
-   int ret = ::sendto(m_iSocket, buf, CPacket::m_iPktHdrSize + packet.getLength(), 0, addr, addrsize);
-
-   #ifdef UNIX
-      while (ret <= 0)
-         ret = ::sendto(m_iSocket, buf, CPacket::m_iPktHdrSize + packet.getLength(), 0, addr, addrsize);
-   #endif
-
-   if (CPacket::m_iPktHdrSize + packet.getLength() > 9000)
-      delete [] buf;
-
-   // convert back into local host order
-   packet.m_nHeader[0] = ntohl(packet.m_nHeader[0]);
-   packet.m_nHeader[1] = ntohl(packet.m_nHeader[1]);
-
-   if (packet.getFlag())
-      for (int j = 0, n = packet.getLength() / 4; j < n; ++ j)
-         *((uint32_t *)packet.m_pcData + j) = ntohl(*((uint32_t *)packet.m_pcData + j));
-
-   return ret;
-}
-
-int CChannel::recvfrom(CPacket& packet, sockaddr* addr) const
-{
-   char* buf;
-   if (CPacket::m_iPktHdrSize + packet.getLength() <= 9000)
-      buf = m_pcChannelBuf;
-   else
-      buf = new char [CPacket::m_iPktHdrSize + packet.getLength()];
-
-   socklen_t addrsize = (AF_INET == m_iIPversion) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
-
-   int ret = ::recvfrom(m_iSocket, buf, CPacket::m_iPktHdrSize + packet.getLength(), 0, addr, &addrsize);
-
-   #ifdef UNIX
-      //simulating RCV_TIMEO
-      if (ret <= 0)
-      {
-         usleep(10);
-         ret = ::recvfrom(m_iSocket, buf, CPacket::m_iPktHdrSize + packet.getLength(), 0, addr, &addrsize);
-      }
-   #endif
-
-   if (ret > CPacket::m_iPktHdrSize)
-   {
-      packet.setLength(ret - CPacket::m_iPktHdrSize);
-      memcpy(packet.getPacketVector()[0].iov_base, buf, CPacket::m_iPktHdrSize);
-      memcpy(packet.getPacketVector()[1].iov_base, buf + CPacket::m_iPktHdrSize, ret - CPacket::m_iPktHdrSize);
-
-      // convert back into local host order
-      packet.m_nHeader[0] = ntohl(packet.m_nHeader[0]);
-      packet.m_nHeader[1] = ntohl(packet.m_nHeader[1]);
-
-      if (packet.getFlag())
-         for (int i = 0, n = packet.getLength() / 4; i < n; ++ i)
-            *((uint32_t *)packet.m_pcData + i) = ntohl(*((uint32_t *)packet.m_pcData + i));
-   }
-   else
-   {
-      if (ret > 0)
-         ret = 0;
-      packet.setLength(ret);
-   }
-
-   if (CPacket::m_iPktHdrSize + packet.getLength() > 9000)
-      delete [] buf;
-
-   return ret;
-}
-
 int CChannel::getSndBufSize()
 {
    socklen_t size = sizeof(socklen_t);
@@ -396,53 +225,83 @@ void CChannel::setChannelOpt()
    #endif
 }
 
-
-int CChannel::sendto(const sockaddr* addr, const CPacket& packet)
+int CChannel::sendto(const sockaddr* addr, CPacket& packet) const
 {
-#ifndef WIN32
-   msghdr mh;
-   mh.msg_name = (sockaddr*)addr;
-   mh.msg_namelen = sizeof(sockaddr_in);
-   mh.msg_iov = (iovec*)packet.m_PacketVector;
-   mh.msg_iovlen = 2;
-   mh.msg_control = NULL;
-   mh.msg_controllen = 0;
-   mh.msg_flags = 0;
+   // convert control information into network order
+   if (packet.getFlag())
+      for (int i = 0, n = packet.getLength() / 4; i < n; ++ i)
+         *((uint32_t *)packet.m_pcData + i) = htonl(*((uint32_t *)packet.m_pcData + i));
 
-   return sendmsg(m_iSocket, &mh, 0);
-#else
-   DWORD size = CPacket::m_iPktHdrSize + packet.getLength();
-   int res = WSASendTo(m_iSocket, (LPWSABUF)packet.m_PacketVector, 2, &size, 0, addr, sizeof(sockaddr_in), NULL, NULL);
-   return (res == 0) ? size : -1;
-#endif
+   // convert packet header into network order
+   for (int j = 0; j < 4; ++ j)
+      packet.m_nHeader[j] = htonl(packet.m_nHeader[j]);
+
+   int ret = 0;
+
+   #ifndef WIN32
+      msghdr mh;
+      mh.msg_name = (sockaddr*)addr;
+      mh.msg_namelen = sizeof(sockaddr_in);
+      mh.msg_iov = (iovec*)packet.m_PacketVector;
+      mh.msg_iovlen = 2;
+      mh.msg_control = NULL;
+      mh.msg_controllen = 0;
+      mh.msg_flags = 0;
+
+      ret = sendmsg(m_iSocket, &mh, 0);
+   #else
+      DWORD size = CPacket::m_iPktHdrSize + packet.getLength();
+      int res = WSASendTo(m_iSocket, (LPWSABUF)packet.m_PacketVector, 2, &size, 0, addr, sizeof(sockaddr_in), NULL, NULL);
+      ret = (res == 0) ? size : -1;
+   #endif
+
+   // convert back into local host order
+   for (int k = 0; k < 4; ++ k)
+      packet.m_nHeader[k] = ntohl(packet.m_nHeader[k]);
+
+   if (packet.getFlag())
+      for (int l = 0, n = packet.getLength() / 4; l < n; ++ l)
+         *((uint32_t *)packet.m_pcData + l) = ntohl(*((uint32_t *)packet.m_pcData + l));
+
+   return ret;
 }
 
-int CChannel::recvfrom(sockaddr* addr, CPacket& packet)
+int CChannel::recvfrom(sockaddr* addr, CPacket& packet) const
 {
-#ifndef WIN32
-   msghdr mh;   
-   mh.msg_name = addr;
-   mh.msg_namelen = sizeof(sockaddr_in);
-   mh.msg_iov = packet.m_PacketVector;
-   mh.msg_iovlen = 2;
-   mh.msg_control = NULL;
-   mh.msg_controllen = 0;
-   mh.msg_flags = 0;
-    
-   int res = recvmsg(m_iSocket, &mh, 0);
+   #ifndef WIN32
+      msghdr mh;   
+      mh.msg_name = addr;
+      mh.msg_namelen = sizeof(sockaddr_in);
+      mh.msg_iov = packet.m_PacketVector;
+      mh.msg_iovlen = 2;
+      mh.msg_control = NULL;
+      mh.msg_controllen = 0;
+      mh.msg_flags = 0;
+
+      int res = recvmsg(m_iSocket, &mh, 0);
+   #else
+      DWORD size = CPacket::m_iPktHdrSize + packet.getLength();
+      DWORD flag = 0;
+      int addrsize = sizeof(sockaddr_in);
+
+      int res = WSARecvFrom(m_iSocket, (LPWSABUF)packet.m_PacketVector, 2, &size, &flag, addr, &addrsize, NULL, NULL);
+   #endif
+
+   if (res <= 0)
+   {
+      packet.setLength(-1);
+      return -1;
+   }
+
    packet.setLength(res - CPacket::m_iPktHdrSize);
 
-   return res;
-#else
-   DWORD size = CPacket::m_iPktHdrSize + packet.getLength();
-   DWORD flag = 0;
-   int addrsize = sizeof(sockaddr_in);
+   // convert back into local host order
+   for (int i = 0; i < 4; ++ i)
+      packet.m_nHeader[i] = ntohl(packet.m_nHeader[i]);
 
-   int res = WSARecvFrom(m_iSocket, (LPWSABUF)packet.m_PacketVector, 2, &size, &flag, addr, &addrsize, NULL, NULL);
-   if (res != 0)
-      return -1;
+   if (packet.getFlag())
+      for (int j = 0, n = packet.getLength() / 4; j < n; ++ j)
+         *((uint32_t *)packet.m_pcData + j) = ntohl(*((uint32_t *)packet.m_pcData + j));
 
-   packet.setLength(size - CPacket::m_iPktHdrSize);
-   return size;
-#endif
+   return packet.getLength();
 }

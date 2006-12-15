@@ -29,7 +29,7 @@ This header file contains the definition of UDT buffer structure and operations.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 12/12/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 12/15/2006
 *****************************************************************************/
 
 #include <cmath>

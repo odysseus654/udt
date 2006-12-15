@@ -285,7 +285,7 @@ public:
       // Returned value:
       //    Size of data sent out.
 
-   int sendto(const sockaddr* addr, const CPacket& packet);
+   int sendto(const sockaddr* addr, CPacket& packet);
 
 private:
 #ifndef WIN32

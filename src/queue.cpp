@@ -424,7 +424,7 @@ void CSndQueue::init(const int& size, const CChannel* c)
    return NULL;
 }
 
-int CSndQueue::sendto(const sockaddr* addr, const CPacket& packet)
+int CSndQueue::sendto(const sockaddr* addr, CPacket& packet)
 {
    // send out the packet immediately (high priority), this is a control packet
    m_pChannel->sendto(addr, packet);
