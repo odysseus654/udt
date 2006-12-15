@@ -132,6 +132,8 @@ m_iQuickStartPkts(16)
    m_pcTmpBuf = NULL;
 
    m_pPeerAddr = NULL;
+   m_pSNode = NULL;
+   m_pRNode = NULL;
 }
 
 CUDT::CUDT(const CUDT& ancestor):
@@ -192,6 +194,8 @@ m_iQuickStartPkts(ancestor.m_iQuickStartPkts)
    m_pcTmpBuf = NULL;
 
    m_pPeerAddr = NULL;
+   m_pSNode = NULL;
+   m_pRNode = NULL;
 }
 
 CUDT::~CUDT()
@@ -226,6 +230,10 @@ CUDT::~CUDT()
       delete [] m_pcTmpBuf;
    if (m_pPeerAddr)
       delete m_pPeerAddr;
+   if (m_pSNode)
+      delete m_pSNode;
+   if (m_pRNode)
+      delete m_pRNode;
 }
 
 void CUDT::setOpt(UDTOpt optName, const void* optval, const int&)
@@ -513,6 +521,19 @@ void CUDT::open(const sockaddr* addr)
    m_llTraceSent = m_llTraceRecv = m_iTraceSndLoss = m_iTraceRcvLoss = m_iTraceRetrans = m_iSentACK = m_iRecvACK = m_iSentNAK = m_iRecvNAK = 0;
 
 
+   m_pSNode = new CUDTList;
+   m_pSNode->m_iID = m_SocketID;
+   m_pSNode->m_pUDT = this;
+   m_pSNode->m_llTimeStamp = 1;
+   m_pSNode->m_pPrev = m_pSNode->m_pNext = NULL;
+
+   m_pRNode = new CUDTList;
+   m_pRNode->m_iID = m_SocketID;
+   m_pRNode->m_pUDT = this;
+   m_pRNode->m_llTimeStamp = 1;
+   m_pRNode->m_pPrev = m_pRNode->m_pNext = NULL;
+
+
    bool nm = false;
 
    if (0 == s_UDTUnited.m_vMultiplexer.size())
@@ -537,8 +558,6 @@ void CUDT::open(const sockaddr* addr)
       m.m_pChannel = new CChannel(m_iIPversion);
       m.m_pChannel->setSndBufSize(m_iUDPSndBufSize);
       m.m_pChannel->setRcvBufSize(m_iUDPRcvBufSize);
-
-cout << "channel " << m_iUDPSndBufSize << " " << m_iUDPRcvBufSize << endl;
 
       m.m_pChannel->open(addr);
 

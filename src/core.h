@@ -476,6 +476,8 @@ public: // for udp multiplexer
    CSndQueue* m_pSndQueue;			// packet sending queue
    CRcvQueue* m_pRcvQueue;			// packet receivinf queue
    sockaddr* m_pPeerAddr;			// peer address
+   CUDTList* m_pSNode;				// node information for UDT list used in snd queue
+   CUDTList* m_pRNode;                          // node information for UDT list used in rcv queue
 };
 
 

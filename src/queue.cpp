@@ -63,15 +63,12 @@ void CSndUList::insert(const int64_t& ts, const int32_t& id, const CUDT* u)
 {
    CGuard listguard(m_ListLock);
 
+   CUDTList* n = u->m_pSNode;
+   n->m_llTimeStamp = ts;
+
    if (NULL == m_pUList)
    {
-      CUDTList* n = new CUDTList;
-
-      n->m_llTimeStamp = ts;
-      n->m_iID = id;
-      n->m_pUDT = (CUDT*)u;
       n->m_pPrev = n->m_pNext = NULL;
-
       m_pLast = m_pUList = n;
 
       // If UList was empty, signal the sending queue to restart
@@ -85,11 +82,6 @@ void CSndUList::insert(const int64_t& ts, const int32_t& id, const CUDT* u)
 
       return;
    }
-
-   CUDTList* n = new CUDTList;
-   n->m_llTimeStamp = ts;
-   n->m_iID = id;
-   n->m_pUDT = (CUDT*)u;
 
    // SndUList is sorted by the next processing time
 
@@ -135,14 +127,12 @@ void CSndUList::remove(const int32_t& id)
    if (id == m_pUList->m_iID)
    {
       // check and remove the first node
-      CUDTList* n = m_pUList;
       m_pUList = m_pUList->m_pNext;
       if (NULL == m_pUList)
          m_pLast = NULL;
       else
          m_pUList->m_pPrev = NULL;
 
-      delete n;
       return;
    }
 
@@ -155,7 +145,6 @@ void CSndUList::remove(const int32_t& id)
          p->m_pPrev->m_pNext = p->m_pNext;
          if (NULL != p->m_pNext)
             p->m_pNext->m_pPrev = p->m_pPrev;
-         delete p;
       }
 
       p = p->m_pNext;
@@ -185,13 +174,9 @@ void CSndUList::update(const int32_t& id, const CUDT* u)
    if (NULL == m_pUList)
    {
       // insert a new entry if the list was empty
-      CUDTList* n = new CUDTList;
-
+      CUDTList* n = u->m_pSNode;
       n->m_llTimeStamp = 1;
-      n->m_iID = id;
-      n->m_pUDT = (CUDT*)u;
       n->m_pPrev = n->m_pNext = NULL;
-
       m_pLast = m_pUList = n;
 
       #ifndef WIN32
@@ -220,17 +205,14 @@ void CSndUList::update(const int32_t& id, const CUDT* u)
          p->m_pPrev->m_pNext = p->m_pNext;
          if (NULL != p->m_pNext)
             p->m_pNext->m_pPrev = p->m_pPrev;
-         delete p;
       }
 
       p = p->m_pNext;
    }
 
    // insert at head
-   CUDTList* n = new CUDTList;
+   CUDTList* n = u->m_pSNode;
    n->m_llTimeStamp = 1;
-   n->m_iID = id;
-   n->m_pUDT = (CUDT*)u;
    n->m_pPrev = NULL;
    n->m_pNext = m_pUList;
    m_pUList = n;
@@ -248,14 +230,11 @@ int CSndUList::pop(int32_t& id, CUDT*& u)
    id = m_pUList->m_iID;
    u = m_pUList->m_pUDT;
 
-   CUDTList* n = m_pUList;
    m_pUList = m_pUList->m_pNext;
    if (NULL == m_pUList)
       m_pLast = NULL;
    else
       m_pUList->m_pPrev = NULL;
-
-   delete n;
 
    return id;
 }
@@ -479,25 +458,19 @@ void CRcvUList::insert(const int32_t& id, const CUDT* u)
 {
    CGuard listguard(m_ListLock);
 
+   CUDTList* n = u->m_pRNode;
+   CTimer::rdtsc(n->m_llTimeStamp);
+
    if (NULL == m_pUList)
    {
       // empty list, insert as the single node
-      CUDTList* n = new CUDTList;
-      CTimer::rdtsc(n->m_llTimeStamp);
-      n->m_iID = id;
-      n->m_pUDT = (CUDT*)u;
       n->m_pPrev = n->m_pNext = NULL;
-
       m_pLast = m_pUList = n;
 
       return;
    }
 
    // always insert at the end for RcvUList
-   CUDTList* n = new CUDTList;
-   CTimer::rdtsc(n->m_llTimeStamp);
-   n->m_iID = id;
-   n->m_pUDT = (CUDT*)u;
    n->m_pPrev = m_pLast;
    n->m_pNext = NULL;
    m_pLast->m_pNext = n;
@@ -520,7 +493,6 @@ void CRcvUList::remove(const int32_t& id)
          m_pLast = NULL;
       else
          m_pUList->m_pPrev = NULL;
-      delete n;
 
       return;
    }
@@ -537,7 +509,7 @@ void CRcvUList::remove(const int32_t& id)
             n->m_pNext->m_pPrev = p;
          else
             m_pLast = p;
-         delete n;
+
          return;
       }
 
