@@ -370,7 +370,6 @@ private: // Receiving related data
    int32_t m_iRcvLastAckAck;                    // Last sent ACK that has been acknowledged
    int32_t m_iAckSeqNo;                         // Last ACK sequence number
    int32_t m_iRcvCurrSeqNo;                     // Largest received sequence number
-   int32_t m_iNextExpect;                       // Sequence number of next speculated packet to receive
 
    volatile bool m_bReadBuf;                    // Application has called "recv" but has not finished
    volatile char* m_pcTempData;                 // Pointer to the buffer that application want to put received data into
@@ -455,7 +454,7 @@ private: // internal data
 
 private:
    int pack(CPacket& packet, uint64_t& ts);
-   int process(CPacket& packet);
+   void process(CPacket& packet);
    int listen(sockaddr* addr, CPacket& packet);
 
    uint64_t m_ullNextACKTime;			// Next ACK time, in CPU clock cycles

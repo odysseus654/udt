@@ -46,7 +46,6 @@ written by
 #include <cmath>
 #include "common.h"
 
-
 #ifdef WIN32
    int gettimeofday(timeval *tv, void*)
    {
@@ -228,7 +227,9 @@ void CTimer::sleepto(const uint64_t& nexttime)
                timeout.tv_sec = now.tv_sec + 1;
                timeout.tv_nsec = (now.tv_usec + 10000 - 1000000) * 1000;
             }
+            pthread_mutex_lock(&m_TickLock);
             pthread_cond_timedwait(&m_TickCond, &m_TickLock, &timeout);
+            pthread_mutex_unlock(&m_TickLock);
          #else
             WaitForSingleObject(m_TickCond, 1);
          #endif
@@ -248,6 +249,7 @@ void CTimer::interrupt()
 
 void CTimer::tick()
 {
+//cout << "tick tick \n";
    #ifndef WIN32
       pthread_cond_signal(&m_TickCond);
    #else

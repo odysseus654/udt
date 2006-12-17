@@ -272,10 +272,11 @@ public:
       // Parameters:
       //    1) [in] size: queue size
       //    2) [in] c: UDP channel to be associated to the queue
+      //    3) [in] t: Timer
       // Returned value:
       //    None.
 
-   void init(const int& size, const CChannel* c);
+   void init(const int& size, const CChannel* c, const CTimer* t);
 
       // Functionality:
       //    Send out a packet to a given address.
@@ -338,10 +339,11 @@ public:
       //    2) [in] mss: maximum packet size
       //    3) [in] hsize: hash table size
       //    4) [in] c: UDP channel to be associated to the queue
+      //    5) [in] t: timer
       // Returned value:
       //    None.
 
-   void init(const int& size, const int& payload, const int& hsize, const CChannel* c);
+   void init(const int& size, const int& payload, const int& hsize, const CChannel* c, const CTimer* t);
 
       // Functionality:
       //    Read a packet for a specific UDT socket id.
@@ -384,6 +386,7 @@ private:
    CRcvUList* m_pRcvUList;	// List of UDT instances that will read packets from the queue
    CHash* m_pHash;		// Hash table for UDT socket looking up
    CChannel* m_pChannel;	// UDP channel for receving packets
+   CTimer* m_pTimer;		// shared timer with the snd queue
 
 private:
    pthread_mutex_t m_PassLock;
@@ -405,6 +408,7 @@ public:
    CSndQueue* m_pSndQueue;	// The sending queue
    CRcvQueue* m_pRcvQueue;	// The receiving queue
    CChannel* m_pChannel;	// The UDP channel for sending and receiving
+   CTimer* m_pTimer;		// The timer
 
    int m_iPort;			// The UDP port number of this multiplexer
    int m_iIPversion;		// IP version

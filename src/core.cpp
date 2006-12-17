@@ -487,7 +487,6 @@ void CUDT::open(const sockaddr* addr)
    m_iRcvLastAckAck = 0;
    m_ullLastAckTime = 0;
    m_iRcvCurrSeqNo = -1;
-   m_iNextExpect = 0;
    m_bReadBuf = false;
 
    m_iLastDecSeq = -1;
@@ -576,10 +575,12 @@ void CUDT::open(const sockaddr* addr)
       m.m_pChannel->getSockAddr((sockaddr*)&sa);
       m.m_iPort = ntohs(sa.sin_port);
 
+      m.m_pTimer = new CTimer;
+
       m.m_pSndQueue = new CSndQueue;
-      m.m_pSndQueue->init(1024, m.m_pChannel);
+      m.m_pSndQueue->init(1024, m.m_pChannel, m.m_pTimer);
       m.m_pRcvQueue = new CRcvQueue;
-      m.m_pRcvQueue->init(1024, m_iPayloadSize, 1024, m.m_pChannel);
+      m.m_pRcvQueue->init(1024, m_iPayloadSize, 1024, m.m_pChannel, m.m_pTimer);
 
       m.m_iMTU = m_iMSS;
       m.m_iIPversion = m_iIPversion;
@@ -824,7 +825,6 @@ void CUDT::connect(const sockaddr* serv_addr)
    m_iRcvLastAck = res->m_iISN;
    m_iRcvLastAckAck = res->m_iISN;
    m_iRcvCurrSeqNo = res->m_iISN - 1;
-   m_iNextExpect = res->m_iISN;
 
    // gu add, set peer ID
    m_PeerID = res->m_iID;
@@ -889,7 +889,6 @@ void CUDT::connect(const sockaddr* peer, CHandShake* hs)
    m_iRcvLastAck = ci.m_iISN;
    m_iRcvLastAckAck = ci.m_iISN;
    m_iRcvCurrSeqNo = ci.m_iISN - 1;
-   m_iNextExpect = ci.m_iISN;
 
    // gu add
    m_PeerID = ci.m_iID;
@@ -2565,17 +2564,19 @@ int CUDT::pack(CPacket& packet, uint64_t& ts)
       #endif
    }
 
+   m_ullTargetTime = ts;
+
    packet.m_iID = m_PeerID;
    packet.setLength(payload);
 
    return payload;
 }
 
-int CUDT::process(CPacket& packet)
+void CUDT::process(CPacket& packet)
 {
    CGuard cg(m_ConnectionLock);
    if (m_bClosing)
-      return -1;
+      return;
 
    // time
    uint64_t currtime;
@@ -2689,7 +2690,7 @@ int CUDT::process(CPacket& packet)
 
          releaseSynch();
 
-         return -1;
+         return;
       }
 
       // sender: Insert all the packets sent after last received acknowledgement into the sender loss list.
@@ -2746,7 +2747,7 @@ int CUDT::process(CPacket& packet)
 
    // Got nothing?
    if (packet.getLength() <= 0)
-      return -1;
+      return;
 
    // Just heard from the peer, reset the expiration count.
    m_iEXPCount = 1;
@@ -2774,8 +2775,15 @@ int CUDT::process(CPacket& packet)
       if ((2 <= packet.getType()) && (4 >= packet.getType()))
          m_ullNextEXPTime = currtime + m_ullEXPInt;
 
-      return 0;
+      return;
    }
+
+
+   #if defined (CUSTOM_CC) || defined (NO_BUSY_WAITING)
+      m_iPktCount ++;
+   #endif
+
+
 
    #ifdef CUSTOM_CC
       // reset RTO
@@ -2796,16 +2804,13 @@ int CUDT::process(CPacket& packet)
 
    offset = CSeqNo::seqoff(m_iRcvLastAck, packet.m_iSeqNo);
    if ((offset >= m_iFlightFlagSize) || (offset < 0))
-      return 0;
-
-   // Oops, the speculation is wrong...
-   // Put the received data explicitly into the right slot.
+      return;
 
    //!!!! ADDDATA changed the data position, no need for this in this version!!!
    char* pos = packet.m_pcData;
 
    if (!(m_pRcvBuffer->addData(&pos, offset * m_iPayloadSize - m_pIrrPktList->currErrorSize(packet.m_iSeqNo), packet.getLength())))
-      return 0;
+      return;
 
    // Loss detection.
    if (CSeqNo::seqcmp(packet.m_iSeqNo, CSeqNo::incseq(m_iRcvCurrSeqNo)) > 0)
@@ -2841,12 +2846,7 @@ int CUDT::process(CPacket& packet)
 
    // Update the current largest sequence number that has been received.
    if (CSeqNo::seqcmp(packet.m_iSeqNo, m_iRcvCurrSeqNo) > 0)
-   {
       m_iRcvCurrSeqNo = packet.m_iSeqNo;
-
-      // Speculate next packet.
-      m_iNextExpect = CSeqNo::incseq(m_iRcvCurrSeqNo);
-   }
    else
    {
       // Or it is a retransmitted packet, remove it from receiver loss list.
@@ -2862,10 +2862,8 @@ int CUDT::process(CPacket& packet)
    #endif
 
    #if defined (CUSTOM_CC) || defined (NO_BUSY_WAITING)
-      m_iPktCount ++;
+//      m_iPktCount ++;
    #endif
-
-   return 1;
 }
 
 int CUDT::listen(sockaddr* addr, CPacket& packet)

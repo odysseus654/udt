@@ -35,9 +35,6 @@ written by
 #include "common.h"
 #include "queue.h"
 #include "core.h"
-#include <iostream>
-
-using namespace std;
 
 CSndUList::CSndUList():
 m_pUList(NULL),
@@ -285,17 +282,14 @@ CSndQueue::~CSndQueue()
       return;
 
    delete [] m_pUnitQueue;
-   m_pUnitQueue = NULL;
-
-   delete m_pTimer;
 }
 
-void CSndQueue::init(const int& size, const CChannel* c)
+void CSndQueue::init(const int& size, const CChannel* c, const CTimer* t)
 {
    m_iQueueLen = size;
    m_pUnitQueue = new CUnit[size];
    m_pChannel = (CChannel*)c;
-   m_pTimer = new CTimer;
+   m_pTimer = (CTimer*)t;
    m_pSndUList = new CSndUList;
    m_pSndUList->m_pWindowLock = &m_WindowLock;
    m_pSndUList->m_pWindowCond = &m_WindowCond;
@@ -303,8 +297,8 @@ void CSndQueue::init(const int& size, const CChannel* c)
    #ifndef WIN32
       pthread_create(&m_enQThread, NULL, CSndQueue::enQueue, this);
       pthread_detach(m_enQThread);
-//      pthread_create(&m_deQThread, NULL, CSndQueue::deQueue, this);
-//      pthread_detach(m_deQThread);
+      pthread_create(&m_deQThread, NULL, CSndQueue::deQueue, this);
+      pthread_detach(m_deQThread);
    #else
       m_enQThread = CreateThread(NULL, 0, CSndQueue::enQueue, this, 0, NULL);
       m_deQThread = CreateThread(NULL, 0, CSndQueue::deQueue, this, 0, NULL);
@@ -336,7 +330,7 @@ void CSndQueue::init(const int& size, const CChannel* c)
 
          while ((self->m_iTailPtr + 1 == self->m_iHeadPtr) || ((self->m_iTailPtr == self->m_iQueueLen - 1) && (self->m_iHeadPtr == 0)))
          {
-            cout << "shityshity\n";
+            // add pthread_cond_wait here
          }
 
          // pack a packet from the socket
@@ -349,10 +343,9 @@ void CSndQueue::init(const int& size, const CChannel* c)
             self->m_pUnitQueue[self->m_iTailPtr].m_pAddr = u->m_pPeerAddr;
 
 
+//         self->m_pChannel->sendto(self->m_pUnitQueue[self->m_iTailPtr].m_pAddr, self->m_pUnitQueue[self->m_iTailPtr].m_Packet);
 
-         self->m_pChannel->sendto(self->m_pUnitQueue[self->m_iTailPtr].m_pAddr, self->m_pUnitQueue[self->m_iTailPtr].m_Packet);
 
-/*
             if (self->m_iQueueLen != self->m_iTailPtr + 1)
                ++ self->m_iTailPtr;
             else
@@ -368,7 +361,7 @@ void CSndQueue::init(const int& size, const CChannel* c)
                if ((self->m_iHeadPtr + 1 == self->m_iTailPtr) || (0 == self->m_iTailPtr))
                   SetEvent(self->m_QueueCond);
             #endif
-*/
+
          }
 
          // insert a new entry, ts is the next processing time
@@ -432,8 +425,6 @@ void CSndQueue::init(const int& size, const CChannel* c)
 
 int CSndQueue::sendto(const sockaddr* addr, CPacket& packet)
 {
-//cout << "send ctrl\n";
-
    // send out the packet immediately (high priority), this is a control packet
    m_pChannel->sendto(addr, packet);
 
@@ -693,6 +684,7 @@ m_iPQTailPtr(0),
 m_pRcvUList(NULL),
 m_pHash(NULL),
 m_pChannel(NULL),
+m_pTimer(NULL),
 m_ListenerID(-1)
 {
    #ifndef WIN32
@@ -712,7 +704,6 @@ CRcvQueue::~CRcvQueue()
          delete [] m_pUnitQueue[i].m_Packet.m_pcData;
 
       delete [] m_pUnitQueue;
-      m_pUnitQueue = NULL;
    }
 
    if (NULL != m_pActiveQueue)
@@ -730,7 +721,7 @@ CRcvQueue::~CRcvQueue()
    #endif
 }
 
-void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, const CChannel* cc)
+void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, const CChannel* cc, const CTimer* t)
 {
    m_iQueueLen = qsize;
    m_iPayloadSize = payload;
@@ -750,6 +741,7 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
    m_pHash->init(hsize);
 
    m_pChannel = (CChannel*)cc;
+   m_pTimer = (CTimer*)t;
 
    m_pRcvUList = new CRcvUList;
 
@@ -776,18 +768,18 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
 
    while (true)
    {
+      #ifdef NO_BUSY_WAITING
+         self->m_pTimer->tick();
+      #endif
+
       // find next available slot for incoming packet
 
-      int t = 0;
       while (self->m_pUnitQueue[self->m_iPtr].m_bValid)
       {
          ++ self->m_iPtr;
 
          if (self->m_iPtr == self->m_iQueueLen)
             self->m_iPtr = 0;
-
-         if (t++ > 2)
-             cout << "whywhy?\n";
       }
 
       self->m_pUnitQueue[self->m_iPtr].m_Packet.setLength(self->m_iPayloadSize);
@@ -796,12 +788,12 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
       if (self->m_pChannel->recvfrom(self->m_pUnitQueue[self->m_iPtr].m_pAddr, self->m_pUnitQueue[self->m_iPtr].m_Packet) <= 0)
          continue;
 
-//cout << "recv sth??\n";
-//      if ((self->m_iAQTailPtr == self->m_iAQHeadPtr) && (self->m_iPQTailPtr == self->m_iPQHeadPtr))
-//         empty = true;
+      if ((self->m_iAQTailPtr == self->m_iAQHeadPtr) && (self->m_iPQTailPtr == self->m_iPQHeadPtr))
+         empty = true;
 
-      if (1 == self->m_pUnitQueue[self->m_iPtr].m_Packet.getFlag())
+      if (0 == self->m_pUnitQueue[self->m_iPtr].m_Packet.getFlag())
       {
+/*
          int32_t id = self->m_pUnitQueue[self->m_iPtr].m_Packet.m_iID;
 
          // ID 0 is for connection request, which should be passed to the listening socket
@@ -821,11 +813,12 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
             else
                self->m_pHash->setUnit(id, self->m_pUnitQueue + self->m_iPtr);
          }
-
-/*
+*/
          // queue is full, disgard the packet
          if ((self->m_iAQTailPtr + 1 == self->m_iAQHeadPtr) || ((self->m_iAQTailPtr == self->m_iQueueLen - 1) && (self->m_iAQHeadPtr == 0)))
+         {
             continue;
+         }
 
          // this is a data packet, put it into active queue
          self->m_pActiveQueue[self->m_iAQTailPtr] = self->m_pUnitQueue + self->m_iPtr;
@@ -836,10 +829,10 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
             ++ self->m_iAQTailPtr;
          else
             self->m_iAQTailPtr = 0;
-*/
       }
       else
       {
+/*
          int32_t id = self->m_pUnitQueue[self->m_iPtr].m_Packet.m_iID;
 
          CUDT* u = self->m_pHash->lookup(id);
@@ -849,9 +842,7 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
             if (u->m_bConnected && !u->m_bBroken)
                u->process(self->m_pUnitQueue[self->m_iPtr].m_Packet);
          }
-
-
-/*
+*/
          // queue is full, disgard the packet
          if ((self->m_iPQTailPtr + 1 == self->m_iPQHeadPtr) || ((self->m_iPQTailPtr == self->m_iQueueLen - 1) && (self->m_iPQHeadPtr == 0)))
             continue;
@@ -865,7 +856,6 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
             ++ self->m_iPQTailPtr;
          else
             self->m_iPQTailPtr = 0;
-*/
       }
 
       if (empty)
@@ -893,7 +883,6 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
 
    while (true)
    {
-/*
       if (self->m_iPQTailPtr != self->m_iPQHeadPtr)
       {
          // check passive queue first, which has higher priority
@@ -977,9 +966,6 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
             WaitForSingleObject(self->m_QueueCond, 1);
          #endif
       }
-
-*/
-      usleep(1);
 
       // take care of the timing event for all UDT sockets
 
