@@ -63,7 +63,7 @@ public:
       // Returned value:
       //    None.
 
-   void disconnect() const;
+   void close() const;
 
       // Functionality:
       //    Get the UDP sending buffer size.
@@ -151,8 +151,6 @@ private:
 
    int m_iSndBufSize;                   // UDP sending buffer size
    int m_iRcvBufSize;                   // UDP receiving buffer size
-
-   char* m_pcChannelBuf;                // buffer for temporally storage of in/out data
 
 private:
    void setChannelOpt();

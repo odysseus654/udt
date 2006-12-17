@@ -72,24 +72,19 @@ using namespace std;
 CChannel::CChannel():
 m_iIPversion(AF_INET),
 m_iSndBufSize(65536),
-m_iRcvBufSize(65536),
-m_pcChannelBuf(NULL)
+m_iRcvBufSize(65536)
 {
-   m_pcChannelBuf = new char [9000];
 }
 
 CChannel::CChannel(const int& version):
 m_iIPversion(version),
 m_iSndBufSize(65536),
-m_iRcvBufSize(65536),
-m_pcChannelBuf(NULL)
+m_iRcvBufSize(65536)
 {
-   m_pcChannelBuf = new char [9000];
 }
 
 CChannel::~CChannel()
 {
-   delete [] m_pcChannelBuf;
 }
 
 void CChannel::open(const sockaddr* addr)
@@ -140,10 +135,10 @@ void CChannel::open(const sockaddr* addr)
    }
 }
 
-void CChannel::disconnect() const
+void CChannel::close() const
 {
    #ifndef WIN32
-      close(m_iSocket);
+      ::close(m_iSocket);
    #else
       closesocket(m_iSocket);
    #endif
@@ -198,6 +193,7 @@ void CChannel::setChannelOpt()
        (0 != setsockopt(m_iSocket, SOL_SOCKET, SO_SNDBUF, (char *)&m_iSndBufSize, sizeof(int))))
       throw CUDTException(1, 3, NET_ERROR);
 
+/*
    timeval tv;
    tv.tv_sec = 0;
    #if defined (BSD) || defined (OSX)
@@ -223,6 +219,7 @@ void CChannel::setChannelOpt()
       if (setsockopt(m_iSocket, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv, sizeof(timeval)) < 0)
          throw CUDTException(1, 3, NET_ERROR);
    #endif
+*/
 }
 
 int CChannel::sendto(const sockaddr* addr, CPacket& packet) const
@@ -236,8 +233,6 @@ int CChannel::sendto(const sockaddr* addr, CPacket& packet) const
    for (int j = 0; j < 4; ++ j)
       packet.m_nHeader[j] = htonl(packet.m_nHeader[j]);
 
-   int ret = 0;
-
    #ifndef WIN32
       msghdr mh;
       mh.msg_name = (sockaddr*)addr;
@@ -248,11 +243,11 @@ int CChannel::sendto(const sockaddr* addr, CPacket& packet) const
       mh.msg_controllen = 0;
       mh.msg_flags = 0;
 
-      ret = sendmsg(m_iSocket, &mh, 0);
+      int res = sendmsg(m_iSocket, &mh, 0);
    #else
       DWORD size = CPacket::m_iPktHdrSize + packet.getLength();
       int res = WSASendTo(m_iSocket, (LPWSABUF)packet.m_PacketVector, 2, &size, 0, addr, sizeof(sockaddr_in), NULL, NULL);
-      ret = (res == 0) ? size : -1;
+      res = (0 == res) ? size : -1;
    #endif
 
    // convert back into local host order
@@ -263,7 +258,7 @@ int CChannel::sendto(const sockaddr* addr, CPacket& packet) const
       for (int l = 0, n = packet.getLength() / 4; l < n; ++ l)
          *((uint32_t *)packet.m_pcData + l) = ntohl(*((uint32_t *)packet.m_pcData + l));
 
-   return ret;
+   return res;
 }
 
 int CChannel::recvfrom(sockaddr* addr, CPacket& packet) const
@@ -285,6 +280,7 @@ int CChannel::recvfrom(sockaddr* addr, CPacket& packet) const
       int addrsize = sizeof(sockaddr_in);
 
       int res = WSARecvFrom(m_iSocket, (LPWSABUF)packet.m_PacketVector, 2, &size, &flag, addr, &addrsize, NULL, NULL);
+      res = (0 == res) ? size : -1;
    #endif
 
    if (res <= 0)

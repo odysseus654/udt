@@ -165,7 +165,8 @@ private:
    void removeSocket(const UDTSOCKET u);
 
 private:
-   vector<CMultiplexer> m_vMultiplexer;
+   vector<CMultiplexer> m_vMultiplexer;			// UDP multiplexer
+   pthread_mutex_t m_MultiplexerLock;
 };
 
 #endif

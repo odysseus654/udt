@@ -89,7 +89,30 @@ written by
    }
 #endif
 
+
 uint64_t CTimer::s_ullCPUFrequency = CTimer::readCPUFrequency();
+
+CTimer::CTimer()
+{
+   #ifndef WIN32
+      pthread_mutex_init(&m_TickLock, NULL);
+      pthread_cond_init(&m_TickCond, NULL);
+   #else
+      m_TickLock = CreateMutex(NULL, false, NULL);
+      m_TickCond = CreateEvent(NULL, false, false, NULL);
+   #endif
+}
+
+CTimer::~CTimer()
+{
+   #ifndef WIN32
+      pthread_mutex_init(&m_TickLock, NULL);
+      pthread_cond_init(&m_TickCond, NULL);
+   #else
+      m_TickLock = CreateMutex(NULL, false, NULL);
+      m_TickCond = CreateEvent(NULL, false, false, NULL);
+   #endif
+}
 
 void CTimer::rdtsc(uint64_t &x)
 {
@@ -181,16 +204,35 @@ void CTimer::sleepto(const uint64_t& nexttime)
 
    while (t < m_ullSchedTime)
    {
-      #ifdef IA32
-         //__asm__ volatile ("nop; nop; nop; nop; nop;");
-         __asm__ volatile ("pause; rep; nop; nop; nop; nop; nop;");
-      #elif IA64
-         __asm__ volatile ("nop 0; nop 0; nop 0; nop 0; nop 0;");
-      #elif AMD64
-         __asm__ volatile ("nop; nop; nop; nop; nop;");
+      #ifndef NO_BUSY_WAITING
+         #ifdef IA32
+            //__asm__ volatile ("nop; nop; nop; nop; nop;");
+            __asm__ volatile ("pause; rep; nop; nop; nop; nop; nop;");
+         #elif IA64
+            __asm__ volatile ("nop 0; nop 0; nop 0; nop 0; nop 0;");
+         #elif AMD64
+            __asm__ volatile ("nop; nop; nop; nop; nop;");
+         #endif
+      #else
+         #ifndef WIN32
+            timeval now;
+            timespec timeout;
+            gettimeofday(&now, 0);
+            if (now.tv_usec < 990000)
+            {
+               timeout.tv_sec = now.tv_sec;
+               timeout.tv_nsec = (now.tv_usec + 10000) * 1000;
+            }
+            else
+            {
+               timeout.tv_sec = now.tv_sec + 1;
+               timeout.tv_nsec = (now.tv_usec + 10000 - 1000000) * 1000;
+            }
+            pthread_cond_timedwait(&m_TickCond, &m_TickLock, &timeout);
+         #else
+            WaitForSingleObject(m_TickCond, 1);
+         #endif
       #endif
-
-      // TODO: use high precision timer if it is available
 
       rdtsc(t);
    }
@@ -200,6 +242,17 @@ void CTimer::interrupt()
 {
    // schedule the sleepto time to the current CCs, so that it will stop
    rdtsc(m_ullSchedTime);
+
+   tick();
+}
+
+void CTimer::tick()
+{
+   #ifndef WIN32
+      pthread_cond_signal(&m_TickCond);
+   #else
+      SetEvent(m_TickCond);
+   #endif
 }
 
 //

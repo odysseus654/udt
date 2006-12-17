@@ -577,10 +577,9 @@ void CUDT::open(const sockaddr* addr)
       m.m_iPort = ntohs(sa.sin_port);
 
       m.m_pSndQueue = new CSndQueue;
-      m.m_pSndQueue->init(100000, m.m_pChannel);
+      m.m_pSndQueue->init(1024, m.m_pChannel);
       m.m_pRcvQueue = new CRcvQueue;
-
-      m.m_pRcvQueue->init(100000, m_iPayloadSize, 100, m.m_pChannel);
+      m.m_pRcvQueue->init(1024, m_iPayloadSize, 1024, m.m_pChannel);
 
       m.m_iMTU = m_iMSS;
       m.m_iIPversion = m_iIPversion;
@@ -644,6 +643,9 @@ void CUDT::open(const sockaddr* addr)
    #endif
 
    m_iPktCount = 0;
+
+   m_ullTargetTime = 0;
+   m_ullTimeDiff = 0;
 }
 
 void CUDT::listen()
@@ -2442,13 +2444,15 @@ int CUDT::pack(CPacket& packet, uint64_t& ts)
    }
 
    int payload = 0;
-   bool newdata = false;
    bool probe = false;
 
    CTimer::rdtsc(ts);
 
    uint64_t entertime;
    m_pTimer->rdtsc(entertime);
+
+   if ((0 != m_ullTargetTime) && (entertime > m_ullTargetTime))
+      m_ullTimeDiff += entertime - m_ullTargetTime;
 
    // Loss retransmission always has higher priority.
    if ((packet.m_iSeqNo = m_pSndLossList->getLostSeq()) >= 0)
@@ -2483,7 +2487,6 @@ int CUDT::pack(CPacket& packet, uint64_t& ts)
    else
    {
       // If no loss, pack a new packet.
-      newdata = false;
 
       // check congestion/flow window limit
       #ifndef CUSTOM_CC
@@ -2494,30 +2497,29 @@ int CUDT::pack(CPacket& packet, uint64_t& ts)
       #endif
       {
          if (0 != (payload = m_pSndBuffer->readData(&(packet.m_pcData), m_iPayloadSize, packet.m_iMsgNo)))
-            newdata = true;
+         {
+            m_iSndCurrSeqNo = CSeqNo::incseq(m_iSndCurrSeqNo);
+            packet.m_iSeqNo = m_iSndCurrSeqNo;
+
+            // every 16 (0xF) packets, a packet pair is sent
+            if (0 == (packet.m_iSeqNo & 0xF))
+               probe = true;
+         }
          else
          {
+            m_ullTargetTime = 0;
+            m_ullTimeDiff = 0;
             ts = 0;
             return 0;
          }
       }
       else
       {
+         m_ullTargetTime = 0;
+         m_ullTimeDiff = 0;
          ts = 0;
          return 0;
       }
-
-      if (newdata)
-      {
-         m_iSndCurrSeqNo = CSeqNo::incseq(m_iSndCurrSeqNo);
-         packet.m_iSeqNo = m_iSndCurrSeqNo;
-
-         // every 16 (0xF) packets, a packet pair is sent
-         if (0 == (packet.m_iSeqNo & 0xF))
-            probe = true;
-      }
-      else
-         return 0;
    }
 
    timeval now;
@@ -2546,7 +2548,22 @@ int CUDT::pack(CPacket& packet, uint64_t& ts)
       m_bFreeze = false;
    }
    else
-      ts = entertime + m_ullInterval;
+   {
+      #ifndef NO_BUSY_WAITING
+         ts = entertime + m_ullInterval;
+      #else
+         if (m_ullTimeDiff >= m_ullInterval)
+         {
+            ts = entertime;
+            m_ullTimeDiff -= m_ullInterval;
+         }
+         else
+         {
+            ts = entertime + m_ullInterval - m_ullTimeDiff;
+            m_ullTimeDiff = 0;
+         }
+      #endif
+   }
 
    packet.m_iID = m_PeerID;
    packet.setLength(payload);

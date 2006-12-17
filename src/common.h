@@ -71,6 +71,10 @@ written by
 class CTimer
 {
 public:
+   CTimer();
+   ~CTimer();
+
+public:
 
       // Functionality:
       //    Sleep for "interval" CCs.
@@ -99,6 +103,15 @@ public:
 
    void interrupt();
 
+      // Functionality:
+      //    trigger the clock for a tick, for better granuality in no_busy_waiting timer.
+      // Parameters:
+      //    None.
+      // Returned value:
+      //    None.
+
+   void tick();
+
 public:
 
       // Functionality:
@@ -121,6 +134,9 @@ public:
 
 private:
    uint64_t m_ullSchedTime;             // next schedulled time
+
+   pthread_cond_t m_TickCond;
+   pthread_mutex_t m_TickLock;
 
 private:
    static uint64_t s_ullCPUFrequency;	// CPU frequency : clock cycles per microsecond

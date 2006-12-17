@@ -473,6 +473,8 @@ private:
 
    int m_iPktCount;				// packet counter
 
+   uint64_t m_ullTargetTime;			// target time of next packet sending
+
 public: // for udp multiplexer
    CSndQueue* m_pSndQueue;			// packet sending queue
    CRcvQueue* m_pRcvQueue;			// packet receivinf queue

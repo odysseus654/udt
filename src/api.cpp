@@ -669,6 +669,28 @@ int CUDTUnited::close(const UDTSOCKET u)
 
    s->m_pUDT->close();
 
+   // decrease multiplexer reference count, and remove it if necessary
+   int port;
+   if (4 == s->m_iIPversion)
+      port = ntohl(((sockaddr_in*)(s->m_pSelfAddr))->sin_port);
+   else
+      port = ntohl(((sockaddr_in6*)(s->m_pSelfAddr))->sin6_port);
+
+   for (vector<CMultiplexer>::iterator i = m_vMultiplexer.begin(); i != m_vMultiplexer.end(); ++ i)
+   {
+      if (port == i->m_iPort)
+      {
+         i->m_iRefCount --;
+         if (0 == i->m_iRefCount)
+         {
+            delete i->m_pSndQueue;
+            delete i->m_pRcvQueue;
+            m_vMultiplexer.erase(i);
+         }
+         break;
+      }
+   }
+
    // a socket will not be immediated removed when it is closed
    // in order to prevent other methods from accessing invalid address
    // a timer is started and the socket will be removed after approximately 1 second
