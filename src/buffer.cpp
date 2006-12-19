@@ -33,7 +33,7 @@ The receiving buffer is a logically circular memeory block.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 12/15/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 12/19/2006
 *****************************************************************************/
 
 #include <cstring>
@@ -646,6 +646,10 @@ int CRcvBuffer::ackData(const int& len)
          m_iUserBufSize = 0;
          if (NULL != m_pPendingBlock)
          {
+            //TODO
+            // release as many buffer as possible, until there is no enough data left for one buffer
+            // change return value to int, and signal as many waiting recv() call
+
             registerUserBuf(m_pPendingBlock->m_pcData, m_pPendingBlock->m_iLength, m_pPendingBlock->m_iHandle, m_pPendingBlock->m_pMemRoutine, m_pPendingBlock->m_pContext);
             m_iPendingSize -= m_pPendingBlock->m_iLength;
             m_pPendingBlock = m_pPendingBlock->m_next;
@@ -715,10 +719,10 @@ int CRcvBuffer::registerUserBuf(char* buf, const int& len, const int& handle, co
       else
       {
          memcpy(m_pcUserBuf, m_pcData + m_iStartPos, len);
-         m_iMaxOffset -= len;
+         m_iMaxOffset -= m_iStartPos + len - m_iLastAckPos;
       }
    else
-      if (m_iSize - (m_iStartPos - currwritepos) <= len)
+      if (m_iSize + currwritepos - m_iStartPos <= len)
       {
          memcpy(m_pcUserBuf, m_pcData + m_iStartPos, m_iSize - m_iStartPos);
          memcpy(m_pcUserBuf + m_iSize - m_iStartPos, m_pcData, currwritepos);
@@ -733,7 +737,8 @@ int CRcvBuffer::registerUserBuf(char* buf, const int& len, const int& handle, co
          }
          else
             memcpy(m_pcUserBuf, m_pcData + m_iStartPos, len);
-         m_iMaxOffset -= len;
+
+         m_iMaxOffset = m_iSize + currwritepos - m_iStartPos - len;
       }
 
    // Update the user buffer pointer
@@ -742,8 +747,9 @@ int CRcvBuffer::registerUserBuf(char* buf, const int& len, const int& handle, co
    else
       m_iUserBufAck += m_iSize - m_iStartPos + m_iLastAckPos;
 
-   // update the protocol buffer pointer
+   // update the protocol buffer pointer, step up by "len"
    m_iStartPos = (m_iStartPos + len) % m_iSize;
+   // assume there is no enough data for the user buffer, ie, ACK - Start < len
    m_iLastAckPos = m_iStartPos;
 
    return m_iUserBufAck;

@@ -249,7 +249,6 @@ void CTimer::interrupt()
 
 void CTimer::tick()
 {
-//cout << "tick tick \n";
    #ifndef WIN32
       pthread_cond_signal(&m_TickCond);
    #else
