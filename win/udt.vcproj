@@ -18,7 +18,7 @@
 				Name="VCCLCompilerTool"
 				AdditionalOptions="/RTC1"
 				Optimization="0"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;UDT_EXPORTS;TRACE"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;UDT_EXPORTS;NO_BUSY_WAITING"
 				MinimalRebuild="TRUE"
 				BasicRuntimeChecks="3"
 				SmallerTypeCheck="TRUE"
