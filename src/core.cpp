@@ -750,8 +750,7 @@ void CUDT::connect(const sockaddr* serv_addr)
    m_pChannel->connect(peer_addr);
 
    // Got it. Re-configure according to the negotiated values.
-   if (m_iMSS < res->m_iMSS)
-      m_iMSS = res->m_iMSS;
+   m_iMSS = res->m_iMSS;
    m_iMaxFlowWindowSize = res->m_iFlightFlagSize;
    m_iPktSize = m_iMSS - 28;
    m_iPayloadSize = m_iPktSize - CPacket::m_iPktHdrSize;
