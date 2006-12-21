@@ -34,7 +34,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 12/12/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 12/21/2006
 *****************************************************************************/
 
 #ifndef WIN32
@@ -1722,15 +1722,6 @@ int CUDT::send(char* data, const int& len, int* overlapped, const UDT_MEM_ROUTIN
    // insert the user buffer into the sening list
    m_pSndBuffer->addBuffer(data, len, handle, r, context);
 
-   // signal the sending thread in case that it is waiting
-   #ifndef WIN32
-      pthread_mutex_lock(&m_SendDataLock);
-      pthread_cond_signal(&m_SendDataCond);
-      pthread_mutex_unlock(&m_SendDataLock);
-   #else
-      SetEvent(m_SendDataCond);
-   #endif
-
    // insert this socket to snd list if it is not on the list yet
    m_pSndQueue->m_pSndUList->update(m_SocketID, this, false);
 
@@ -1940,15 +1931,6 @@ int CUDT::sendmsg(const char* data, const int& len, const int& msttl, const bool
    // insert the user buffer into the sening list
    m_pSndBuffer->addBuffer(data, len, handle, r, NULL, msttl, m_iSndCurrSeqNo, inorder);
 
-   // signal the sending thread in case that it is waiting
-   #ifndef WIN32
-      pthread_mutex_lock(&m_SendDataLock);
-      pthread_cond_signal(&m_SendDataCond);
-      pthread_mutex_unlock(&m_SendDataLock);
-   #else
-      SetEvent(m_SendDataCond);
-   #endif
-
    // insert this socket to the snd list if it is not on the list yet
    m_pSndQueue->m_pSndUList->update(m_SocketID, this, false);
 
@@ -2105,16 +2087,10 @@ int64_t CUDT::sendfile(ifstream& ifs, const int64_t& offset, const int64_t& size
          while (!m_bBroken && m_bConnected && (m_pSndBuffer->getCurrBufSize() >= m_iSndQueueLimit))
             usleep(10);
          m_pSndBuffer->addBuffer(tempbuf, unitsize, 0, CSndBuffer::releaseBuffer, NULL);
-
-         pthread_mutex_lock(&m_SendDataLock);
-         pthread_cond_signal(&m_SendDataCond);
-         pthread_mutex_unlock(&m_SendDataLock);
       #else
          while (!m_bBroken && m_bConnected && (m_pSndBuffer->getCurrBufSize() >= m_iSndQueueLimit))
             Sleep(1);
          m_pSndBuffer->addBuffer(tempbuf, unitsize, 0, CSndBuffer::releaseBuffer, NULL);
-
-         SetEvent(m_SendDataCond);
       #endif
 
       if (m_bBroken)
@@ -2298,8 +2274,6 @@ void CUDT::sample(CPerfMon* perf, bool clear)
 void CUDT::initSynch()
 {
    #ifndef WIN32
-      pthread_mutex_init(&m_SendDataLock, NULL);
-      pthread_cond_init(&m_SendDataCond, NULL);
       pthread_mutex_init(&m_SendBlockLock, NULL);
       pthread_cond_init(&m_SendBlockCond, NULL);
       pthread_mutex_init(&m_RecvDataLock, NULL);
@@ -2314,8 +2288,6 @@ void CUDT::initSynch()
       pthread_cond_init(&m_WindowCond, NULL);
       pthread_mutex_init(&m_HandleLock, NULL);
    #else
-      m_SendDataLock = CreateMutex(NULL, false, NULL);
-      m_SendDataCond = CreateEvent(NULL, false, false, NULL);
       m_SendBlockLock = CreateMutex(NULL, false, NULL);
       m_SendBlockCond = CreateEvent(NULL, false, false, NULL);
       m_RecvDataLock = CreateMutex(NULL, false, NULL);
@@ -2335,8 +2307,6 @@ void CUDT::initSynch()
 void CUDT::destroySynch()
 {
    #ifndef WIN32
-      pthread_mutex_destroy(&m_SendDataLock);
-      pthread_cond_destroy(&m_SendDataCond);
       pthread_mutex_destroy(&m_SendBlockLock);
       pthread_cond_destroy(&m_SendBlockCond);
       pthread_mutex_destroy(&m_RecvDataLock);
@@ -2351,8 +2321,6 @@ void CUDT::destroySynch()
       pthread_cond_destroy(&m_WindowCond);
       pthread_mutex_destroy(&m_HandleLock);
    #else
-      CloseHandle(m_SendDataLock);
-      CloseHandle(m_SendDataCond);
       CloseHandle(m_SendBlockLock);
       CloseHandle(m_SendBlockCond);
       CloseHandle(m_RecvDataLock);
@@ -2375,10 +2343,6 @@ void CUDT::releaseSynch()
       // wake up sending thread
       pthread_cond_signal(&m_WindowCond);
 
-      pthread_mutex_lock(&m_SendDataLock);
-      pthread_cond_signal(&m_SendDataCond);
-      pthread_mutex_unlock(&m_SendDataLock);
-
       // wake up user calls
       pthread_mutex_lock(&m_SendBlockLock);
       pthread_cond_signal(&m_SendBlockCond);
@@ -2399,7 +2363,6 @@ void CUDT::releaseSynch()
       pthread_mutex_unlock(&m_RecvLock);
    #else
       SetEvent(m_WindowCond);
-      SetEvent(m_SendDataCond);
 
       SetEvent(m_SendBlockCond);
       WaitForSingleObject(m_SendLock, INFINITE);
@@ -2679,13 +2642,13 @@ void CUDT::process(CPacket& packet)
          int32_t csn = m_iSndCurrSeqNo;
 
          m_pSndLossList->insert(const_cast<int32_t&>(m_iSndLastAck), csn);
-
-         // immediately starting retransmission
-         m_pSndQueue->m_pTimer->interrupt();
-         m_pSndQueue->m_pSndUList->update(m_SocketID, this);
       }
       else
          sendCtrl(1);
+
+      // immediately restart transmission
+      m_pSndQueue->m_pSndUList->update(m_SocketID, this);
+      m_pSndQueue->m_pTimer->interrupt();
 
       if (m_pSndBuffer->getCurrBufSize() > 0)
       {

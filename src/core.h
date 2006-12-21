@@ -29,7 +29,7 @@ This header file contains the definition of UDT buffer structure and operations.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 12/12/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 12/21/2006
 *****************************************************************************/
 
 #ifndef __UDT_CORE_H__
@@ -391,9 +391,6 @@ private: // Overlapped IO related
 
 private: // synchronization: mutexes and conditions
    pthread_mutex_t m_ConnectionLock;            // used to synchronize connection operation
-
-   pthread_cond_t m_SendDataCond;               // used to block sending when there is no data
-   pthread_mutex_t m_SendDataLock;              // lock associated to m_SendDataCond
 
    pthread_cond_t m_SendBlockCond;              // used to block "send" call
    pthread_mutex_t m_SendBlockLock;             // lock associated to m_SendBlockCond

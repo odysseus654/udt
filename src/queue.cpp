@@ -339,6 +339,7 @@ void CSndQueue::init(const int& size, const CChannel* c, const CTimer* t)
          while ((self->m_iTailPtr + 1 == self->m_iHeadPtr) || ((self->m_iTailPtr == self->m_iQueueLen - 1) && (self->m_iHeadPtr == 0)))
          {
             // add pthread_cond_wait here
+            pthread_cond_signal(&self->m_QueueCond);
          }
 
          // pack a packet from the socket

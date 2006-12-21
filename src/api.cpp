@@ -31,7 +31,7 @@ reference: UDT programming manual and socket programming reference
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 12/12/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 12/21/2006
 *****************************************************************************/
 
 #ifndef WIN32
@@ -232,7 +232,7 @@ int CUDTUnited::newConnection(const UDTSOCKET listen, const sockaddr* peer, CHan
    CUDTSocket* ls = locate(listen);
 
    // if this connection has already been processed
-   if (NULL != (ns = locate(listen, peer)))
+   if (NULL != (ns = locate(listen, peer, hs->m_iID, hs->m_iISN)))
    {
       if (ns->m_pUDT->m_bBroken)
       {
@@ -253,7 +253,7 @@ int CUDTUnited::newConnection(const UDTSOCKET listen, const sockaddr* peer, CHan
             ReleaseMutex(ls->m_AcceptLock);
          #endif
       }
-      else if (hs->m_iISN == ns->m_pUDT->m_iPeerISN)
+      else
       {
          // connection already exist, this is a repeated connection request
          // respond with existing HS information
@@ -316,6 +316,8 @@ int CUDTUnited::newConnection(const UDTSOCKET listen, const sockaddr* peer, CHan
    ns->m_ListenSocket = listen;
    ns->m_iIPversion = ls->m_iIPversion;
    ns->m_pUDT->m_SocketID = ns->m_Socket;
+   ns->m_PeerID = hs->m_iID;
+   ns->m_iISN = hs->m_iISN;
 
    int error = 0;
 
@@ -842,30 +844,39 @@ CUDTSocket* CUDTUnited::locate(const UDTSOCKET u)
       return i->second;
 }
 
-CUDTSocket* CUDTUnited::locate(const UDTSOCKET u, const sockaddr* peer)
+CUDTSocket* CUDTUnited::locate(const UDTSOCKET u, const sockaddr* peer, const UDTSOCKET& id, const int32_t& isn)
 {
    CGuard cg(m_ControlLock);
 
    map<UDTSOCKET, CUDTSocket*>::iterator i = m_Sockets.find(u);
 
-   // look up the "peer" address in queued sockets set
-   for (set<UDTSOCKET>::iterator j1 = i->second->m_pQueuedSockets->begin(); j1 != i->second->m_pQueuedSockets->end(); ++ j1)
+   // look up the "peer" address in queued sockets set and accepted sockets set
+   for (set<UDTSOCKET>::iterator j = i->second->m_pQueuedSockets->begin(); ; ++ j)
    {
-      map<UDTSOCKET, CUDTSocket*>::iterator k1 = m_Sockets.find(*j1);
+      if (j == i->second->m_pQueuedSockets->end())
+         j = i->second->m_pAcceptSockets->begin();
+      if (j == i->second->m_pAcceptSockets->end())
+         break;
+
+      map<UDTSOCKET, CUDTSocket*>::iterator k = m_Sockets.find(*j);
 
       if (AF_INET == i->second->m_iIPversion)
       {
          // compare IPv4 address
-         if ((((sockaddr_in*)peer)->sin_port == ((sockaddr_in*)k1->second->m_pPeerAddr)->sin_port) && (((sockaddr_in*)peer)->sin_addr.s_addr == ((sockaddr_in*)k1->second->m_pPeerAddr)->sin_addr.s_addr))
-            return k1->second;
+         if ((((sockaddr_in*)peer)->sin_port == ((sockaddr_in*)k->second->m_pPeerAddr)->sin_port) && (((sockaddr_in*)peer)->sin_addr.s_addr == ((sockaddr_in*)k->second->m_pPeerAddr)->sin_addr.s_addr))
+         {
+            // compare ID and ISN
+            if ((id == k->second->m_PeerID) && (isn == k->second->m_iISN))
+               return k->second;
+         }
       }
       else
       {
          // compare IPv6 address
-         if (((sockaddr_in6*)peer)->sin6_port == ((sockaddr_in6*)k1->second->m_pPeerAddr)->sin6_port)
+         if (((sockaddr_in6*)peer)->sin6_port == ((sockaddr_in6*)k->second->m_pPeerAddr)->sin6_port)
          {
             int* addr1 = (int*)&(((sockaddr_in6*)peer)->sin6_addr);
-            int* addr2 = (int*)&(((sockaddr_in6*)k1->second->m_pPeerAddr)->sin6_addr);
+            int* addr2 = (int*)&(((sockaddr_in6*)k->second->m_pPeerAddr)->sin6_addr);
 
             int m1 = 4;
             for (; m1 > 0; -- m1)
@@ -873,37 +884,11 @@ CUDTSocket* CUDTUnited::locate(const UDTSOCKET u, const sockaddr* peer)
                   break;
 
             if (m1 > 0)
-               return k1->second;
-         }
-      }
-   }
-
-   // look up the "peer" address in accepted sockets
-   for (set<UDTSOCKET>::iterator j2 = i->second->m_pAcceptSockets->begin(); j2 != i->second->m_pAcceptSockets->end(); ++ j2)
-   {
-      map<UDTSOCKET, CUDTSocket*>::iterator k2 = m_Sockets.find(*j2);
-
-      if (AF_INET == i->second->m_iIPversion)
-      {
-         // compare IPv4 address
-         if ((((sockaddr_in*)peer)->sin_port == ((sockaddr_in*)k2->second->m_pPeerAddr)->sin_port) && (((sockaddr_in*)peer)->sin_addr.s_addr == ((sockaddr_in*)k2->second->m_pPeerAddr)->sin_addr.s_addr))
-            return k2->second;
-      }
-      else
-      {
-         // compare IPv6 address
-         if (((sockaddr_in6*)peer)->sin6_port == ((sockaddr_in6*)k2->second->m_pPeerAddr)->sin6_port)
-         {
-            int* addr1 = (int*)&(((sockaddr_in6*)peer)->sin6_addr);
-            int* addr2 = (int*)&(((sockaddr_in6*)k2->second->m_pPeerAddr)->sin6_addr);
-
-            int m2 = 4;
-            for (; m2 > 0; -- m2)
-               if (addr1[m2] != addr2[m2])
-                  break;
-
-            if (m2 > 0)
-               return k2->second;
+            {
+               // compare ID and ISN
+               if ((id == k->second->m_PeerID) && (isn == k->second->m_iISN))
+                  return k->second;
+            }
          }
       }
    }

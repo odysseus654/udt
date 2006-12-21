@@ -29,7 +29,7 @@ This header file contains the definition of structures related to UDT API.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 12/12/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 12/21/2006
 *****************************************************************************/
 
 #ifndef __UDT_API_H__
@@ -64,6 +64,9 @@ struct CUDTSocket
 
    UDTSOCKET m_Socket;                       // socket ID
    UDTSOCKET m_ListenSocket;                 // ID of the listener socket; 0 means this is an independent socket
+
+   UDTSOCKET m_PeerID;                       // peer socket ID
+   int32_t m_iISN;                           // initial sequence number, used to tell different connection from same IP:port
 
    CUDT* m_pUDT;                             // pointer to the UDT entity
 
@@ -160,7 +163,7 @@ private:
 
 private:
    CUDTSocket* locate(const UDTSOCKET u);
-   CUDTSocket* locate(const UDTSOCKET u, const sockaddr* peer);
+   CUDTSocket* locate(const UDTSOCKET u, const sockaddr* peer, const UDTSOCKET& id, const int32_t& isn);
    void checkBrokenSockets();
    void removeSocket(const UDTSOCKET u);
 
