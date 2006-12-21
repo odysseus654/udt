@@ -84,6 +84,10 @@ void CSndUList::insert(const int64_t& ts, const int32_t& id, const CUDT* u)
 
    if (n->m_llTimeStamp >= m_pLast->m_llTimeStamp)
    {
+      // do not insert repeated node
+      if (id == m_pLast->m_iID)
+         return;
+
       // insert as the last node
       n->m_pPrev = m_pLast;
       n->m_pNext = NULL;
@@ -92,25 +96,33 @@ void CSndUList::insert(const int64_t& ts, const int32_t& id, const CUDT* u)
 
       return;
    }
-   else if (n->m_llTimeStamp <= m_pLast->m_llTimeStamp)
+   else if (n->m_llTimeStamp <= m_pUList->m_llTimeStamp)
    {
+      // do not insert repeated node
+      if (id == m_pUList->m_iID)
+         return;
+
       // insert as the first node
       n->m_pPrev = NULL;
       n->m_pNext = m_pUList;
+      m_pUList->m_pPrev = n;
       m_pUList = n;
 
       return;
    }
 
    // check somewhere in the middle
-   CUDTList* p = m_pLast;
-   while ((NULL != p) && (p->m_llTimeStamp > n->m_llTimeStamp))
+   CUDTList* p = m_pLast->m_pPrev->m_pPrev;
+   while (p->m_llTimeStamp > n->m_llTimeStamp)
       p = p->m_pPrev;
+
+   // do not insert repeated node
+   if ((id == p->m_iID) || (id == p->m_pNext->m_iID) || ((NULL != p->m_pPrev) && (id == p->m_pPrev->m_iID)))
+      return;
 
    n->m_pPrev = p;
    n->m_pNext = p->m_pNext;
-   if (NULL != p->m_pNext)
-      p->m_pNext->m_pPrev = n;
+   p->m_pNext->m_pPrev = n;
    p->m_pNext = n;
 }
 
@@ -142,29 +154,17 @@ void CSndUList::remove(const int32_t& id)
          p->m_pPrev->m_pNext = p->m_pNext;
          if (NULL != p->m_pNext)
             p->m_pNext->m_pPrev = p->m_pPrev;
+         else
+            m_pLast = p->m_pPrev;
+
+         return;
       }
 
       p = p->m_pNext;
    }
 }
 
-bool CSndUList::find(const int32_t& id)
-{
-   CGuard listguard(m_ListLock);
-
-   CUDTList* p = m_pUList;
-
-   while (NULL != p)
-   {
-      if (id == p->m_iID)
-         return true;
-	  p = p->m_pNext;
-   }
-
-   return false;
-}
-
-void CSndUList::update(const int32_t& id, const CUDT* u)
+void CSndUList::update(const int32_t& id, const CUDT* u, const bool& reschedule)
 {
    CGuard listguard(m_ListLock);
 
@@ -189,7 +189,8 @@ void CSndUList::update(const int32_t& id, const CUDT* u)
 
    if (id == m_pUList->m_iID)
    {
-      m_pUList->m_llTimeStamp = 1;
+      if (reschedule)
+         m_pUList->m_llTimeStamp = 1;
       return;
    }
 
@@ -199,9 +200,16 @@ void CSndUList::update(const int32_t& id, const CUDT* u)
    {
       if (id == p->m_iID)
       {
+         if (!reschedule)
+            return;
+
          p->m_pPrev->m_pNext = p->m_pNext;
          if (NULL != p->m_pNext)
             p->m_pNext->m_pPrev = p->m_pPrev;
+         else
+            m_pLast = p->m_pPrev;
+
+         break;
       }
 
       p = p->m_pNext;
@@ -212,9 +220,8 @@ void CSndUList::update(const int32_t& id, const CUDT* u)
    n->m_llTimeStamp = 1;
    n->m_pPrev = NULL;
    n->m_pNext = m_pUList;
+   m_pUList->m_pPrev = n;
    m_pUList = n;
-   if (NULL == n->m_pNext)
-      m_pLast = n;
 }
 
 int CSndUList::pop(int32_t& id, CUDT*& u)
@@ -326,7 +333,8 @@ void CSndQueue::init(const int& size, const CChannel* c, const CTimer* t)
          // it is time to process it, pop it out/remove from the list
          int32_t id;
          CUDT* u;
-         self->m_pSndUList->pop(id, u);
+         if (self->m_pSndUList->pop(id, u) < 0)
+            continue;
 
          while ((self->m_iTailPtr + 1 == self->m_iHeadPtr) || ((self->m_iTailPtr == self->m_iQueueLen - 1) && (self->m_iHeadPtr == 0)))
          {
@@ -341,10 +349,6 @@ void CSndQueue::init(const int& size, const CChannel* c, const CTimer* t)
          {
             // insert the packet to the sending queue
             self->m_pUnitQueue[self->m_iTailPtr].m_pAddr = u->m_pPeerAddr;
-
-
-//         self->m_pChannel->sendto(self->m_pUnitQueue[self->m_iTailPtr].m_pAddr, self->m_pUnitQueue[self->m_iTailPtr].m_Packet);
-
 
             if (self->m_iQueueLen != self->m_iTailPtr + 1)
                ++ self->m_iTailPtr;
@@ -361,7 +365,6 @@ void CSndQueue::init(const int& size, const CChannel* c, const CTimer* t)
                if ((self->m_iHeadPtr + 1 == self->m_iTailPtr) || (0 == self->m_iTailPtr))
                   SetEvent(self->m_QueueCond);
             #endif
-
          }
 
          // insert a new entry, ts is the next processing time
@@ -486,9 +489,8 @@ void CRcvUList::remove(const int32_t& id)
    if (id == m_pUList->m_iID)
    {
       // remove first node
-      CUDTList* n = m_pUList;
       m_pUList = m_pUList->m_pNext;
-      if (m_pLast == n)
+      if (NULL == m_pUList)
          m_pLast = NULL;
       else
          m_pUList->m_pPrev = NULL;
@@ -502,10 +504,9 @@ void CRcvUList::remove(const int32_t& id)
    {
       if (id == p->m_pNext->m_iID)
       {
-         CUDTList* n = p->m_pNext;
-         p->m_pNext = n->m_pNext;
-         if (NULL != n->m_pNext)
-            n->m_pNext->m_pPrev = p;
+         p->m_pNext = p->m_pNext->m_pNext;
+         if (NULL != p->m_pNext)
+            p->m_pNext->m_pPrev = p;
          else
             m_pLast = p;
 
@@ -793,27 +794,6 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
 
       if (0 == self->m_pUnitQueue[self->m_iPtr].m_Packet.getFlag())
       {
-/*
-         int32_t id = self->m_pUnitQueue[self->m_iPtr].m_Packet.m_iID;
-
-         // ID 0 is for connection request, which should be passed to the listening socket
-         if ((0 == id) && (-1 != self->m_ListenerID))
-            id = self->m_ListenerID;
-
-         CUDT* u = self->m_pHash->lookup(id);
-
-         if (NULL != u)
-         {
-            // process the control packet, pass the connection request to listening socket, or temporally store in in hash table
-
-            if (u->m_bConnected && !u->m_bBroken)
-               u->process(self->m_pUnitQueue[self->m_iPtr].m_Packet);
-            else if (u->m_bListening)
-               u->listen(self->m_pUnitQueue[self->m_iPtr].m_pAddr, self->m_pUnitQueue[self->m_iPtr].m_Packet);
-            else
-               self->m_pHash->setUnit(id, self->m_pUnitQueue + self->m_iPtr);
-         }
-*/
          // queue is full, disgard the packet
          if ((self->m_iAQTailPtr + 1 == self->m_iAQHeadPtr) || ((self->m_iAQTailPtr == self->m_iQueueLen - 1) && (self->m_iAQHeadPtr == 0)))
          {
@@ -832,17 +812,6 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
       }
       else
       {
-/*
-         int32_t id = self->m_pUnitQueue[self->m_iPtr].m_Packet.m_iID;
-
-         CUDT* u = self->m_pHash->lookup(id);
-
-         if (NULL != u)
-         {
-            if (u->m_bConnected && !u->m_bBroken)
-               u->process(self->m_pUnitQueue[self->m_iPtr].m_Packet);
-         }
-*/
          // queue is full, disgard the packet
          if ((self->m_iPQTailPtr + 1 == self->m_iPQHeadPtr) || ((self->m_iPQTailPtr == self->m_iQueueLen - 1) && (self->m_iPQHeadPtr == 0)))
             continue;

@@ -94,23 +94,15 @@ public:
    void remove(const int32_t& id);
 
       // Functionality:
-      //    Look for a specific UDT instance.
-      // Parameters:
-      //    1) [in] id: Socket ID
-      // Returned value:
-      //    True if found, otherwise false.
-
-   bool find(const int32_t& id);
-
-      // Functionality:
       //    Update the timestamp of the UDT instance on the list.
       // Parameters:
       //    1) [in] id: socket ID
       //    2) [in] u: pointer to the UDT instance
+      //    3) [in] resechedule: if the timestampe shoudl be rescheduled
       // Returned value:
       //    None.
 
-   void update(const int32_t& id, const CUDT* u);
+   void update(const int32_t& id, const CUDT* u, const bool& reschedule = true);
 
       // Functionality:
       //    Get and remove the first UDT instance on the list.

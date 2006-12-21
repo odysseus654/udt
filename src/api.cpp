@@ -321,7 +321,7 @@ int CUDTUnited::newConnection(const UDTSOCKET listen, const sockaddr* peer, CHan
 
    try
    {
-      /// gu add for udt-m, bind to the same addr of listening socket
+      // bind to the same addr of listening socket
       ns->m_pUDT->open(ls->m_pSelfAddr);
       ns->m_pUDT->connect(peer, hs);
    }

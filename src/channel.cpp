@@ -54,9 +54,7 @@ written by
 #endif
 #include "channel.h"
 #include "packet.h"
-#include <iostream>
 
-using namespace std;
 
 #ifdef WIN32
    #define socklen_t int
