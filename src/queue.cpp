@@ -339,7 +339,11 @@ void CSndQueue::init(const int& size, const CChannel* c, const CTimer* t)
          while ((self->m_iTailPtr + 1 == self->m_iHeadPtr) || ((self->m_iTailPtr == self->m_iQueueLen - 1) && (self->m_iHeadPtr == 0)))
          {
             // add pthread_cond_wait here
-            pthread_cond_signal(&self->m_QueueCond);
+            #ifndef WIN32
+               pthread_cond_signal(&self->m_QueueCond);
+            #else
+               SetEvent(self->m_QueueCond);
+            #endif
          }
 
          // pack a packet from the socket
@@ -859,9 +863,19 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
 
          int32_t id = self->m_pPassiveQueue[self->m_iPQHeadPtr]->m_Packet.m_iID;
 
-         // ID 0 is for connection request, which should be passed to the listening socket
-         if ((0 == id) && (-1 != self->m_ListenerID))
-            id = self->m_ListenerID;
+         // ID 0 is for connection request, which should be passed to the listening socket or rendezvous sockets
+         if (0 == id)
+         {
+            if (-1 != self->m_ListenerID)
+               id = self->m_ListenerID;
+            else if (0 != self->m_vRendezvousID.size())
+               for (vector<CRL>::iterator i = self->m_vRendezvousID.begin(); i != self->m_vRendezvousID.end(); ++ i)
+                  if (CIPAddress::ipcmp(self->m_pPassiveQueue[self->m_iPQHeadPtr]->m_pAddr, i->m_pPeerAddr /*IPversion*/))
+                  {
+                     id = i->m_iID;
+                     break;
+                  }
+         }
 
          CUDT* u = self->m_pHash->lookup(id);
 
@@ -970,7 +984,7 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
    return NULL;
 }
 
-int CRcvQueue::recvfrom(sockaddr* addr, CPacket& packet, const int32_t& id)
+int CRcvQueue::recvfrom(sockaddr* , CPacket& packet, const int32_t& id)
 {
    // read a packet from the temporay strorage in hash table
 

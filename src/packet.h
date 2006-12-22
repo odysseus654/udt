@@ -183,7 +183,6 @@ struct CHandShake
    int32_t m_iMSS;              // maximum segment size
    int32_t m_iFlightFlagSize;   // flow control window size
    int32_t m_iReqType;          // connection request type: -1: response, 1: initial request, 0: rendezvous request
-   int32_t m_iPort;		// new socket port
    int32_t m_iID;		// socket ID
 };
 

@@ -39,7 +39,9 @@ written by
 #include "common.h"
 #include "packet.h"
 #include "channel.h"
+#include <vector>
 
+using namespace std;
 
 class CUDT;
 
@@ -389,6 +391,12 @@ private:
 
 private:
    volatile UDTSOCKET m_ListenerID;	// The only listening socket that is associated to the queue, if there is one
+   struct CRL
+   {
+      UDTSOCKET m_iID;
+      sockaddr* m_pPeerAddr;
+   };
+   vector<CRL> m_vRendezvousID;         // The socket IDs currently in rendezvous mode
 
    int m_iPayloadSize;			// packet payload size
 };

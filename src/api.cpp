@@ -262,10 +262,6 @@ int CUDTUnited::newConnection(const UDTSOCKET listen, const sockaddr* peer, CHan
          hs->m_iMSS = ns->m_pUDT->m_iMSS;
          hs->m_iFlightFlagSize = ns->m_pUDT->m_iFlightFlagSize;
          hs->m_iReqType = -1;
-         if (AF_INET == ls->m_iIPversion)
-            hs->m_iPort = ntohs(((sockaddr_in*)ns->m_pSelfAddr)->sin_port);
-         else
-            hs->m_iPort = ntohs(((sockaddr_in6*)ns->m_pSelfAddr)->sin6_port);
 
          return 0;
 
@@ -385,12 +381,6 @@ int CUDTUnited::newConnection(const UDTSOCKET listen, const sockaddr* peer, CHan
 
       return -1;
    }
-
-   // complete the response HS information with port number
-   if (AF_INET == ls->m_iIPversion)
-      hs->m_iPort = ntohs(((sockaddr_in*)ns->m_pSelfAddr)->sin_port);
-   else
-      hs->m_iPort = ntohs(((sockaddr_in6*)ns->m_pSelfAddr)->sin6_port);
 
    // wake up a waiting accept() call
    #ifndef WIN32
@@ -860,36 +850,10 @@ CUDTSocket* CUDTUnited::locate(const UDTSOCKET u, const sockaddr* peer, const UD
 
       map<UDTSOCKET, CUDTSocket*>::iterator k = m_Sockets.find(*j);
 
-      if (AF_INET == i->second->m_iIPversion)
+      if (CIPAddress::ipcmp(peer, k->second->m_pPeerAddr, i->second->m_iIPversion))
       {
-         // compare IPv4 address
-         if ((((sockaddr_in*)peer)->sin_port == ((sockaddr_in*)k->second->m_pPeerAddr)->sin_port) && (((sockaddr_in*)peer)->sin_addr.s_addr == ((sockaddr_in*)k->second->m_pPeerAddr)->sin_addr.s_addr))
-         {
-            // compare ID and ISN
-            if ((id == k->second->m_PeerID) && (isn == k->second->m_iISN))
-               return k->second;
-         }
-      }
-      else
-      {
-         // compare IPv6 address
-         if (((sockaddr_in6*)peer)->sin6_port == ((sockaddr_in6*)k->second->m_pPeerAddr)->sin6_port)
-         {
-            int* addr1 = (int*)&(((sockaddr_in6*)peer)->sin6_addr);
-            int* addr2 = (int*)&(((sockaddr_in6*)k->second->m_pPeerAddr)->sin6_addr);
-
-            int m1 = 4;
-            for (; m1 > 0; -- m1)
-               if (addr1[m1] != addr2[m1])
-                  break;
-
-            if (m1 > 0)
-            {
-               // compare ID and ISN
-               if ((id == k->second->m_PeerID) && (isn == k->second->m_iISN))
-                  return k->second;
-            }
-         }
+         if ((id == k->second->m_PeerID) && (isn == k->second->m_iISN))
+            return k->second;
       }
    }
 

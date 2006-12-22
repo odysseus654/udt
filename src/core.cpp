@@ -128,8 +128,6 @@ m_iQuickStartPkts(16)
    m_bConnected = false;
    m_bBroken = false;
 
-   m_pcTmpBuf = NULL;
-
    m_pPeerAddr = NULL;
    m_pSNode = NULL;
    m_pRNode = NULL;
@@ -190,8 +188,6 @@ m_iQuickStartPkts(ancestor.m_iQuickStartPkts)
    m_bConnected = false;
    m_bBroken = false;
 
-   m_pcTmpBuf = NULL;
-
    m_pPeerAddr = NULL;
    m_pSNode = NULL;
    m_pRNode = NULL;
@@ -225,8 +221,6 @@ CUDT::~CUDT()
       delete m_pCCFactory;
    if (m_pCC)
       delete m_pCC;
-   if (m_pcTmpBuf)
-      delete [] m_pcTmpBuf;
    if (m_pPeerAddr)
       delete m_pPeerAddr;
    if (m_pSNode)
@@ -529,7 +523,6 @@ void CUDT::open(const sockaddr* addr)
    gettimeofday(&m_LastSampleTime, 0);
    m_llTraceSent = m_llTraceRecv = m_iTraceSndLoss = m_iTraceRcvLoss = m_iTraceRetrans = m_iSentACK = m_iRecvACK = m_iSentNAK = m_iRecvNAK = 0;
 
-
    m_pSNode = new CUDTList;
    m_pSNode->m_iID = m_SocketID;
    m_pSNode->m_pUDT = this;
@@ -541,7 +534,6 @@ void CUDT::open(const sockaddr* addr)
    m_pRNode->m_pUDT = this;
    m_pRNode->m_llTimeStamp = 1;
    m_pRNode->m_pPrev = m_pRNode->m_pNext = NULL;
-
 
    bool nm = false;
 
@@ -611,10 +603,6 @@ void CUDT::open(const sockaddr* addr)
 
    m_pRcvQueue->m_pHash->insert(m_SocketID, this);
 
-
-   // Create an internal buffer to be used in threads
-   m_pcTmpBuf = new char [m_iPayloadSize];
-
    // Now UDT is opened.
    m_bOpened = true;
 
@@ -664,6 +652,7 @@ void CUDT::listen()
 
    m_bListening = true;
 
+   // TO DO
    //detect error here:
    // if there is already a listener, throw exception
 
@@ -683,6 +672,17 @@ void CUDT::connect(const sockaddr* serv_addr)
    if (m_bConnected)
       throw CUDTException(5, 2, 0);
 
+
+   // rendezvous mode check in
+   if (m_bRendezvous)
+   {
+      CRcvQueue::CRL r;
+      r.m_iID = m_SocketID;
+      r.m_pPeerAddr = (sockaddr*)serv_addr;
+      m_pRcvQueue->m_vRendezvousID.insert(m_pRcvQueue->m_vRendezvousID.end(), r);
+   }
+
+
    CPacket request;
    char* reqdata = new char [m_iPayloadSize];
    CHandShake* req = (CHandShake *)reqdata;
@@ -697,7 +697,6 @@ void CUDT::connect(const sockaddr* serv_addr)
    req->m_iMSS = m_iMSS;
    req->m_iFlightFlagSize = m_iFlightFlagSize;
    req->m_iReqType = (!m_bRendezvous) ? 1 : 0;
-   req->m_iPort = 0;
    req->m_iID = m_SocketID;
 
    // Random Initial Sequence Number
@@ -718,18 +717,10 @@ void CUDT::connect(const sockaddr* serv_addr)
 
    m_pSndQueue->sendto(serv_addr, request);
 
-   sockaddr* peer_addr;
-   sockaddr_in addr4;
-   sockaddr_in6 addr6;
-   if (AF_INET == m_iIPversion)
-      peer_addr = (sockaddr*)(&addr4);
-   else
-      peer_addr = (sockaddr*)(&addr6);
-
    // Wait for the negotiated configurations from the peer side.
    response.pack(0, NULL, resdata, sizeof(CHandShake));
 
-   m_pRcvQueue->recvfrom(peer_addr, response, m_SocketID);
+   m_pRcvQueue->recvfrom(NULL, response, m_SocketID);
 
    int timeo = 3000000;
 
@@ -744,7 +735,7 @@ void CUDT::connect(const sockaddr* serv_addr)
       m_pSndQueue->sendto(serv_addr, request);
 
       response.setLength(m_iPayloadSize);
-      m_pRcvQueue->recvfrom(peer_addr, response, m_SocketID);
+      m_pRcvQueue->recvfrom(NULL, response, m_SocketID);
 
       gettimeofday(&currtime, 0);
       if ((currtime.tv_sec - entertime.tv_sec) * 1000000 + (currtime.tv_usec - entertime.tv_usec) > timeo)
@@ -778,38 +769,10 @@ void CUDT::connect(const sockaddr* serv_addr)
    }
 
    // secuity check
-   bool secure = true;
-   if (m_bRendezvous)
-   {
-      char req_ip[NI_MAXHOST];
-      char req_port[NI_MAXSERV];
-      char res_ip[NI_MAXHOST];
-      char res_port[NI_MAXSERV];
-      int addrlen = (AF_INET == m_iIPversion) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
-      getnameinfo(serv_addr, addrlen, req_ip, sizeof(req_ip), req_port, sizeof(req_port), NI_NUMERICHOST|NI_NUMERICSERV);
-      getnameinfo(peer_addr, addrlen, res_ip, sizeof(res_ip), res_port, sizeof(res_port), NI_NUMERICHOST|NI_NUMERICSERV);
-
-      if ((0 != strcmp(req_ip, res_ip)) || (0 != strcmp(req_port, res_port)))
-         secure = false;
-   }
-   else
-   {
-      if (m_iISN != res->m_iISN)
-         secure = false;
-   }
-
-   if (!secure)
+   if ((!m_bRendezvous) && (m_iISN != res->m_iISN))
    {
       delete [] resdata;
       throw CUDTException(1, 4, 0);
-   }
-
-   if (!m_bRendezvous)
-   {
-      if (AF_INET == m_iIPversion)
-         addr4.sin_port = htons(res->m_iPort);
-      else
-         addr6.sin6_port = htons(res->m_iPort);
    }
 
    // Got it. Re-configure according to the negotiated values.
@@ -845,9 +808,7 @@ void CUDT::connect(const sockaddr* serv_addr)
       m_pCC->init();
    #endif
 
-   //uint64_t ts;
-   //CTimer::rdtsc(ts);
-   //m_pSndQueue->m_pSndUList->insert(ts, m_SocketID, this);
+   // register this socket for receiving data packets
    m_pRcvQueue->m_pRcvUList->insert(m_SocketID, this);
 
    m_pPeerAddr = (sockaddr*)new sockaddr_in;
@@ -920,9 +881,7 @@ void CUDT::connect(const sockaddr* peer, CHandShake* hs)
       m_pCC->init();
    #endif
 
-   //uint64_t ts;
-   //CTimer::rdtsc(ts);
-   //m_pSndQueue->m_pSndUList->insert(ts, m_SocketID, this);
+   // register this socket for receiving data packet
    m_pRcvQueue->m_pRcvUList->insert(m_SocketID, this);
 
    m_pPeerAddr = (sockaddr*)new sockaddr_in;
@@ -1020,8 +979,6 @@ void CUDT::close()
       delete m_pCCFactory;
    if (m_pCC)
       delete m_pCC;
-   if (m_pcTmpBuf)
-      delete [] m_pcTmpBuf;
 
    m_pSndBuffer = NULL;
    m_pRcvBuffer = NULL;
@@ -1034,7 +991,6 @@ void CUDT::close()
    m_pRcvTimeWindow = NULL;
    m_pCCFactory = NULL;
    m_pCC = NULL;
-   m_pcTmpBuf = NULL;
 
    // CLOSED.
    m_bOpened = false;
@@ -1207,7 +1163,7 @@ void CUDT::sendCtrl(const int& pkttype, void* lparam, void* rparam, const int& s
          // this is periodically NAK report
 
          // read loss list from the local receiver loss list
-         int32_t* data = (int32_t*)m_pcTmpBuf;
+         int32_t* data = new int32_t[m_iPayloadSize / 4];
          int losslen;
          m_pRcvLossList->getLossArray(data, losslen, m_iPayloadSize / 4, m_iRTT + 4 * m_iRTTVar);
 
@@ -1222,6 +1178,8 @@ void CUDT::sendCtrl(const int& pkttype, void* lparam, void* rparam, const int& s
 
             ++ m_iSentNAK;
          }
+
+         delete [] data;
       }
 
       break;
@@ -1534,6 +1492,7 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
          initdata.m_iMSS = m_iMSS;
          initdata.m_iFlightFlagSize = m_iFlightFlagSize;
          initdata.m_iReqType = -1;
+         initdata.m_iID = m_SocketID;
          sendCtrl(0, NULL, (char *)&initdata, sizeof(CHandShake));
       }
 
@@ -2720,13 +2679,6 @@ void CUDT::process(CPacket& packet)
       return;
    }
 
-
-   #if defined (CUSTOM_CC) || defined (NO_BUSY_WAITING)
-      m_iPktCount ++;
-   #endif
-
-
-
    #ifdef CUSTOM_CC
       // reset RTO
       if (self->m_pCC->m_iRTO > 0)
@@ -2804,7 +2756,7 @@ void CUDT::process(CPacket& packet)
    #endif
 
    #if defined (CUSTOM_CC) || defined (NO_BUSY_WAITING)
-//      m_iPktCount ++;
+      m_iPktCount ++;
    #endif
 }
 

@@ -446,9 +446,6 @@ private: // Trace
    int m_iSentNAK;                              // number of NAKs sent in the last trace interval
    int m_iRecvNAK;                              // number of NAKs received in the last trace interval
 
-private: // internal data
-   char* m_pcTmpBuf;
-
 private:
    int pack(CPacket& packet, uint64_t& ts);
    void process(CPacket& packet);

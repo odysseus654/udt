@@ -562,3 +562,33 @@ const int CUDTException::getErrorCode() const
 {
    return m_iMajor * 1000 + m_iMinor;
 }
+
+
+//
+bool CIPAddress::ipcmp(const sockaddr* addr1, const sockaddr* addr2, const int& ver)
+{
+   if (AF_INET == ver)
+   {
+      sockaddr_in* a1 = (sockaddr_in*)addr1;
+      sockaddr_in* a2 = (sockaddr_in*)addr2;
+
+      if ((a1->sin_port == a2->sin_port) && (a1->sin_addr.s_addr == a2->sin_addr.s_addr))
+         return true;
+   }
+   else
+   {
+      sockaddr_in6* a1 = (sockaddr_in6*)addr1;
+      sockaddr_in6* a2 = (sockaddr_in6*)addr2;
+
+      if (a1->sin6_port == a2->sin6_port)
+      {
+         for (int i = 0; i < 16; ++ i)
+            if (*((char*)&(a1->sin6_addr) + i) != *((char*)&(a1->sin6_addr) + i))
+               return false;
+
+         return true;
+      }
+   }
+
+   return false;
+}

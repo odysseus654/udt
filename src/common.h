@@ -249,5 +249,12 @@ public:
    static const int32_t m_iMaxMsgNo;            // maximum message number used in UDT
 };
 
+////////////////////////////////////////////////////////////////////////////////
+
+class CIPAddress
+{
+public:
+   static bool ipcmp(const sockaddr* addr1, const sockaddr* addr2, const int& ver = AF_INET);
+};
 
 #endif
