@@ -840,20 +840,27 @@ CUDTSocket* CUDTUnited::locate(const UDTSOCKET u, const sockaddr* peer, const UD
 
    map<UDTSOCKET, CUDTSocket*>::iterator i = m_Sockets.find(u);
 
-   // look up the "peer" address in queued sockets set and accepted sockets set
-   for (set<UDTSOCKET>::iterator j = i->second->m_pQueuedSockets->begin(); ; ++ j)
+   // look up the "peer" address in queued sockets set
+   for (set<UDTSOCKET>::iterator j1 = i->second->m_pQueuedSockets->begin(); j1 != i->second->m_pQueuedSockets->end(); ++ j1)
    {
-      if (j == i->second->m_pQueuedSockets->end())
-         j = i->second->m_pAcceptSockets->begin();
-      if (j == i->second->m_pAcceptSockets->end())
-         break;
+      map<UDTSOCKET, CUDTSocket*>::iterator k1 = m_Sockets.find(*j1);
 
-      map<UDTSOCKET, CUDTSocket*>::iterator k = m_Sockets.find(*j);
-
-      if (CIPAddress::ipcmp(peer, k->second->m_pPeerAddr, i->second->m_iIPversion))
+      if (CIPAddress::ipcmp(peer, k1->second->m_pPeerAddr, i->second->m_iIPversion))
       {
-         if ((id == k->second->m_PeerID) && (isn == k->second->m_iISN))
-            return k->second;
+         if ((id == k1->second->m_PeerID) && (isn == k1->second->m_iISN))
+            return k1->second;
+      }
+   }
+
+   // look up the "peer" address in accept sockets set
+   for (set<UDTSOCKET>::iterator j2 = i->second->m_pAcceptSockets->begin(); j2 != i->second->m_pAcceptSockets->end(); ++ j2)
+   {
+      map<UDTSOCKET, CUDTSocket*>::iterator k2 = m_Sockets.find(*j2);
+
+      if (CIPAddress::ipcmp(peer, k2->second->m_pPeerAddr, i->second->m_iIPversion))
+      {
+         if ((id == k2->second->m_PeerID) && (isn == k2->second->m_iISN))
+            return k2->second;
       }
    }
 
