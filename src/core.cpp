@@ -34,7 +34,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 12/21/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 12/29/2006
 *****************************************************************************/
 
 #ifndef WIN32
@@ -678,7 +678,16 @@ void CUDT::connect(const sockaddr* serv_addr)
    {
       CRcvQueue::CRL r;
       r.m_iID = m_SocketID;
-      r.m_pPeerAddr = (sockaddr*)serv_addr;
+      if (AF_INET == m_iIPversion)
+      {
+         r.m_pPeerAddr = (sockaddr*)new sockaddr_in;
+         memcpy(r.m_pPeerAddr, serv_addr, sizeof(sockaddr_in));
+      }
+      else
+      {
+         r.m_pPeerAddr = (sockaddr*)new sockaddr_in6;
+         memcpy(r.m_pPeerAddr, serv_addr, sizeof(sockaddr_in6));
+      }
       m_pRcvQueue->m_vRendezvousID.insert(m_pRcvQueue->m_vRendezvousID.end(), r);
    }
 
@@ -945,6 +954,22 @@ void CUDT::close()
          sendCtrl(5);
 
       m_bConnected = false;
+   }
+
+   if (m_bRendezvous)
+   {
+      for (vector<CRcvQueue::CRL>::iterator i = m_pRcvQueue->m_vRendezvousID.begin(); i != m_pRcvQueue->m_vRendezvousID.end(); ++ i)
+      {
+         if (i->m_iID == m_SocketID)
+         {
+            if (AF_INET == m_iIPversion)
+               delete (sockaddr_in*)(i->m_pPeerAddr);
+            else
+               delete (sockaddr_in6*)(i->m_pPeerAddr);
+            m_pRcvQueue->m_vRendezvousID.erase(i);
+            break;
+         }
+      }
    }
 
    m_pRcvQueue->m_pHash->remove(m_SocketID);
