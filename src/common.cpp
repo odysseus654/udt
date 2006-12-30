@@ -130,7 +130,7 @@ void CTimer::rdtsc(uint64_t &x)
       // use system call to read time clock for other archs
       timeval t;
       gettimeofday(&t, 0);
-      x = t.tv_sec * 1000000 + t.tv_usec;
+      x = (uint64_t)t.tv_sec * (uint64_t)1000000 + (uint64_t)t.tv_usec;
    #endif
 }
 

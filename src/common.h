@@ -30,7 +30,7 @@ This header file contains the definitions of common types and utility classes.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/23/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 12/29/2006
 *****************************************************************************/
 
 #ifndef __UDT_COMMON_H__
@@ -43,6 +43,7 @@ written by
    #include <sys/types.h>
    #include <sys/socket.h>
    #include <netinet/in.h>
+   #include <pthread.h>
 #else
    #include <windows.h>
 #endif
