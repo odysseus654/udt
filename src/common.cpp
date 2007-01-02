@@ -90,16 +90,6 @@ written by
    }
 #endif
 
-#ifdef UNIX
-   #define usleep(usec) \
-   { \
-      struct timeval _timeout; \
-      _timeout.tv_sec  = 0; \
-      _timeout.tv_usec = usec; \
-      ::select (0, NULL, NULL, NULL, &_timeout); \
-   }
-#endif
-
 
 uint64_t CTimer::s_ullCPUFrequency = CTimer::readCPUFrequency();
 
