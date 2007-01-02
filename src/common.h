@@ -67,6 +67,17 @@ written by
    int writev(SOCKET s, const iovec* vector, int count);
 #endif
 
+#ifdef UNIX
+   #define usleep(usec) \
+   { \
+      struct timeval _timeout; \
+      _timeout.tv_sec  = 0; \
+      _timeout.tv_usec = usec; \
+      ::select (0, NULL, NULL, NULL, &_timeout); \
+   }
+#endif
+
+
 ////////////////////////////////////////////////////////////////////////////////
 
 class CTimer
