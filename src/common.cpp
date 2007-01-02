@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright © 2001 - 2006, The Board of Trustees of the University of Illinois.
+Copyright © 2001 - 2007, The Board of Trustees of the University of Illinois.
 All Rights Reserved.
 
 UDP-based Data Transfer Library (UDT) special version UDT-m
@@ -30,7 +30,7 @@ mutex facility, and exception processing.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 12/12/2006
+   Yunhong Gu [ygu@cs.uic.edu], last updated 01/01/2007
 *****************************************************************************/
 
 
