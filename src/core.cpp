@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright © 2001 - 2006, The Board of Trustees of the University of Illinois.
+Copyright © 2001 - 2007, The Board of Trustees of the University of Illinois.
 All Rights Reserved.
 
 UDP-based Data Transfer Library (UDT) version 3
@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 12/13/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 01/07/2007
 *****************************************************************************/
 
 #ifndef WIN32
@@ -1281,11 +1281,10 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
    #ifdef CUSTOM_CC
       self->m_pTimer->rdtsc(nextccacktime);
       nextccacktime += self->m_pCC->m_iACKPeriod * 1000 * self->m_ullCPUFrequency;
-      if (self->m_pCC->m_iRTO > 0)
-      {
-         self->m_pTimer->rdtsc(nextrto);
-         nextrto += self->m_pCC->m_iRTO * self->m_ullCPUFrequency;
-      }
+      if (!self->m_pCC->m_bUserDefinedRTO)
+         self->m_pCC->m_iRTO = self->m_iRTT + 4 * self->m_iRTTVar;
+      self->m_pTimer->rdtsc(nextrto);
+      nextrto += self->m_pCC->m_iRTO * self->m_ullCPUFrequency;
    #endif
 
    while (!self->m_bClosing)
@@ -1440,7 +1439,7 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
       }
 
       #ifdef CUSTOM_CC
-         if ((self->m_pCC->m_iRTO > 0) && (currtime > nextrto) && (CSeqNo::incseq(self->m_iSndCurrSeqNo) != self->m_iSndLastAck))
+         if ((currtime > nextrto) && (CSeqNo::incseq(self->m_iSndCurrSeqNo) != self->m_iSndLastAck))
          {
             self->m_pCC->onTimeout();
             nextrto = currtime + self->m_pCC->m_iRTO * self->m_ullCPUFrequency;
@@ -1501,8 +1500,9 @@ DWORD WINAPI CUDT::rcvHandler(LPVOID recver)
 
       #ifdef CUSTOM_CC
          // reset RTO
-         if (self->m_pCC->m_iRTO > 0)
-            nextrto = currtime + self->m_pCC->m_iRTO * self->m_ullCPUFrequency;
+         if (!self->m_pCC->m_bUserDefinedRTO)
+            self->m_pCC->m_iRTO = self->m_iRTT + 4 * self->m_iRTTVar;
+         nextrto = currtime + self->m_pCC->m_iRTO * self->m_ullCPUFrequency;
       #endif
 
       // update time/delay information

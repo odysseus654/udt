@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright © 2001 - 2006, The Board of Trustees of the University of Illinois.
+Copyright © 2001 - 2007, The Board of Trustees of the University of Illinois.
 All Rights Reserved.
 
 UDP-based Data Transfer Library (UDT) version 3
@@ -30,7 +30,7 @@ This header file contains the definitions of common types and utility classes.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 12/29/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 01/01/2007
 *****************************************************************************/
 
 #ifndef __UDT_COMMON_H__
