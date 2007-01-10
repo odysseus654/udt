@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright © 2001 - 2006, The Board of Trustees of the University of Illinois.
+Copyright © 2001 - 2007, The Board of Trustees of the University of Illinois.
 All Rights Reserved.
 
 UDP-based Data Transfer Library (UDT) special version UDT-m
@@ -31,7 +31,7 @@ reference: UDT programming manual and socket programming reference
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 12/21/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 01/10/2007
 *****************************************************************************/
 
 #ifndef WIN32
@@ -461,8 +461,6 @@ int CUDTUnited::listen(const UDTSOCKET u, const int& backlog)
    if (CUDTSocket::OPENED != s->m_Status)
       throw CUDTException(5, 5, 0);
 
-   s->m_pUDT->listen();
-
    try
    {
       s->m_pQueuedSockets = new set<UDTSOCKET>;
@@ -473,6 +471,8 @@ int CUDTUnited::listen(const UDTSOCKET u, const int& backlog)
       delete s->m_pQueuedSockets;
       throw CUDTException(3, 2, 0);
    }
+
+   s->m_pUDT->listen();
 
    s->m_Status = CUDTSocket::LISTENING;
 
