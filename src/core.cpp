@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 01/07/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 02/07/2007
 *****************************************************************************/
 
 #ifndef WIN32
@@ -602,7 +602,8 @@ void CUDT::listen()
       if (0 != pthread_create(&m_ListenThread, NULL, CUDT::listenHandler, this))
          throw CUDTException(3, 1, errno);
    #else
-      if (NULL == (m_ListenThread = CreateThread(NULL, 0, CUDT::listenHandler, this, 0, NULL)))
+      DWORD threadID;
+      if (NULL == (m_ListenThread = CreateThread(NULL, 0, CUDT::listenHandler, this, 0, &threadID)))
          throw CUDTException(3, 1, GetLastError());
    #endif
 
@@ -792,7 +793,8 @@ void CUDT::connect(const sockaddr* serv_addr)
          throw CUDTException(3, 1, errno);
    #else
       m_SndThread = NULL;
-      if (NULL == (m_RcvThread = CreateThread(NULL, 0, CUDT::rcvHandler, this, 0, NULL)))
+      DWORD threadID;
+      if (NULL == (m_RcvThread = CreateThread(NULL, 0, CUDT::rcvHandler, this, 0, &threadID)))
          throw CUDTException(3, 1, GetLastError());
    #endif
 
@@ -869,7 +871,8 @@ void CUDT::connect(const sockaddr* peer, CHandShake* hs)
          throw CUDTException(3, 1, errno);
    #else
       m_SndThread = NULL;
-      if (NULL == (m_RcvThread = CreateThread(NULL, 0, CUDT::rcvHandler, this, 0, NULL)))
+      DWORD threadID;
+      if (NULL == (m_RcvThread = CreateThread(NULL, 0, CUDT::rcvHandler, this, 0, &threadID)))
          throw CUDTException(3, 1, GetLastError());
    #endif
 
@@ -2217,7 +2220,8 @@ int CUDT::send(char* data, const int& len, int* overlapped, const UDT_MEM_ROUTIN
          }
          m_bSndThrStart = true;
       #else
-         if (NULL == (m_SndThread = CreateThread(NULL, 0, CUDT::sndHandler, this, 0, NULL)))
+         DWORD threadID;
+         if (NULL == (m_SndThread = CreateThread(NULL, 0, CUDT::sndHandler, this, 0, &threadID)))
          {
             delete m_pSndTimeWindow;
             m_pSndTimeWindow = NULL;
@@ -2504,7 +2508,8 @@ int CUDT::sendmsg(const char* data, const int& len, const int& msttl, const bool
          }
          m_bSndThrStart = true;
       #else
-         if (NULL == (m_SndThread = CreateThread(NULL, 0, CUDT::sndHandler, this, 0, NULL)))
+         DWORD threadID;
+         if (NULL == (m_SndThread = CreateThread(NULL, 0, CUDT::sndHandler, this, 0, &threadID)))
          {
             delete m_pSndTimeWindow;
             m_pSndTimeWindow = NULL;
@@ -2689,7 +2694,8 @@ int64_t CUDT::sendfile(ifstream& ifs, const int64_t& offset, const int64_t& size
          }
          m_bSndThrStart = true;
       #else
-         if (NULL == (m_SndThread = CreateThread(NULL, 0, CUDT::sndHandler, this, 0, NULL)))
+         DWORD threadID;
+         if (NULL == (m_SndThread = CreateThread(NULL, 0, CUDT::sndHandler, this, 0, threadID)))
          {
             delete m_pSndTimeWindow;
             m_pSndTimeWindow = NULL;

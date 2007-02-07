@@ -31,7 +31,7 @@ mutex facility, and exception processing.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 01/01/2007
+   Yunhong Gu [ygu@cs.uic.edu], last updated 02/07/2007
 *****************************************************************************/
 
 
@@ -68,25 +68,6 @@ written by
       }
 
       return 0;
-   }
-
-   int readv(SOCKET s, const iovec* vector, int count)
-   {
-      DWORD rsize = 0;
-      DWORD flag = 0;
-
-      WSARecv(s, (LPWSABUF)vector, count, &rsize, &flag, NULL, NULL);
-
-      return rsize;
-   }
-
-   int writev(SOCKET s, const iovec* vector, int count)
-   {
-      DWORD ssize = 0;
-
-      WSASend(s, (LPWSABUF)vector, count, &ssize, 0, NULL, NULL);
-
-      return ssize;
    }
 #endif
 

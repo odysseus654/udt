@@ -1024,7 +1024,9 @@ int CRcvBuffer::readMsg(char* data, const int& len)
          memcpy(data + size - partial, m_pcData, partial);
       }
 
+      // already read, will not be read again
       m_pMessageList[ptr].m_bValid = false;
+      // mark this msg as dropped so that it will not be set to valid again in checkMsg()
       m_pMessageList[ptr].m_bDropped = true;
 
       -- m_iValidMsgCount;
