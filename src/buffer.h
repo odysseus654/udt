@@ -134,7 +134,7 @@ private:
       char* m_pcData;                   // pointer to the data block
       int m_iLength;                    // length of the block
 
-      timeval m_OriginTime;             // original request time
+      uint64_t m_OriginTime;            // original request time
       int m_iTTL;                       // time to live
       int32_t m_iMsgNo;                 // message number
       int32_t m_iSeqNo;                 // sequence number of first packet

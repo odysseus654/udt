@@ -94,7 +94,7 @@ void CSndBuffer::addBuffer(const char* data, const int& len, const int& handle, 
       m_pBlock = new Block;
       m_pBlock->m_pcData = const_cast<char *>(data);
       m_pBlock->m_iLength = len;
-      gettimeofday(&m_pBlock->m_OriginTime, 0);
+      m_pBlock->m_OriginTime = CTimer::getTime();
       m_pBlock->m_iTTL = ttl;
       m_pBlock->m_iMsgNo = m_iNextMsgNo;
       m_pBlock->m_iSeqNo = seqno;
@@ -121,7 +121,7 @@ void CSndBuffer::addBuffer(const char* data, const int& len, const int& handle, 
       m_pLastBlock = m_pLastBlock->m_next;
       m_pLastBlock->m_pcData = const_cast<char *>(data);
       m_pLastBlock->m_iLength = len;
-      gettimeofday(&m_pLastBlock->m_OriginTime, 0);
+      m_pLastBlock->m_OriginTime = CTimer::getTime();
       m_pLastBlock->m_iTTL = ttl;
       m_pLastBlock->m_iMsgNo = m_iNextMsgNo;
       m_pLastBlock->m_iSeqNo = lastseq + (int32_t)ceil(double(offset) / m_iMSS);
@@ -203,12 +203,7 @@ int CSndBuffer::readData(char** data, const int offset, const int& len, int32_t&
 
    if (p->m_iTTL >= 0)
    {
-      timeval currtime;
-      gettimeofday(&currtime, 0);
-
-      int e = (currtime.tv_sec - p->m_OriginTime.tv_sec) * 1000000 + currtime.tv_usec - p->m_OriginTime.tv_usec;
-
-      if (e > p->m_iTTL)
+      if (int(CTimer::getTime() - p->m_OriginTime) > p->m_iTTL)
       {
          msgno = p->m_iMsgNo;
          seqno = p->m_iSeqNo;

@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright © 2001 - 2006, The Board of Trustees of the University of Illinois.
+Copyright © 2001 - 2007, The Board of Trustees of the University of Illinois.
 All Rights Reserved.
 
 UDP-based Data Transfer Library (UDT) special version UDT-m
@@ -29,7 +29,7 @@ This file contains the implementation of UDT multiplexer.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 12/05/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/11/2007
 *****************************************************************************/
 
 #include "common.h"
@@ -112,7 +112,7 @@ void CSndUList::insert(const int64_t& ts, const int32_t& id, const CUDT* u)
    }
 
    // check somewhere in the middle
-   CUDTList* p = m_pLast->m_pPrev->m_pPrev;
+   CUDTList* p = m_pLast->m_pPrev;
    while (p->m_llTimeStamp > n->m_llTimeStamp)
       p = p->m_pPrev;
 
@@ -307,8 +307,9 @@ void CSndQueue::init(const int& size, const CChannel* c, const CTimer* t)
       pthread_create(&m_deQThread, NULL, CSndQueue::deQueue, this);
       pthread_detach(m_deQThread);
    #else
-      m_enQThread = CreateThread(NULL, 0, CSndQueue::enQueue, this, 0, NULL);
-      m_deQThread = CreateThread(NULL, 0, CSndQueue::deQueue, this, 0, NULL);
+      DWORD threadID;
+      m_enQThread = CreateThread(NULL, 0, CSndQueue::enQueue, this, 0, &threadID);
+      m_deQThread = CreateThread(NULL, 0, CSndQueue::deQueue, this, 0, &threadID);
    #endif
 }
 
@@ -757,8 +758,9 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
       pthread_create(&m_deQThread, NULL, CRcvQueue::deQueue, this);
       pthread_detach(m_deQThread);
    #else
-      m_enQThread = CreateThread(NULL, 0, CRcvQueue::enQueue, this, 0, NULL);
-      m_deQThread = CreateThread(NULL, 0, CRcvQueue::deQueue, this, 0, NULL);
+      DWORD threadID;
+      m_enQThread = CreateThread(NULL, 0, CRcvQueue::enQueue, this, 0, &threadID);
+      m_deQThread = CreateThread(NULL, 0, CRcvQueue::deQueue, this, 0, &threadID);
    #endif
 }
 
@@ -930,19 +932,10 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
          // wait for a new packet
          #ifndef WIN32
             timespec timeout;
-            timeval now;
+            uint64_t now = CTimer::getTime() + 10000;
 
-            gettimeofday(&now, 0);
-            if (now.tv_usec < 990000)
-            {
-               timeout.tv_sec = now.tv_sec;
-               timeout.tv_nsec = (now.tv_usec + 10000) * 1000;
-            }
-            else
-            {
-               timeout.tv_sec = now.tv_sec + 1;
-               timeout.tv_nsec = (now.tv_usec + 10000 - 1000000) * 1000;
-            }
+            timeout.tv_sec = now / 1000000;
+            timeout.tv_nsec = (now % 1000000) * 1000;
 
             if (0 == pthread_cond_timedwait(&self->m_QueueCond, &self->m_QueueLock, &timeout))
                continue;
@@ -993,11 +986,11 @@ int CRcvQueue::recvfrom(sockaddr* , CPacket& packet, const int32_t& id)
    if ((res = m_pHash->retrieve(id, packet)) < 0)
    {
       #ifndef WIN32
-         timeval now;
+         uint64_t now = CTimer::getTime();
          timespec timeout;
-         gettimeofday(&now, 0);
-         timeout.tv_sec = now.tv_sec + 1;
-         timeout.tv_nsec = now.tv_usec * 1000;
+
+         timeout.tv_sec = now / 1000000 + 1;
+         timeout.tv_nsec = now % 1000000 * 1000;
 
          pthread_cond_timedwait(&m_PassCond, &m_PassLock, &timeout);
       #else

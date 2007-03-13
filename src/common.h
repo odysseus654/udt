@@ -29,7 +29,7 @@ This header file contains the definitions of common types and utility classes.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 01/01/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/12/2007
 *****************************************************************************/
 
 #ifndef __UDT_COMMON_H__
@@ -61,10 +61,6 @@ written by
       int iov_len;
       char* iov_base;
    };
-
-   int gettimeofday(timeval *tv, void*);
-   int readv(SOCKET s, const iovec* vector, int count);
-   int writev(SOCKET s, const iovec* vector, int count);
 #endif
 
 #ifdef UNIX
@@ -143,6 +139,15 @@ public:
       //    CPU frequency.
 
    static uint64_t getCPUFrequency();
+
+      // Functionality:
+      //    check the current time, 64bit, in microseconds.
+      // Parameters:
+      //    None.
+      // Returned value:
+      //    current time in microseconds.
+
+   static uint64_t getTime();
 
 private:
    uint64_t m_ullSchedTime;             // next schedulled time

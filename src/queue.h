@@ -158,10 +158,10 @@ public:
    void remove(const int32_t& id);
 
 public:
-   CUDTList* m_pUList;
+   CUDTList* m_pUList;		// the head node
 
 private:
-   CUDTList* m_pLast;
+   CUDTList* m_pLast;		// the last node
 
 private:
    pthread_mutex_t m_ListLock;

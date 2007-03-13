@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright © 2001 - 2006, The Board of Trustees of the University of Illinois.
+Copyright © 2001 - 2007, The Board of Trustees of the University of Illinois.
 All Rights Reserved.
 
 UDP-based Data Transfer Library (UDT) special version UDT-m
@@ -32,7 +32,7 @@ All the lists are static linked lists in ascending order of sequence numbers.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 12/15/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/13/2007
 *****************************************************************************/
 
 #include "list.h"
@@ -440,7 +440,7 @@ m_iSize(size)
    m_iHead = -1;
    m_iTail = -1;
 
-   gettimeofday(&m_TimeStamp, 0);
+   m_TimeStamp = CTimer::getTime();
 }
 
 CRcvLossList::~CRcvLossList()
@@ -453,7 +453,7 @@ CRcvLossList::~CRcvLossList()
 
 void CRcvLossList::insert(const int32_t& seqno1, const int32_t& seqno2)
 {
-   gettimeofday(&m_TimeStamp, 0);
+   m_TimeStamp = CTimer::getTime();
 
    // Data to be inserted must be larger than all those in the list
    // guaranteed by the UDT receiver
@@ -503,7 +503,7 @@ void CRcvLossList::insert(const int32_t& seqno1, const int32_t& seqno2)
 
 bool CRcvLossList::remove(const int32_t& seqno)
 {
-   gettimeofday(&m_TimeStamp, 0);
+   m_TimeStamp = CTimer::getTime();
 
    if (0 == m_iLength)
       return false; 
@@ -686,13 +686,10 @@ int CRcvLossList::getFirstLostSeq() const
 
 void CRcvLossList::getLossArray(int32_t* array, int& len, const int& limit, const int& threshold)
 {
-   timeval currtime;
-   gettimeofday(&currtime, 0);
-
    len = 0;
 
    // do not feedback NAK unless no retransmission is received within a certain interval
-   if ((currtime.tv_sec - m_TimeStamp.tv_sec) * 1000000 + currtime.tv_usec - m_TimeStamp.tv_usec > threshold)
+   if (int(CTimer::getTime() - m_TimeStamp) < threshold)
       return;
 
    int i = m_iHead;
@@ -713,7 +710,7 @@ void CRcvLossList::getLossArray(int32_t* array, int& len, const int& limit, cons
       i = m_piNext[i];
    }
 
-   gettimeofday(&m_TimeStamp, 0);
+   m_TimeStamp = CTimer::getTime();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright © 2001 - 2006, The Board of Trustees of the University of Illinois.
+Copyright © 2001 - 2007, The Board of Trustees of the University of Illinois.
 All Rights Reserved.
 
 UDP-based Data Transfer Library (UDT) special version UDT-m
@@ -29,7 +29,7 @@ This header file contains the definition of UDT buffer structure and operations.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 12/21/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/13/2007
 *****************************************************************************/
 
 #ifndef __UDT_CORE_H__
@@ -345,7 +345,7 @@ private: // Sending related data
    int m_iAvgNAKNum;                            // average number of NAKs per congestion
    int m_iDecCount;				// number of decreases in a congestion epoch
 
-   timeval m_LastSYNTime;                       // the timestamp when last rate control occured
+   uint64_t m_LastSYNTime;                      // the timestamp when last rate control occured
    bool m_bLoss;                                // if there is any loss during last RC period
 
    volatile int32_t m_iSndLastAck;              // Last ACK received
@@ -424,7 +424,7 @@ private: // Generation and processing of control packet
    void processCtrl(CPacket& ctrlpkt);
 
 private: // Trace
-   timeval m_StartTime;                         // timestamp when the UDT entity is started
+   uint64_t m_StartTime;                        // timestamp when the UDT entity is started
    int64_t m_llSentTotal;                       // total number of sent data packets, including retransmissions
    int64_t m_llRecvTotal;                       // total number of received packets
    int m_iSndLossTotal;                         // total number of lost packets (sender side)
@@ -435,7 +435,7 @@ private: // Trace
    int m_iSentNAKTotal;                         // total number of sent NAK packets
    int m_iRecvNAKTotal;                         // total number of received NAK packets
 
-   timeval m_LastSampleTime;                    // last performance sample time
+   uint64_t m_LastSampleTime;                   // last performance sample time
    int64_t m_llTraceSent;                       // number of pakctes sent in the last trace interval
    int64_t m_llTraceRecv;                       // number of pakctes received in the last trace interval
    int m_iTraceSndLoss;                         // number of lost packets in the last trace interval (sender side)

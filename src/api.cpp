@@ -31,7 +31,7 @@ reference: UDT programming manual and socket programming reference
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 01/10/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/13/2007
 *****************************************************************************/
 
 #ifndef WIN32
@@ -238,7 +238,7 @@ int CUDTUnited::newConnection(const UDTSOCKET listen, const sockaddr* peer, CHan
       {
          // last connection from the "peer" address has been broken
          ns->m_Status = CUDTSocket::CLOSED;
-         gettimeofday(&ns->m_TimeStamp, 0);
+         ns->m_TimeStamp = CTimer::getTime();
 
          #ifndef WIN32
             pthread_mutex_lock(&(ls->m_AcceptLock));
@@ -686,7 +686,7 @@ int CUDTUnited::close(const UDTSOCKET u)
    // a socket will not be immediated removed when it is closed
    // in order to prevent other methods from accessing invalid address
    // a timer is started and the socket will be removed after approximately 1 second
-   gettimeofday(&s->m_TimeStamp, 0);
+   s->m_TimeStamp = CTimer::getTime();
 
    return 0;
 }
@@ -732,11 +732,9 @@ int CUDTUnited::getsockname(const UDTSOCKET u, sockaddr* name, int* namelen)
 
 int CUDTUnited::select(ud_set* readfds, ud_set* writefds, ud_set* exceptfds, const timeval* timeout)
 {
-   timeval entertime, currtime;
+   uint64_t entertime = CTimer::getTime();
 
-   gettimeofday(&entertime, 0);
-
-   int64_t to;
+   uint64_t to;
    if (NULL == timeout)
       to = (int64_t)1 << 62;
    else
@@ -803,9 +801,7 @@ int CUDTUnited::select(ud_set* readfds, ud_set* writefds, ud_set* exceptfds, con
          Sleep(1);
       #endif
 
-      gettimeofday(&currtime, 0);
-
-   } while (to > ((currtime.tv_sec - entertime.tv_sec) * 1000000 + currtime.tv_usec - entertime.tv_usec));
+   } while (to > CTimer::getTime() - entertime);
 
    if (0 < count)
    {
@@ -883,7 +879,7 @@ void CUDTUnited::checkBrokenSockets()
          {
             //close broken connections and start removal timer
             i->second->m_Status = CUDTSocket::CLOSED;
-            gettimeofday(&i->second->m_TimeStamp, 0);
+            i->second->m_TimeStamp = CTimer::getTime();
 
             // remove from listener's queue
             map<UDTSOCKET, CUDTSocket*>::iterator j = m_Sockets.find(i->second->m_ListenSocket);
@@ -893,11 +889,8 @@ void CUDTUnited::checkBrokenSockets()
       }
       else
       {
-         // if timeout, delete the socket
-         timeval currtime;
-         gettimeofday(&currtime, 0);
-         // timeout 1-2 seconds to destroy a socket
-         if ((i->second->m_TimeStamp.tv_sec >= 0) && (currtime.tv_sec - i->second->m_TimeStamp.tv_sec >= 2))
+         // timeout 1 second to destroy a socket
+         if (CTimer::getTime() - i->second->m_TimeStamp > 1000000)
             tbr.insert(i->second->m_Socket);
 
          // sockets cannot be removed here because it will invalidate the map iterator

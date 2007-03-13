@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright © 2001 - 2006, The Board of Trustees of the University of Illinois.
+Copyright © 2001 - 2007, The Board of Trustees of the University of Illinois.
 All Rights Reserved.
 
 UDP-based Data Transfer Library (UDT) special version UDT-m
@@ -29,7 +29,7 @@ This header file contains the definition of structures related to UDT API.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 12/21/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/13/2007
 *****************************************************************************/
 
 #ifndef __UDT_API_H__
@@ -56,7 +56,7 @@ struct CUDTSocket
    enum UDTSTATUS {INIT = 1, OPENED, LISTENING, CONNECTED, CLOSED};
    UDTSTATUS m_Status;                       // current socket state
 
-   timeval m_TimeStamp;                      // time when the socket is closed
+   uint64_t m_TimeStamp;                     // time when the socket is closed
 
    int m_iIPversion;                         // IP version
    sockaddr* m_pSelfAddr;                    // pointer to the local address of the socket

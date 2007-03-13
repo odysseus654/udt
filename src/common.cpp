@@ -30,7 +30,7 @@ mutex facility, and exception processing.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 01/01/2007
+   Yunhong Gu [ygu@cs.uic.edu], last updated 03/11/2007
 *****************************************************************************/
 
 
@@ -45,49 +45,6 @@ written by
 #endif
 #include <cmath>
 #include "common.h"
-
-#ifdef WIN32
-   int gettimeofday(timeval *tv, void*)
-   {
-      LARGE_INTEGER ccf;
-      if (QueryPerformanceFrequency(&ccf))
-      {
-         LARGE_INTEGER cc;
-         QueryPerformanceCounter(&cc);
-         tv->tv_sec = (long)(cc.QuadPart / ccf.QuadPart);
-         tv->tv_usec = (long)((cc.QuadPart % ccf.QuadPart) / (ccf.QuadPart / 1000000));
-      }
-      else
-      {
-         uint64_t ft;
-         GetSystemTimeAsFileTime((FILETIME *)&ft);
-         tv->tv_sec = (long)(ft / 10000000);
-         tv->tv_usec = (long)((ft % 10000000) / 10);
-      }
-
-      return 0;
-   }
-
-   int readv(SOCKET s, const iovec* vector, int count)
-   {
-      DWORD rsize = 0;
-      DWORD flag = 0;
-
-      WSARecv(s, (LPWSABUF)vector, count, &rsize, &flag, NULL, NULL);
-
-      return rsize;
-   }
-
-   int writev(SOCKET s, const iovec* vector, int count)
-   {
-      DWORD ssize = 0;
-
-      WSASend(s, (LPWSABUF)vector, count, &ssize, 0, NULL, NULL);
-
-      return ssize;
-   }
-#endif
-
 
 uint64_t CTimer::s_ullCPUFrequency = CTimer::readCPUFrequency();
 
@@ -117,11 +74,7 @@ void CTimer::rdtsc(uint64_t &x)
 {
    #ifdef WIN32
       if (!QueryPerformanceCounter((LARGE_INTEGER *)&x))
-      {
-         timeval t;
-         gettimeofday(&t, 0);
-         x = t.tv_sec * 1000000 + t.tv_usec;
-      }
+         x = getTime();
    #elif IA32
       // read CPU clock with RDTSC instruction on IA32 acrh
       __asm__ volatile (".byte 0x0f, 0x31" : "=A" (x));
@@ -253,6 +206,29 @@ void CTimer::tick()
       pthread_cond_signal(&m_TickCond);
    #else
       SetEvent(m_TickCond);
+   #endif
+}
+
+uint64_t CTimer::getTime()
+{
+   #ifndef WIN32
+      timeval t;
+      gettimeofday(&t, 0);
+      return t.tv_sec * 1000000ULL + t.tv_usec;
+   #else
+      LARGE_INTEGER ccf;
+      if (QueryPerformanceFrequency(&ccf))
+      {
+         LARGE_INTEGER cc;
+         QueryPerformanceCounter(&cc);
+         return (cc.QuadPart / ccf.QuadPart) * 1000000ULL + (cc.QuadPart % ccf.QuadPart) / (ccf.QuadPart / 1000000);
+      }
+      else
+      {
+         FILETIME ft;
+         GetSystemTimeAsFileTime((FILETIME *)&ft);
+         return ((uint64_t)ft.dwHighDateTime << 32 + ft.dwLowDateTime) / 10;
+      }
    #endif
 }
 

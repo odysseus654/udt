@@ -34,7 +34,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 01/07/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/13/2007
 *****************************************************************************/
 
 #ifndef WIN32
@@ -470,7 +470,7 @@ void CUDT::open(const sockaddr* addr)
    m_iPeerISN = 0;
  
    m_bLoss = false;
-   gettimeofday(&m_LastSYNTime, 0);
+   m_LastSYNTime = CTimer::getTime();
 
    m_iSndLastAck = 0;
    m_iSndLastDataAck = 0;
@@ -518,9 +518,9 @@ void CUDT::open(const sockaddr* addr)
    #endif
 
    // trace information
-   gettimeofday(&m_StartTime, 0);
+   m_StartTime = CTimer::getTime();
    m_llSentTotal = m_llRecvTotal = m_iSndLossTotal = m_iRcvLossTotal = m_iRetransTotal = m_iSentACKTotal = m_iRecvACKTotal = m_iSentNAKTotal = m_iRecvNAKTotal = 0;
-   gettimeofday(&m_LastSampleTime, 0);
+   m_LastSampleTime = CTimer::getTime();
    m_llTraceSent = m_llTraceRecv = m_iTraceSndLoss = m_iTraceRcvLoss = m_iTraceRetrans = m_iSentACK = m_iRecvACK = m_iSentNAK = m_iRecvNAK = 0;
 
    m_pSNode = new CUDTList;
@@ -708,9 +708,7 @@ void CUDT::connect(const sockaddr* serv_addr)
    req->m_iID = m_SocketID;
 
    // Random Initial Sequence Number
-   timeval currtime;
-   gettimeofday(&currtime, 0);
-   srand(currtime.tv_usec);
+   srand((unsigned int)CTimer::getTime());
    m_iISN = req->m_iISN = (int32_t)(double(rand()) * CSeqNo::m_iMaxSeqNo / (RAND_MAX + 1.0));
 
    m_iLastDecSeq = req->m_iISN - 1;
@@ -730,13 +728,12 @@ void CUDT::connect(const sockaddr* serv_addr)
 
    m_pRcvQueue->recvfrom(NULL, response, m_SocketID);
 
-   int timeo = 3000000;
+   uint64_t timeo = 3000000;
 
    if (m_bRendezvous)
       timeo *= 10;
 
-   timeval entertime;
-   gettimeofday(&entertime, 0);
+   uint64_t entertime = CTimer::getTime();
 
    while (((response.getLength() <= 0) || (1 != response.getFlag()) || (0 != response.getType())) && (!m_bClosing))
    {
@@ -745,8 +742,7 @@ void CUDT::connect(const sockaddr* serv_addr)
       response.setLength(m_iPayloadSize);
       m_pRcvQueue->recvfrom(NULL, response, m_SocketID);
 
-      gettimeofday(&currtime, 0);
-      if ((currtime.tv_sec - entertime.tv_sec) * 1000000 + (currtime.tv_usec - entertime.tv_usec) > timeo)
+      if (CTimer::getTime() - entertime > timeo)
       {
          delete [] reqdata;
          delete [] resdata;
@@ -911,19 +907,15 @@ void CUDT::close()
 
    if (0 != m_Linger.l_onoff)
    {
-      timeval t1, t2;
-      gettimeofday(&t1, 0);
-      t2 = t1;
+      uint64_t entertime = CTimer::getTime();
 
-      while (!m_bBroken && m_bConnected && (m_pSndBuffer->getCurrBufSize() > 0) && ((t2.tv_sec - t1.tv_sec - 1) < m_Linger.l_linger))
+      while (!m_bBroken && m_bConnected && (m_pSndBuffer->getCurrBufSize() > 0) && (CTimer::getTime() - entertime < m_Linger.l_linger * 1000000ULL))
       {
          #ifndef WIN32
             usleep(10);
          #else
             Sleep(1);
          #endif
-
-         gettimeofday(&t2, 0);
       }
    }
 
@@ -1358,10 +1350,9 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
 
       #ifndef CUSTOM_CC
          // an ACK may activate rate control
-         timeval currtime;
-         gettimeofday(&currtime, 0);
+         uint64_t currtime = CTimer::getTime();
 
-         if (((currtime.tv_sec - m_LastSYNTime.tv_sec) * 1000000 + currtime.tv_usec - m_LastSYNTime.tv_usec) >= m_iSYNInterval)
+         if (currtime - m_LastSYNTime >= (uint64_t)m_iSYNInterval)
          {
             m_LastSYNTime = currtime;
 
@@ -1644,12 +1635,11 @@ int CUDT::send(char* data, const int& len, int* overlapped, const UDT_MEM_ROUTIN
             }
             else
             {
-               timeval currtime; 
+               uint64_t currtime = CTimer::getTime(); 
                timespec locktime; 
     
-               gettimeofday(&currtime, 0); 
-               locktime.tv_sec = currtime.tv_sec + ((int64_t)m_iSndTimeOut * 1000 + currtime.tv_usec) / 1000000; 
-               locktime.tv_nsec = ((int64_t)m_iSndTimeOut * 1000 + currtime.tv_usec) % 1000000 * 1000; 
+               locktime.tv_sec = currtime / 1000000 + (currtime % 1000000 + m_iSndTimeOut * 1000ULL) / 1000000;
+               locktime.tv_nsec = (m_iSndTimeOut * 1000ULL + currtime % 1000000) % 1000000 * 1000;
     
                pthread_cond_timedwait(&m_SendBlockCond, &m_SendBlockLock, &locktime);
             }
@@ -1745,12 +1735,11 @@ int CUDT::recv(char* data, const int& len, int* overlapped, UDT_MEM_ROUTINE func
             }
             else
             {
-               timeval currtime; 
+               uint64_t currtime = CTimer::getTime(); 
                timespec locktime; 
     
-               gettimeofday(&currtime, 0); 
-               locktime.tv_sec = currtime.tv_sec + ((int64_t)m_iRcvTimeOut * 1000 + currtime.tv_usec) / 1000000; 
-               locktime.tv_nsec = ((int64_t)m_iRcvTimeOut * 1000 + currtime.tv_usec) % 1000000 * 1000; 
+               locktime.tv_sec = currtime / 1000000 + (currtime % 1000000 + m_iRcvTimeOut * 1000ULL) / 1000000;
+               locktime.tv_nsec = (m_iRcvTimeOut * 1000ULL + currtime % 1000000) % 1000000 * 1000;
     
                pthread_cond_timedwait(&m_RecvDataCond, &m_RecvDataLock, &locktime); 
             }
@@ -2045,7 +2034,7 @@ int64_t CUDT::sendfile(ifstream& ifs, const int64_t& offset, const int64_t& size
    // sending block by block
    while (tosend > 0)
    {
-      unitsize = (tosend >= block) ? block : tosend;
+      unitsize = int((tosend >= block) ? block : tosend);
 
       try
       {
@@ -2142,7 +2131,7 @@ int64_t CUDT::recvfile(ofstream& ofs, const int64_t& offset, const int64_t& size
    // receiving...
    while (torecv > 0)
    {
-      unitsize = (torecv >= block) ? block : torecv;
+      unitsize = int((torecv >= block) ? block : torecv);
 
       try
       {
@@ -2179,10 +2168,9 @@ int64_t CUDT::recvfile(ofstream& ofs, const int64_t& offset, const int64_t& size
 
 void CUDT::sample(CPerfMon* perf, bool clear)
 {
-   timeval currtime;
-   gettimeofday(&currtime, 0);
+   uint64_t currtime = CTimer::getTime();
 
-   perf->msTimeStamp = (currtime.tv_sec - m_StartTime.tv_sec) * 1000 + (currtime.tv_usec - m_StartTime.tv_usec) / 1000;
+   perf->msTimeStamp = (currtime - m_StartTime) / 1000;
 
    m_llSentTotal += m_llTraceSent;
    m_llRecvTotal += m_llTraceRecv;
@@ -2214,7 +2202,7 @@ void CUDT::sample(CPerfMon* perf, bool clear)
    perf->pktSentNAK = m_iSentNAK;
    perf->pktRecvNAK = m_iRecvNAK;
 
-   double interval = (currtime.tv_sec - m_LastSampleTime.tv_sec) * 1000000.0 + currtime.tv_usec - m_LastSampleTime.tv_usec;
+   double interval = double(currtime - m_LastSampleTime);
 
    perf->mbpsSendRate = double(m_llTraceSent) * m_iPayloadSize * 8.0 / interval;
    perf->mbpsRecvRate = double(m_llTraceRecv) * m_iPayloadSize * 8.0 / interval;
@@ -2446,9 +2434,7 @@ int CUDT::pack(CPacket& packet, uint64_t& ts)
       }
    }
 
-   timeval now;
-   gettimeofday(&now, 0);
-   packet.m_iTimeStamp = (now.tv_sec - m_StartTime.tv_sec) * 1000000 + now.tv_usec - m_StartTime.tv_usec;
+   packet.m_iTimeStamp = int(CTimer::getTime() - m_StartTime);
    m_pSndTimeWindow->onPktSent(packet.m_iTimeStamp);
 
    packet.m_iID = m_PeerID;
