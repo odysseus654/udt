@@ -51,7 +51,7 @@ written by
 #include <cmath>
 #include "queue.h"
 #include "core.h"
-
+#include <iostream>
 using namespace std;
 
 
@@ -74,7 +74,7 @@ CUDT::CUDT():
 //
 // These constants are defined in UDT specification. They MUST NOT be changed!
 //
-m_iVersion(3),
+m_iVersion(4),
 m_iSYNInterval(10000),
 m_iSelfClockInterval(64),
 m_iQuickStartPkts(16)
@@ -2609,7 +2609,6 @@ void CUDT::process(CPacket& packet)
       if (CSeqNo::incseq(m_iSndCurrSeqNo) != m_iSndLastAck)
       {
          int32_t csn = m_iSndCurrSeqNo;
-
          m_pSndLossList->insert(const_cast<int32_t&>(m_iSndLastAck), csn);
       }
       else

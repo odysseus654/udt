@@ -42,7 +42,7 @@ written by
 #endif
 #include "api.h"
 #include "core.h"
-
+#include <iostream>
 using namespace std;
 
 
@@ -98,9 +98,11 @@ CUDTSocket::~CUDTSocket()
 
 ////////////////////////////////////////////////////////////////////////////////
 
-CUDTUnited::CUDTUnited():
-m_SocketID(1 << 30)
+CUDTUnited::CUDTUnited()
 {
+   srand((unsigned int)CTimer::getTime());
+   m_SocketID = 1 + (int)(1 << 30) * (rand()/(RAND_MAX + 1.0));
+
    #ifndef WIN32
       pthread_mutex_init(&m_ControlLock, NULL);
       pthread_mutex_init(&m_IDLock, NULL);

@@ -29,12 +29,142 @@ This file contains the implementation of UDT multiplexer.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/11/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/13/2007
 *****************************************************************************/
 
 #include "common.h"
 #include "queue.h"
 #include "core.h"
+#include <iostream>
+using namespace std;
+
+CUnitQueue::CUnitQueue():
+m_pUnit(NULL),
+m_iSize(0),
+m_iCount(0)
+{
+   m_vpBuffer.clear();
+   m_vpAddrBuf.clear();
+}
+
+CUnitQueue::~CUnitQueue()
+{
+   delete [] m_pUnit;
+
+   for (vector<char*>::iterator i = m_vpBuffer.begin(); i != m_vpBuffer.end(); ++ i)
+      delete [] *i;
+   m_vpBuffer.clear();
+
+   for (vector<char*>::iterator i = m_vpAddrBuf.begin(); i != m_vpAddrBuf.end(); ++ i)
+      delete [] *i;
+   m_vpAddrBuf.clear();
+}
+
+int CUnitQueue::init(const int& size, const int& mss)
+{
+   char* tempb = NULL;
+   char* tempa = NULL;
+
+   try
+   {
+      m_pUnit = new CUnit [size];
+      tempb = new char [size * mss];
+      tempa = (char*) new sockaddr_in [size];
+   }
+   catch (...)
+   {
+      delete [] m_pUnit;
+      delete [] tempb;
+      delete [] tempa;
+      m_pUnit = NULL;
+
+      return -1;
+   }
+
+   for (int i = 0; i < size; ++ i)
+   {
+      m_pUnit[i].m_bValid = false;
+      m_pUnit[i].m_pAddr = (sockaddr*)((sockaddr_in*)tempa + i);
+      m_pUnit[i].m_Packet.m_pcData = tempb + i * mss;
+   }
+
+   m_vpBuffer.insert(m_vpBuffer.begin(), tempb);
+   m_vpAddrBuf.insert(m_vpAddrBuf.begin(), tempa);
+
+   m_iSize = size;
+   m_iMSS = mss;
+
+   m_pAvailUnit = m_pUnit;
+
+   return 0;
+}
+
+int CUnitQueue::increase()
+{
+//cout << "INCREASE!!!!\n";
+
+   CUnit* tempu = NULL;
+   char* tempb = NULL;
+   char* tempa = NULL;
+
+   try
+   {
+      tempu = new CUnit [m_iSize * 2];
+      tempb = new char [m_iSize * m_iMSS];
+      tempa = (char*) new sockaddr_in [m_iSize];
+   }
+   catch (...)
+   {
+      delete [] tempu;
+      delete [] tempb;
+      delete [] tempa;
+
+      return -1;
+   }
+
+   memcpy(tempu, m_pUnit, m_iSize * sizeof(CUnit));
+   delete [] m_pUnit;
+   m_pUnit = tempu;
+   tempu = m_pUnit + m_iSize;
+
+   for (int i = 0; i < m_iSize; ++ i)
+   {
+      tempu[i].m_bValid = false;
+      tempu[i].m_pAddr = (sockaddr*)((sockaddr_in*)tempa + i);
+      tempu[i].m_Packet.m_pcData = tempb + i * m_iMSS;
+   }
+
+   m_vpBuffer.insert(m_vpBuffer.begin(), tempb);
+   m_vpAddrBuf.insert(m_vpAddrBuf.begin(), tempa);
+
+   m_iSize *= 2;
+   return 0;
+}
+
+int CUnitQueue::shrink()
+{
+   // currently queue cannot be shrinked.
+   return -1;
+}
+
+CUnit* CUnitQueue::getNextAvailUnit()
+{
+   if (m_iCount / m_iSize > 0.9)
+      increase();
+
+   if (m_iCount == m_iSize)
+      return NULL;
+
+   if (m_pAvailUnit == m_pUnit + m_iSize - 1)
+      m_pAvailUnit = m_pUnit;
+
+   while (m_pAvailUnit->m_bValid) ++ m_pAvailUnit;
+
+   ++ m_iCount;
+
+   return m_pAvailUnit;
+}
+
 
 CSndUList::CSndUList():
 m_pUList(NULL),
@@ -678,10 +808,7 @@ void CHash::remove(const int32_t& id)
 
 //
 CRcvQueue::CRcvQueue():
-m_pUnitQueue(NULL),
 m_iQueueLen(0),
-m_iUnitSize(0),
-m_iPtr(0),
 m_pActiveQueue(NULL),
 m_iAQHeadPtr(0),
 m_iAQTailPtr(0),
@@ -705,14 +832,6 @@ m_ListenerID(-1)
 
 CRcvQueue::~CRcvQueue()
 {
-   if (NULL != m_pUnitQueue)
-   {
-      for (int i = 0; i < m_iQueueLen; ++ i)
-         delete [] m_pUnitQueue[i].m_Packet.m_pcData;
-
-      delete [] m_pUnitQueue;
-   }
-
    if (NULL != m_pActiveQueue)
       delete [] m_pActiveQueue;
 
@@ -733,13 +852,7 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
    m_iQueueLen = qsize;
    m_iPayloadSize = payload;
 
-   m_pUnitQueue = new CUnit[qsize * 2];
-   for (int i = 0; i < m_iQueueLen; ++ i)
-   {
-      m_pUnitQueue[i].m_bValid = false;
-      m_pUnitQueue[i].m_Packet.m_pcData = new char[m_iPayloadSize];
-      m_pUnitQueue[i].m_pAddr = (sockaddr*)new sockaddr_in;
-   }
+   m_UnitQueue.init(qsize, payload);
 
    m_pActiveQueue = new CUnit*[qsize];
    m_pPassiveQueue = new CUnit*[qsize];
@@ -773,6 +886,9 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
    CRcvQueue* self = (CRcvQueue*)param;
 
    bool empty = false;
+   CUnit temp;
+   temp.m_Packet.m_pcData = new char[self->m_iPayloadSize];
+   CUnit* unit;
 
    while (true)
    {
@@ -781,36 +897,33 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
       #endif
 
       // find next available slot for incoming packet
-
-      while (self->m_pUnitQueue[self->m_iPtr].m_bValid)
-      {
-         ++ self->m_iPtr;
-
-         if (self->m_iPtr == self->m_iQueueLen)
-            self->m_iPtr = 0;
-      }
-
-      self->m_pUnitQueue[self->m_iPtr].m_Packet.setLength(self->m_iPayloadSize);
+      unit = self->m_UnitQueue.getNextAvailUnit();
+      if (NULL == unit)
+         unit = &temp;
+      
+      unit->m_Packet.setLength(self->m_iPayloadSize);
 
       // reading next incoming packet
-      if (self->m_pChannel->recvfrom(self->m_pUnitQueue[self->m_iPtr].m_pAddr, self->m_pUnitQueue[self->m_iPtr].m_Packet) <= 0)
+      if (self->m_pChannel->recvfrom(unit->m_pAddr, unit->m_Packet) <= 0)
          continue;
+      if (unit == &temp)
+         continue;
+
+//cout << "recv sth!!! " << unit->m_Packet.getLength() << endl;
+
+      unit->m_bValid = true;
 
       if ((self->m_iAQTailPtr == self->m_iAQHeadPtr) && (self->m_iPQTailPtr == self->m_iPQHeadPtr))
          empty = true;
 
-      if (0 == self->m_pUnitQueue[self->m_iPtr].m_Packet.getFlag())
+      if (0 == unit->m_Packet.getFlag())
       {
          // queue is full, disgard the packet
          if ((self->m_iAQTailPtr + 1 == self->m_iAQHeadPtr) || ((self->m_iAQTailPtr == self->m_iQueueLen - 1) && (self->m_iAQHeadPtr == 0)))
-         {
             continue;
-         }
 
          // this is a data packet, put it into active queue
-         self->m_pActiveQueue[self->m_iAQTailPtr] = self->m_pUnitQueue + self->m_iPtr;
-
-         self->m_pUnitQueue[self->m_iPtr].m_bValid = true;
+         self->m_pActiveQueue[self->m_iAQTailPtr] = unit;
 
          if (self->m_iQueueLen != self->m_iAQTailPtr + 1)
             ++ self->m_iAQTailPtr;
@@ -824,9 +937,7 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
             continue;
 
          // this is a control packet, put it into passive queue
-         self->m_pPassiveQueue[self->m_iPQTailPtr] = self->m_pUnitQueue + self->m_iPtr;
-
-         self->m_pUnitQueue[self->m_iPtr].m_bValid = true;
+         self->m_pPassiveQueue[self->m_iPQTailPtr] = unit;
 
          if (self->m_iQueueLen != self->m_iPQTailPtr + 1)
             ++ self->m_iPQTailPtr;
@@ -845,6 +956,8 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
          empty = false;
       }
    }
+
+   delete [] temp.m_Packet.m_pcData;
 
    return NULL;
 }
@@ -898,6 +1011,7 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
          }
 
          self->m_pPassiveQueue[self->m_iPQHeadPtr]->m_bValid = false;
+         self->m_UnitQueue.m_iCount --;
 
          if (self->m_iQueueLen != self->m_iPQHeadPtr + 1)
             ++ self->m_iPQHeadPtr;
@@ -921,6 +1035,7 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
          }
 
          self->m_pActiveQueue[self->m_iAQHeadPtr]->m_bValid = false;
+         self->m_UnitQueue.m_iCount --;
 
          if (self->m_iQueueLen != self->m_iAQHeadPtr + 1)
             ++ self->m_iAQHeadPtr;
@@ -931,6 +1046,7 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
       {
          // wait for a new packet
          #ifndef WIN32
+//cout << "into cs!\n";
             timespec timeout;
             uint64_t now = CTimer::getTime() + 10000;
 
@@ -939,6 +1055,7 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
 
             if (0 == pthread_cond_timedwait(&self->m_QueueCond, &self->m_QueueLock, &timeout))
                continue;
+//cout << "leave cs!\n";
          #else
             WaitForSingleObject(self->m_QueueCond, 1);
          #endif
@@ -947,9 +1064,17 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
       // take care of the timing event for all UDT sockets
 
       CUDTList* ul = self->m_pRcvUList->m_pUList;
-
+/*
+if (ul == NULL)
+   cout << "nothing??\n";
+else
+   cout << "something!!! " << ul->m_iID << endl;
+*/
       uint64_t currtime;
       CTimer::rdtsc(currtime);
+
+//      cout << "activate " << (NULL == ul) << " " << ul->m_llTimeStamp << " " << currtime - 10000 * CTimer::getCPUFrequency() << endl;
+
       while ((NULL != ul) && (ul->m_llTimeStamp < currtime - 10000 * CTimer::getCPUFrequency()))
       {
          CUDT* u = ul->m_pUDT;

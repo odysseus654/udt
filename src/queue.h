@@ -53,6 +53,34 @@ struct CUnit
    bool m_bValid;		// if this is a valid entry
 };
 
+class CUnitQueue
+{
+friend class CRcvQueue;
+
+public:
+   CUnitQueue();
+   ~CUnitQueue();
+
+public:
+   int init(const int& size, const int& mss);
+   int increase();
+   int shrink();
+
+   CUnit* getNextAvailUnit();
+
+private:
+   CUnit* m_pUnit;		// unit queue
+   vector<char*> m_vpBuffer;	// data buffer
+   vector<char*> m_vpAddrBuf;	// addr information
+
+   int m_iSize;			// size of the unit queue, in number of packets
+   int m_iCount;		// number of valid packets in the queue
+
+   int m_iMSS;			// unit buffer size
+
+   CUnit* m_pAvailUnit;		// recent available unit
+};
+
 
 struct CUDTList
 {
@@ -363,10 +391,9 @@ private:
    pthread_t m_deQThread;
 
 private:
-   CUnit* m_pUnitQueue;		// The received packet queue
-   int m_iQueueLen;		// Size of the queue
-   int m_iUnitSize;		// Size of the storage per queue entry
-   int m_iPtr;			// Next available writing entry
+   CUnitQueue m_UnitQueue;	// The received packet queue
+
+   int m_iQueueLen;		// length of AQ and PQ
 
    CUnit** m_pActiveQueue;	// Queue for data packets
    int m_iAQHeadPtr;		// Header pointer for AQ, first available packet
