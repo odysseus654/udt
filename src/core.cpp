@@ -84,7 +84,6 @@ m_iSelfClockInterval(64)
    m_pSndLossList = NULL;
    m_pRcvLossList = NULL;
    m_pTimer = NULL;
-   m_pIrrPktList = NULL;
    m_pACKWindow = NULL;
    m_pSndTimeWindow = NULL;
    m_pRcvTimeWindow = NULL;
@@ -144,7 +143,6 @@ m_iSelfClockInterval(ancestor.m_iSelfClockInterval)
    m_pSndLossList = NULL;
    m_pRcvLossList = NULL;
    m_pTimer = NULL;
-   m_pIrrPktList = NULL;
    m_pACKWindow = NULL;
    m_pSndTimeWindow = NULL;
    m_pRcvTimeWindow = NULL;
@@ -209,8 +207,6 @@ CUDT::~CUDT()
       delete m_pRcvLossList;
    if (m_pTimer)
       delete m_pTimer;
-   if (m_pIrrPktList)
-      delete m_pIrrPktList;
    if (m_pACKWindow)
       delete m_pACKWindow;
    if (m_pSndTimeWindow)
@@ -799,7 +795,6 @@ void CUDT::connect(const sockaddr* serv_addr)
    // after introducing lite ACK, the sndlosslist may not be cleared in time, so it requires twice space.
    m_pSndLossList = new CSndLossList(m_iMaxFlowWindowSize * 2);
    m_pRcvLossList = new CRcvLossList(m_iFlightFlagSize);
-   m_pIrrPktList = new CIrregularPktList(m_iFlightFlagSize);
    m_pACKWindow = new CACKWindow(4096);
    m_pRcvTimeWindow = new CPktTimeWindow(m_iQuickStartPkts, 16, 64);
    m_pSndTimeWindow = new CPktTimeWindow();
@@ -868,7 +863,6 @@ void CUDT::connect(const sockaddr* peer, CHandShake* hs)
    m_pRcvBuffer = new CRcvBuffer(m_iUDTBufSize, &(m_pRcvQueue->m_UnitQueue));
    m_pSndLossList = new CSndLossList(m_iMaxFlowWindowSize * 2);
    m_pRcvLossList = new CRcvLossList(m_iFlightFlagSize);
-   m_pIrrPktList = new CIrregularPktList(m_iFlightFlagSize);
    m_pACKWindow = new CACKWindow(4096);
    m_pRcvTimeWindow = new CPktTimeWindow(m_iQuickStartPkts, 16, 64);
    m_pSndTimeWindow = new CPktTimeWindow();
@@ -975,8 +969,6 @@ void CUDT::close()
       delete m_pRcvLossList;
    if (m_pTimer)
       delete m_pTimer;
-   if (m_pIrrPktList)
-      delete m_pIrrPktList;
    if (m_pACKWindow)
       delete m_pACKWindow;
    if (m_pSndTimeWindow)
@@ -993,7 +985,6 @@ void CUDT::close()
    m_pSndLossList = NULL;
    m_pRcvLossList = NULL;
    m_pTimer = NULL;
-   m_pIrrPktList = NULL;
    m_pACKWindow = NULL;
    m_pSndTimeWindow = NULL;
    m_pRcvTimeWindow = NULL;
@@ -1056,8 +1047,6 @@ void CUDT::sendCtrl(const int& pkttype, void* lparam, void* rparam, const int& s
             if ((m_bSynRecving) && (0 != m_pRcvBuffer->getRcvDataSize()))
                SetEvent(m_RecvDataCond);
          #endif
-
-         m_pIrrPktList->deleteIrregularPkt(m_iRcvLastAck);
       }
       else if (ack == m_iRcvLastAck)
       {
@@ -2533,13 +2522,9 @@ void CUDT::processData(CUnit* unit)
    }
 
    // This is not a regular fixed size packet...
+   //an irregular sized packet usually indicates the end of a message, so send an ACK immediately
    if (packet.getLength() != m_iPayloadSize)
-   {
-      m_pIrrPktList->addIrregularPkt(packet.m_iSeqNo, m_iPayloadSize - packet.getLength());
-
-      //an irregular sized packet usually indicates the end of a message, so send an ACK immediately
       m_pTimer->rdtsc(m_ullNextACKTime);
-   }
 
    // Update the current largest sequence number that has been received.
    // Or it is a retransmitted packet, remove it from receiver loss list.

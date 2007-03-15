@@ -334,7 +334,6 @@ private: // Sending related data
 private: // Receiving related data
    CRcvBuffer* m_pRcvBuffer;                    // Receiver buffer
    CRcvLossList* m_pRcvLossList;                // Receiver loss list
-   CIrregularPktList* m_pIrrPktList;            // Irregular sized packet list
    CACKWindow* m_pACKWindow;                    // ACK history window
    CPktTimeWindow* m_pRcvTimeWindow;            // Packet arrival time window
 

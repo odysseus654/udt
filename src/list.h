@@ -187,52 +187,5 @@ private:
    uint64_t m_TimeStamp;		// last list update time or NAK feedback time
 };
 
-////////////////////////////////////////////////////////////////////////////////
-
-class CIrregularPktList
-{
-public:
-   CIrregularPktList(const int& size);
-   ~CIrregularPktList();
-
-      // Functionality:
-      //    Read the total size error of all the irregular packets prior to "seqno".
-      // Parameters:
-      //    0) [in] seqno: sequence number.
-      // Returned value:
-      //    the total size error of all the irregular packets prior to (excluding) "seqno".
-
-   int currErrorSize(const int32_t& seqno) const;
-
-      // Functionality:
-      //    Insert an irregular packet into the list.
-      // Parameters:
-      //    0) [in] seqno: sequence number.
-      //    1) [in] errsize: size error of the current packet.
-      // Returned value:
-      //    None
-
-   void addIrregularPkt(const int32_t& seqno, const int& errsize);
-
-      // Functionality:
-      //    Remove ALL the packets prior to "seqno".
-      // Parameters:
-      //    0) [in] seqno: sequence number.
-      // Returned value:
-      //    None
-
-   void deleteIrregularPkt(const int32_t& seqno);
-
-private:
-   int32_t* m_piData;                   // sequence number
-   int* m_piErrorSize;                  // size error of the node
-   int* m_piNext;                       // next node in the list
-
-   int m_iHead;                         // first node in the list
-   int m_iLength;                       // number of irregular packets in the list
-   int m_iSize;                         // size of the static array
-   int m_iInsertPos;                    // last node insert position
-};
-
 
 #endif
