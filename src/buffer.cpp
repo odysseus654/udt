@@ -39,7 +39,8 @@ written by
 #include <cstring>
 #include <cmath>
 #include "buffer.h"
-
+#include <iostream>
+using namespace std;
 
 CSndBuffer::CSndBuffer(const int& mss):
 m_pBlock(NULL),
@@ -307,21 +308,15 @@ void CSndBuffer::releaseBuffer(char* buf, int, void*)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-CRcvBuffer::CRcvBuffer(const int& mss):
-m_pcData(NULL),
-m_iSize(40960000),
+CRcvBuffer::CRcvBuffer(CUnitQueue* queue):
+m_pUnit(NULL),
+m_iSize(65536),
+m_pUnitQueue(queue),
 m_iStartPos(0),
 m_iLastAckPos(0),
-m_iMaxOffset(0),
-m_pcUserBuf(NULL),
-m_iUserBufSize(0),
-m_pPendingBlock(NULL),
-m_pLastBlock(NULL),
-m_iPendingSize(0),
-m_pMessageList(NULL),
-m_iMSS(mss)
+m_pMessageList(NULL)
 {
-   m_pcData = new char [m_iSize];
+   m_pUnit = new CUnit* [m_iSize];
 
    #ifndef WIN32
       pthread_mutex_init(&m_MsgLock, NULL);
@@ -330,21 +325,17 @@ m_iMSS(mss)
    #endif
 }
 
-CRcvBuffer::CRcvBuffer(const int& mss, const int& bufsize):
-m_pcData(NULL),
+CRcvBuffer::CRcvBuffer(const int& bufsize, CUnitQueue* queue):
+m_pUnit(NULL),
 m_iSize(bufsize),
+m_pUnitQueue(queue),
 m_iStartPos(0),
 m_iLastAckPos(0),
-m_iMaxOffset(0),
-m_pcUserBuf(NULL),
-m_iUserBufSize(0),
-m_pPendingBlock(NULL),
-m_pLastBlock(NULL),
-m_iPendingSize(0),
-m_pMessageList(NULL),
-m_iMSS(mss)
+m_pMessageList(NULL)
 {
-   m_pcData = new char [m_iSize];
+   m_pUnit = new CUnit* [m_iSize];
+   for (int i = 0; i < m_iSize; ++ i)
+      m_pUnit[i] = NULL;
 
    #ifndef WIN32
       pthread_mutex_init(&m_MsgLock, NULL);
@@ -355,16 +346,16 @@ m_iMSS(mss)
 
 CRcvBuffer::~CRcvBuffer()
 {
-   delete [] m_pcData;
-
-   Block* p = m_pPendingBlock;
-
-   while (NULL != p)
+   for (int i = 0; i < m_iSize; ++ i)
    {
-     m_pPendingBlock = m_pPendingBlock->m_next;
-     delete p;
-     p = m_pPendingBlock;
+      if (NULL != m_pUnit[i])
+      {
+         m_pUnit[i]->m_bValid = false;
+         m_pUnitQueue->m_iCount --;
+      }
    }
+
+   delete [] m_pUnit;
 
    if (NULL != m_pMessageList)
       delete [] m_pMessageList;
@@ -376,430 +367,97 @@ CRcvBuffer::~CRcvBuffer()
    #endif
 }
 
-bool CRcvBuffer::nextDataPos(char** data, int offset, const int& len)
+void CRcvBuffer::addData(CUnit* unit, int offset)
 {
-   // Search the user data block first
-   if (NULL != m_pcUserBuf)
-   {
-      if (m_iUserBufAck + offset + len <= m_iUserBufSize)
-      {
-         // find a position in user buffer
-         *data = m_pcUserBuf + m_iUserBufAck + offset;
-         return true;
-      }
-      else if (m_iUserBufAck + offset < m_iUserBufSize)
-      {
-         // Meet the end of the user buffer and there is not enough space for a regular packet
-         return false;
-      }
-      else
-         // offset is larger than user buffer size
-         offset -= m_iUserBufSize - m_iUserBufAck;
-   }
+   int pos = (m_iLastAckPos + offset) % m_iSize;
+   m_pUnit[pos] = unit;
 
-   // Remember the position of the furthest "dirty" data
-   int origoff = m_iMaxOffset;
-   if (offset + len > m_iMaxOffset)
-      m_iMaxOffset = offset + len;
-
-   if (m_iLastAckPos >= m_iStartPos)
-   {
-      if (m_iLastAckPos + offset + len <= m_iSize)
-      {
-         *data = m_pcData + m_iLastAckPos + offset;
-         return true;
-      }
-      else if ((m_iLastAckPos + offset > m_iSize) && (m_iLastAckPos + offset - m_iSize + len < m_iStartPos))
-      {
-         *data = m_pcData + offset - (m_iSize - m_iLastAckPos);
-         return true;
-      }
-   }
-   else if (m_iLastAckPos + offset + len < m_iStartPos)
-   {
-      *data = m_pcData + m_iLastAckPos + offset;
-      return true;
-   }
-
-   // recover this pointer if no space is found
-   m_iMaxOffset = origoff;
-
-   return false;
+//cout << "ADD " << pos << endl;
 }
 
-bool CRcvBuffer::addData(char** data, int offset, int len)
+int CRcvBuffer::readBuffer(char* data, const int& len)
 {
-   // Check the user buffer first
-   if (NULL != m_pcUserBuf)
-   {
-      if (m_iUserBufAck + offset + len <= m_iUserBufSize)
-      {
-         // write data into the user buffer
-         memcpy(m_pcUserBuf + m_iUserBufAck + offset, *data, len);
-         return true;
-      }
-      else if (m_iUserBufAck + offset < m_iUserBufSize)
-      {
-         // write part of the data to the user buffer
-         memcpy(m_pcUserBuf + m_iUserBufAck + offset, *data, m_iUserBufSize - (m_iUserBufAck + offset));
-         *data += m_iUserBufSize - (m_iUserBufAck + offset);
-         len -= m_iUserBufSize - (m_iUserBufAck + offset);
-         offset = 0;
-      }
-      else
-         // offset is larger than size of user buffer
-         offset -= m_iUserBufSize - m_iUserBufAck;
-   }
-
-   // Record this value in case that the method is failed
-   int origoff = m_iMaxOffset;
-   if (offset + len > m_iMaxOffset)
-      m_iMaxOffset = offset + len;
-
-   if (m_iLastAckPos >= m_iStartPos)
-   {
-      if (m_iLastAckPos + offset + len <= m_iSize)
-      {
-         memcpy(m_pcData + m_iLastAckPos + offset, *data, len);
-         *data = m_pcData + m_iLastAckPos + offset;
-         return true;
-      }
-      else if ((m_iLastAckPos + offset < m_iSize) && (m_iLastAckPos + offset + len - m_iSize < m_iStartPos))
-      {
-         memcpy(m_pcData + m_iLastAckPos + offset, *data, m_iSize - m_iLastAckPos - offset);
-         memcpy(m_pcData, *data + m_iSize - m_iLastAckPos - offset, m_iLastAckPos + offset + len - m_iSize);
-         *data = m_pcData + m_iLastAckPos + offset;
-         return true;
-      }
-      else if ((m_iLastAckPos + offset >= m_iSize) && (m_iLastAckPos + offset + len - m_iSize < m_iStartPos))
-      {
-         memcpy(m_pcData + m_iLastAckPos + offset - m_iSize, *data, len);
-         *data = m_pcData + m_iLastAckPos + offset - m_iSize;
-         return true;
-      }
-   }
-   else if (m_iLastAckPos + offset + len < m_iStartPos)
-   {
-      memcpy(m_pcData + m_iLastAckPos + offset, *data, len);
-      *data = m_pcData + m_iLastAckPos + offset;
-      return true;
-   }
-
-   // recover the offset pointer since the write is failed
-   m_iMaxOffset = origoff;
-
-   return false;
-}
-
-void CRcvBuffer::moveData(int offset, const int& len)
-{
-   // check the user buffer first
-   if (NULL != m_pcUserBuf)
-   {
-      if (m_iUserBufAck + offset + len < m_iUserBufSize)
-      {
-         // move data in user buffer
-         memmove(m_pcUserBuf + m_iUserBufAck + offset, m_pcUserBuf + m_iUserBufAck + offset + len, m_iUserBufSize - (m_iUserBufAck + offset + len));
-
-         // move data from protocol buffer
-         if (m_iMaxOffset > 0)
-         {
-            int reallen = len;
-            if (m_iMaxOffset < len)
-               reallen = m_iMaxOffset;
-
-            if (m_iSize < m_iLastAckPos + reallen)
-            {
-               memcpy(m_pcUserBuf + m_iUserBufSize - len, m_pcData + m_iLastAckPos, m_iSize - m_iLastAckPos);
-               memcpy(m_pcUserBuf + m_iUserBufSize - len + m_iSize - m_iLastAckPos, m_pcData, m_iLastAckPos + reallen - m_iSize);
-            }
-            else
-               memcpy(m_pcUserBuf + m_iUserBufSize - len, m_pcData + m_iLastAckPos, reallen);
-         }
-
-         offset = 0; 
-      }
-      else if (m_iUserBufAck + offset < m_iUserBufSize)
-      {
-         if (m_iMaxOffset > m_iUserBufAck + offset + len - m_iUserBufSize)
-         {
-            int reallen = m_iUserBufSize - (m_iUserBufAck + offset);
-            int startpos = m_iLastAckPos + len - reallen;
-            if (m_iMaxOffset < len)
-               reallen -= len - m_iMaxOffset;
-
-            // Be sure that the m_iSize is at least 1 packet size, whereas len cannot be greater than this value, checked in setOpt().
-            if (m_iSize < startpos)
-               memcpy(m_pcUserBuf + m_iUserBufAck + offset, m_pcData + startpos - m_iSize, reallen);
-            else if (m_iSize < startpos + reallen)
-            {
-               memcpy(m_pcUserBuf + m_iUserBufAck + offset, m_pcData + startpos, m_iSize - startpos);
-               memcpy(m_pcUserBuf + m_iUserBufAck + offset + m_iSize - startpos, m_pcData, startpos + reallen - m_iSize);
-            }
-            else
-               memcpy(m_pcUserBuf + m_iUserBufAck + offset, m_pcData + startpos, reallen);
-         }
-
-         offset = 0;
-      }
-      else
-         // offset is larger than size of user buffer
-         offset -= m_iUserBufSize - m_iUserBufAck;
-   }
-
-   // No data to move
-   if (m_iMaxOffset - offset < len)
-   {
-      m_iMaxOffset = offset;
-      return;
-   }
-
-   // Move data in protocol buffer.
-   if (m_iLastAckPos + m_iMaxOffset <= m_iSize)
-      memmove(m_pcData + m_iLastAckPos + offset, m_pcData + m_iLastAckPos + offset + len, m_iMaxOffset - offset - len);
-   else if (m_iLastAckPos + offset >= m_iSize)
-      memmove(m_pcData + m_iLastAckPos + offset - m_iSize, m_pcData + m_iLastAckPos + offset + len - m_iSize, m_iMaxOffset - offset - len);
-   else if (m_iLastAckPos + offset + len <= m_iSize)
-   {
-      memmove(m_pcData + m_iLastAckPos + offset, m_pcData + m_iLastAckPos + offset + len, m_iSize - m_iLastAckPos - offset - len);
-      if (m_iLastAckPos + m_iMaxOffset - m_iSize > len)
-      {
-         memmove(m_pcData + m_iSize - len, m_pcData, len);
-         memmove(m_pcData, m_pcData + len, m_iLastAckPos + m_iMaxOffset - m_iSize - len);
-      }
-      else
-      {
-         memmove(m_pcData + m_iSize - len, m_pcData, m_iLastAckPos + m_iMaxOffset - m_iSize);
-      }
-   }
-   else
-   {
-      memmove(m_pcData + m_iLastAckPos + offset, m_pcData + len - (m_iSize - m_iLastAckPos - offset), m_iSize - m_iLastAckPos - offset);
-      memmove(m_pcData, m_pcData + len, m_iLastAckPos + m_iMaxOffset - m_iSize - len);
-   }
-
-   // Update the offset pointer
-   m_iMaxOffset -= len;
-}
-
-bool CRcvBuffer::readBuffer(char* data, const int& len)
-{
-   if (m_iStartPos + len <= m_iLastAckPos)
-   {
-      // Simplest situation, read "len" data from start position
-      memcpy(data, m_pcData + m_iStartPos, len);
-      m_iStartPos += len;
-      return true;
-   }
-   else if (m_iLastAckPos < m_iStartPos)
-   {
-      if (m_iStartPos + len < m_iSize)
-      {
-         // Data is not cover the physical boundary of the buffer
-         memcpy(data, m_pcData + m_iStartPos, len);
-         m_iStartPos += len;
-         return true;
-      }
-      if (len - (m_iSize - m_iStartPos) <= m_iLastAckPos)
-      {
-         // data length exceeds the physical boundary, read twice
-         memcpy(data, m_pcData + m_iStartPos, m_iSize - m_iStartPos);
-         memcpy(data + m_iSize - m_iStartPos, m_pcData, len - (m_iSize - m_iStartPos));
-         m_iStartPos = len - (m_iSize - m_iStartPos);
-         return true;
-      }
-   }
-
-   // No enough data to read
-   return false;
-}
-
-int CRcvBuffer::ackData(const int& len)
-{
-   int ret = 0;
-
-   if (NULL != m_pcUserBuf)
-      if (m_iUserBufAck + len < m_iUserBufSize)
-      {
-         // update user buffer ACK pointer
-         m_iUserBufAck += len;
-         return 0;
-      }
-      else
-      {
-         // user buffer is fulfilled
-         // update protocol ACK pointer
-         m_iLastAckPos += m_iUserBufAck + len - m_iUserBufSize;
-         m_iMaxOffset -= m_iUserBufAck + len - m_iUserBufSize;
-
-         // process received data using user-defined function
-         if (NULL != m_pMemRoutine)
-            m_pMemRoutine(m_pcUserBuf, m_iUserBufSize, m_pContext);
-
-         // the overlapped IO is completed, a pending buffer should be activated
-         m_pcUserBuf = NULL;
-         m_iUserBufSize = 0;
-         if (NULL != m_pPendingBlock)
-         {
-            //TODO
-            // release as many buffer as possible, until there is no enough data left for one buffer
-            // change return value to int, and signal as many waiting recv() call
-
-            registerUserBuf(m_pPendingBlock->m_pcData, m_pPendingBlock->m_iLength, m_pPendingBlock->m_iHandle, m_pPendingBlock->m_pMemRoutine, m_pPendingBlock->m_pContext);
-            m_iPendingSize -= m_pPendingBlock->m_iLength;
-            m_pPendingBlock = m_pPendingBlock->m_next;
-            if (NULL == m_pPendingBlock)
-               m_pLastBlock = NULL;
-         }
-
-         // returned value is 1 means user buffer is fulfilled
-         ret = 1;
-      }
-   else
-   {
-      // there is no user buffer
-      m_iLastAckPos += len;
-      m_iMaxOffset -= len;
-   }
-
-   m_iLastAckPos %= m_iSize;
-
-   return ret;
-}
-
-int CRcvBuffer::registerUserBuf(char* buf, const int& len, const int& handle, const UDT_MEM_ROUTINE func, void* context)
-{
-   if (NULL != m_pcUserBuf)
-   {
-      // there is ongoing recv, new buffer is put into pending list.
-
-      Block *nb = new Block;
-      nb->m_pcData = buf;
-      nb->m_iLength = len;
-      nb->m_iHandle = handle;
-      nb->m_pMemRoutine = func;
-      nb->m_pContext = context;
-      nb->m_next = NULL;
-
-      if (NULL == m_pPendingBlock)
-         m_pLastBlock = m_pPendingBlock = nb;
-      else
-      {
-         m_pLastBlock->m_next = nb;
-         m_pLastBlock = nb;
-      }
-
-      m_iPendingSize += len;
-
+   // empty buffer
+   if (m_iStartPos == m_iLastAckPos)
       return 0;
+
+   int p = m_iStartPos;
+   int rs = len;
+
+   int unitsize = m_pUnit[p]->m_Packet.getLength() - m_iNotch;
+   if (rs >= unitsize)
+   {
+      memcpy(data, m_pUnit[p]->m_Packet.m_pcData + m_iNotch, unitsize);
+      data += unitsize;
+
+      m_pUnit[p]->m_bValid = false;
+      m_pUnitQueue->m_iCount --;
+      m_pUnit[p] = NULL;
+
+      m_iNotch = 0;
+      rs -= unitsize;
+
+      if (++ p == m_iSize)
+         p = 0;
+   }
+   else
+   {
+      memcpy(data, m_pUnit[p]->m_Packet.m_pcData + m_iNotch, rs);
+      m_iNotch += rs;
+      return rs;
    }
 
-   m_iUserBufAck = 0;
-   m_iUserBufSize = len;
-   m_pcUserBuf = buf;
-   m_iHandle = handle;
-   m_pMemRoutine = func;
-   m_pContext = context;
-
-   // find the furthest "dirty" data that need to be copied
-   int currwritepos = (m_iLastAckPos + m_iMaxOffset) % m_iSize;
-
-   // copy data from protocol buffer into user buffer
-   if (m_iStartPos <= currwritepos)
-      if (currwritepos - m_iStartPos <= len)
+   while ((p != m_iLastAckPos) && (rs > 0))
+   {
+      unitsize = m_pUnit[p]->m_Packet.getLength();
+      if (rs >= unitsize)
       {
-         memcpy(m_pcUserBuf, m_pcData + m_iStartPos, currwritepos - m_iStartPos);
-         m_iMaxOffset = 0;
+//cout << "** " << p << " " << m_pUnit[p]->m_bValid << " " << unitsize << " " << m_iStartPos << " " << m_iLastAckPos << " " << m_iSize << endl;
+         memcpy(data, m_pUnit[p]->m_Packet.m_pcData, unitsize);
+         data += unitsize;
+
+         m_pUnit[p]->m_bValid = false;
+         m_pUnitQueue->m_iCount --;
+         m_pUnit[p] = NULL;
+
+         rs -= unitsize;
+
+         if (++ p == m_iSize)
+            p = 0;
       }
       else
       {
-         memcpy(m_pcUserBuf, m_pcData + m_iStartPos, len);
-         m_iMaxOffset -= m_iStartPos + len - m_iLastAckPos;
+         memcpy(data, m_pUnit[p]->m_Packet.m_pcData, rs);
+         m_iNotch = rs;
+         rs = 0;
       }
-   else
-      if (m_iSize + currwritepos - m_iStartPos <= len)
-      {
-         memcpy(m_pcUserBuf, m_pcData + m_iStartPos, m_iSize - m_iStartPos);
-         memcpy(m_pcUserBuf + m_iSize - m_iStartPos, m_pcData, currwritepos);
-         m_iMaxOffset = 0;
-      }
-      else
-      {
-         if (m_iSize - m_iStartPos <= len)
-         {
-            memcpy(m_pcUserBuf, m_pcData + m_iStartPos, m_iSize - m_iStartPos);
-            memcpy(m_pcUserBuf + m_iSize - m_iStartPos, m_pcData, len - (m_iSize - m_iStartPos));
-         }
-         else
-            memcpy(m_pcUserBuf, m_pcData + m_iStartPos, len);
+   }
 
-         m_iMaxOffset = m_iSize + currwritepos - m_iStartPos - len;
-      }
+   m_iStartPos = p;
 
-   // Update the user buffer pointer
-   if (m_iStartPos <= m_iLastAckPos)
-      m_iUserBufAck += m_iLastAckPos - m_iStartPos;
-   else
-      m_iUserBufAck += m_iSize - m_iStartPos + m_iLastAckPos;
-
-   // update the protocol buffer pointer, step up by "len"
-   m_iStartPos = (m_iStartPos + len) % m_iSize;
-   // assume there is no enough data for the user buffer, ie, ACK - Start < len
-   m_iLastAckPos = m_iStartPos;
-
-   return m_iUserBufAck;
+   return len - rs;
 }
 
-void CRcvBuffer::removeUserBuf()
+void CRcvBuffer::ackData(const int& len)
 {
-   m_pcUserBuf = NULL;
-   m_iUserBufAck = 0;
+   m_iLastAckPos = (m_iLastAckPos + len) % m_iSize;
+
+   //cout << "BUF ACK " << m_iStartPos << " " << m_iLastAckPos << endl;
 }
 
 int CRcvBuffer::getAvailBufSize() const
 {
-   int bs = m_iSize;
-
-   bs -= m_iLastAckPos - m_iStartPos;
-
-   if (m_iLastAckPos < m_iStartPos)
-      bs -= m_iSize;
-
-   if (NULL != m_pcUserBuf)
-      bs += m_iUserBufSize - m_iUserBufAck;
-
-   return bs;
+   return m_iSize - getRcvDataSize();
 }
 
 int CRcvBuffer::getRcvDataSize() const
 {
-   return (m_iLastAckPos - m_iStartPos + m_iSize) % m_iSize;
+   if (m_iLastAckPos >= m_iStartPos)
+      return m_iLastAckPos - m_iStartPos;
+
+   return m_iSize + m_iLastAckPos - m_iStartPos;
 }
 
-bool CRcvBuffer::getOverlappedResult(const int& handle, int& progress)
-{
-   if ((NULL != m_pcUserBuf) && (handle == m_iHandle))
-   {
-      progress = m_iUserBufAck;
-      return false;
-   }
-
-   progress = 0;
-
-   if (NULL != m_pPendingBlock)
-   {
-      if (((m_pLastBlock->m_iHandle >= m_pPendingBlock->m_iHandle) && (m_pPendingBlock->m_iHandle <= handle) && (handle <= m_pLastBlock->m_iHandle))
-         || ((m_pLastBlock->m_iHandle < m_pPendingBlock->m_iHandle) && ((m_pPendingBlock->m_iHandle <= handle) || (handle <= m_pLastBlock->m_iHandle))))
-         return false;
-   }
-
-   return true;
-}
-
-int CRcvBuffer::getPendingQueueSize() const
-{
-   return m_iPendingSize + m_iUserBufSize;
-}
 
 void CRcvBuffer::initMsgList()
 {
@@ -891,193 +549,19 @@ bool CRcvBuffer::ackMsg(const int32_t& ack, const CRcvLossList* rll)
 {
    CGuard msgguard(m_MsgLock);
 
-   // no message exist, return
-   if (-1 == m_iPtrFirstMsg)
-   {
-      // also means no message is valid
-
-      m_iStartPos = m_iLastAckPos;
-
-      return false;
-   }
-
-   int ptr;
-   int len;
-
-   if (-1 == m_iPtrRecentACK)
-   {
-      // all messages are new, check from the start
-      ptr = m_iPtrFirstMsg;
-      len = CMsgNo::msglen(m_pMessageList[ptr].m_iMsgNo, m_iLastMsgNo);
-   }
-   else
-   {
-      // check from the last ACK point
-      ptr = m_iPtrRecentACK + 1;
-
-      if (ptr == m_iMsgInfoSize)
-         ptr = 0;
-
-      len = CMsgNo::msglen(m_pMessageList[ptr].m_iMsgNo, m_iLastMsgNo);
-   }
-
-   for (int i = 0; i < len; ++ i)
-   {
-      if ((m_pMessageList[ptr].m_iStartSeq != -1) &&
-          (m_pMessageList[ptr].m_iEndSeq != -1) &&
-          (!m_pMessageList[ptr].m_bDropped) &&
-          (!(rll->find(m_pMessageList[ptr].m_iStartSeq, m_pMessageList[ptr].m_iEndSeq))) &&
-          (!m_pMessageList[ptr].m_bInOrder || CSeqNo::seqcmp(m_pMessageList[ptr].m_iEndSeq, ack) <= 0))
-      {
-         m_pMessageList[ptr].m_bValid = true;
-         m_pMessageList[ptr].m_iLength = CSeqNo::seqlen(m_pMessageList[ptr].m_iStartSeq, m_pMessageList[ptr].m_iEndSeq) * m_iMSS - m_pMessageList[ptr].m_iSizeDiff;
-
-         ++ m_iValidMsgCount;
-      }
-
-      if ((m_pMessageList[ptr].m_iEndSeq != -1) && (CSeqNo::seqcmp(m_pMessageList[ptr].m_iEndSeq, ack) <= 0))
-         m_iPtrRecentACK = ptr;
-
-      ++ ptr;
-
-      if (ptr == m_iMsgInfoSize)
-         ptr = 0;
-   }
-
    return (m_iValidMsgCount > 0);
 }
 
 void CRcvBuffer::dropMsg(const int32_t& msgno)
 {
    CGuard msgguard(m_MsgLock);
-
-   // no message exist, return
-   if (-1 == m_iPtrFirstMsg)
-      return;
-
-   int ptr = m_iPtrFirstMsg + CMsgNo::msglen(m_pMessageList[m_iPtrFirstMsg].m_iMsgNo, msgno);
-   if (ptr >= m_iMsgInfoSize)
-      ptr -= m_iMsgInfoSize;
-
-   m_pMessageList[ptr].m_iMsgNo = msgno;
-   m_pMessageList[ptr].m_bDropped = true;
-
-   // update the largest msg no so far
-   if (CMsgNo::msgcmp(m_iLastMsgNo, msgno) < 0)
-      m_iLastMsgNo = msgno;
 }
 
 int CRcvBuffer::readMsg(char* data, const int& len)
 {
    CGuard msgguard(m_MsgLock);
 
-   // no message exist, return
-   if (-1 == m_iPtrFirstMsg)
-      return 0;
-
-   int ptr = m_iPtrFirstMsg;
-
-   // searching first valid message
-   while (m_pMessageList[ptr].m_iMsgNo != m_iLastMsgNo)
-   {
-      if (m_pMessageList[ptr].m_bValid)
-         break;
-
-      ++ ptr;
-      if (ptr == m_iMsgInfoSize)
-         ptr = 0;
-   }
-
-   int size = 0;
-
-   if (m_pMessageList[ptr].m_bValid)
-   {
-      if ((m_pMessageList[ptr].m_bInOrder) || (CSeqNo::seqcmp(m_pMessageList[ptr].m_iEndSeq, m_pMessageList[m_iPtrRecentACK].m_iEndSeq) <= 0))
-      {
-         m_iStartPos = m_pMessageList[ptr].m_pcData + CSeqNo::seqlen(m_pMessageList[ptr].m_iStartSeq, m_pMessageList[ptr].m_iEndSeq) * m_iMSS - m_pcData;
-         if (m_iStartPos > m_iSize)
-            m_iStartPos -= m_iSize;
-      }
-      else
-      {
-         if (NULL != m_pMessageList[m_iPtrRecentACK].m_pcData)
-            m_iStartPos = m_pMessageList[m_iPtrRecentACK].m_pcData - m_pcData;
-      }
-
-      size = (len > m_pMessageList[ptr].m_iLength) ? m_pMessageList[ptr].m_iLength : len;
-
-      if (m_pMessageList[ptr].m_pcData - m_pcData + size < m_iSize)
-      {
-         memcpy(data, m_pMessageList[ptr].m_pcData, size);
-      }
-      else
-      {
-         int partial = m_pMessageList[ptr].m_pcData - m_pcData + size - m_iSize;
-
-         memcpy(data, m_pMessageList[ptr].m_pcData, size - partial);
-         memcpy(data + size - partial, m_pcData, partial);
-      }
-
-      // already read, will not be read again
-      m_pMessageList[ptr].m_bValid = false;
-      // mark this msg as dropped so that it will not be set to valid again in checkMsg()
-      m_pMessageList[ptr].m_bDropped = true;
-
-      -- m_iValidMsgCount;
-   }
-
-   // all messages prior to the first valid message before the recent ACK point are permanently invalid
-   if (CMsgNo::msgcmp(m_pMessageList[ptr].m_iMsgNo, m_pMessageList[m_iPtrRecentACK].m_iMsgNo) <= 0)
-   {
-      while (ptr != m_iPtrRecentACK)
-      {
-         ptr ++;
-         if (ptr == m_iMsgInfoSize)
-            ptr = 0;
-
-         if (m_pMessageList[ptr].m_bValid)
-            break;
-      }
-   }
-   else 
-      ptr = m_iPtrRecentACK;
-
-   // release the invalid message items
-   while (m_iPtrFirstMsg != ptr)
-   {
-      m_pMessageList[m_iPtrFirstMsg].m_pcData = NULL;
-      m_pMessageList[m_iPtrFirstMsg].m_iMsgNo = -1;
-      m_pMessageList[m_iPtrFirstMsg].m_iStartSeq = -1;
-      m_pMessageList[m_iPtrFirstMsg].m_iEndSeq = -1;
-      m_pMessageList[m_iPtrFirstMsg].m_iLength = -1;
-      m_pMessageList[m_iPtrFirstMsg].m_bValid = false;
-      m_pMessageList[m_iPtrFirstMsg].m_bDropped = false;
-      m_pMessageList[m_iPtrFirstMsg].m_bInOrder = false;
-
-      ++ m_iPtrFirstMsg;
-      if (m_iPtrFirstMsg == m_iMsgInfoSize)
-         m_iPtrFirstMsg = 0;
-   }
-
-   // all messages are invalid, re-init the message list
-   if ((m_pMessageList[m_iPtrFirstMsg].m_iMsgNo == m_iLastMsgNo) && !(m_pMessageList[m_iPtrFirstMsg].m_bValid))
-   {
-      m_pMessageList[m_iPtrFirstMsg].m_pcData = NULL;
-      m_pMessageList[m_iPtrFirstMsg].m_iMsgNo = -1;
-      m_pMessageList[m_iPtrFirstMsg].m_iStartSeq = -1;
-      m_pMessageList[m_iPtrFirstMsg].m_iEndSeq = -1;
-      m_pMessageList[m_iPtrFirstMsg].m_iLength = -1;
-      m_pMessageList[m_iPtrFirstMsg].m_bValid = false;
-      m_pMessageList[m_iPtrFirstMsg].m_bDropped = false;
-      m_pMessageList[m_iPtrFirstMsg].m_bInOrder = false;
-
-      m_iPtrFirstMsg = -1;
-      m_iPtrRecentACK = -1;
-
-      m_iStartPos = m_iLastAckPos;
-   }
-
-   return size;
+   return 0;
 }
 
 int CRcvBuffer::getValidMsgCount()

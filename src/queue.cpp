@@ -39,17 +39,20 @@ written by
 using namespace std;
 
 CUnitQueue::CUnitQueue():
-m_pUnit(NULL),
 m_iSize(0),
 m_iCount(0)
 {
+   m_vpUnit.clear();
    m_vpBuffer.clear();
    m_vpAddrBuf.clear();
+   m_viSize.clear();
 }
 
 CUnitQueue::~CUnitQueue()
 {
-   delete [] m_pUnit;
+   for (vector<CUnit*>::iterator i = m_vpUnit.begin(); i != m_vpUnit.end(); ++ i)
+      delete [] *i;
+   m_vpUnit.clear();
 
    for (vector<char*>::iterator i = m_vpBuffer.begin(); i != m_vpBuffer.end(); ++ i)
       delete [] *i;
@@ -58,50 +61,55 @@ CUnitQueue::~CUnitQueue()
    for (vector<char*>::iterator i = m_vpAddrBuf.begin(); i != m_vpAddrBuf.end(); ++ i)
       delete [] *i;
    m_vpAddrBuf.clear();
+
+   m_viSize.clear();
 }
 
 int CUnitQueue::init(const int& size, const int& mss)
 {
+   CUnit* tempu = NULL;
    char* tempb = NULL;
    char* tempa = NULL;
 
    try
    {
-      m_pUnit = new CUnit [size];
+      tempu = new CUnit [size];
       tempb = new char [size * mss];
       tempa = (char*) new sockaddr_in [size];
    }
    catch (...)
    {
-      delete [] m_pUnit;
+      delete [] tempu;
       delete [] tempb;
       delete [] tempa;
-      m_pUnit = NULL;
 
       return -1;
    }
 
    for (int i = 0; i < size; ++ i)
    {
-      m_pUnit[i].m_bValid = false;
-      m_pUnit[i].m_pAddr = (sockaddr*)((sockaddr_in*)tempa + i);
-      m_pUnit[i].m_Packet.m_pcData = tempb + i * mss;
+      tempu[i].m_bValid = false;
+      tempu[i].m_pAddr = (sockaddr*)((sockaddr_in*)tempa + i);
+      tempu[i].m_Packet.m_pcData = tempb + i * mss;
    }
 
-   m_vpBuffer.insert(m_vpBuffer.begin(), tempb);
-   m_vpAddrBuf.insert(m_vpAddrBuf.begin(), tempa);
+   m_vpUnit.insert(m_vpUnit.end(), tempu);
+   m_vpBuffer.insert(m_vpBuffer.end(), tempb);
+   m_vpAddrBuf.insert(m_vpAddrBuf.end(), tempa);
+   m_viSize.insert(m_viSize.end(), size);
 
    m_iSize = size;
    m_iMSS = mss;
 
-   m_pAvailUnit = m_pUnit;
+   m_pAvailUnit = (CUnit*)m_vpUnit[0];
+   m_iVQ = 0;
 
    return 0;
 }
 
 int CUnitQueue::increase()
 {
-//cout << "INCREASE!!!!\n";
+cout << "INCREASE!!!! " << m_iCount << " " << m_iSize << endl;
 
    CUnit* tempu = NULL;
    char* tempb = NULL;
@@ -109,7 +117,7 @@ int CUnitQueue::increase()
 
    try
    {
-      tempu = new CUnit [m_iSize * 2];
+      tempu = new CUnit [m_iSize];
       tempb = new char [m_iSize * m_iMSS];
       tempa = (char*) new sockaddr_in [m_iSize];
    }
@@ -122,11 +130,6 @@ int CUnitQueue::increase()
       return -1;
    }
 
-   memcpy(tempu, m_pUnit, m_iSize * sizeof(CUnit));
-   delete [] m_pUnit;
-   m_pUnit = tempu;
-   tempu = m_pUnit + m_iSize;
-
    for (int i = 0; i < m_iSize; ++ i)
    {
       tempu[i].m_bValid = false;
@@ -134,8 +137,10 @@ int CUnitQueue::increase()
       tempu[i].m_Packet.m_pcData = tempb + i * m_iMSS;
    }
 
-   m_vpBuffer.insert(m_vpBuffer.begin(), tempb);
-   m_vpAddrBuf.insert(m_vpAddrBuf.begin(), tempa);
+   m_vpUnit.insert(m_vpUnit.end(), tempu);
+   m_vpBuffer.insert(m_vpBuffer.end(), tempb);
+   m_vpAddrBuf.insert(m_vpAddrBuf.end(), tempa);
+   m_viSize.insert(m_viSize.end(), m_iSize);
 
    m_iSize *= 2;
    return 0;
@@ -149,20 +154,31 @@ int CUnitQueue::shrink()
 
 CUnit* CUnitQueue::getNextAvailUnit()
 {
-   if (m_iCount / m_iSize > 0.9)
+   if (double(m_iCount) / m_iSize > 0.9)
       increase();
 
    if (m_iCount == m_iSize)
       return NULL;
 
-   if (m_pAvailUnit == m_pUnit + m_iSize - 1)
-      m_pAvailUnit = m_pUnit;
+   while (true)
+   {
+      for (CUnit* sentinel = (CUnit*)m_vpUnit[m_iVQ] + m_viSize[m_iVQ] - 1; m_pAvailUnit != sentinel; ++ m_pAvailUnit)
+         if (!m_pAvailUnit->m_bValid)
+{
+//cout << "NEXT AVA " << m_iVQ << " " << m_viSize[m_iVQ] << " " << m_iSize << " " << sentinel - m_pAvailUnit << " " << long(m_pAvailUnit->m_Packet.m_pcData) << endl;
+            return m_pAvailUnit;
+}
 
-   while (m_pAvailUnit->m_bValid) ++ m_pAvailUnit;
+      if (m_iVQ != m_vpUnit.size() - 1)
+         m_pAvailUnit = (CUnit*)m_vpUnit[++ m_iVQ];
+      else
+      {
+         m_iVQ = 0;
+         m_pAvailUnit = (CUnit*)m_vpUnit[0];
+      }
+   }
 
-   ++ m_iCount;
-
-   return m_pAvailUnit;
+   return NULL;
 }
 
 
@@ -479,7 +495,7 @@ void CSndQueue::init(const int& size, const CChannel* c, const CTimer* t)
 
          // pack a packet from the socket
          uint64_t ts;
-         int ps = u->pack(self->m_pUnitQueue[self->m_iTailPtr].m_Packet, ts);
+         int ps = u->packData(self->m_pUnitQueue[self->m_iTailPtr].m_Packet, ts);
 
          if (ps > 0)
          {
@@ -544,6 +560,8 @@ void CSndQueue::init(const int& size, const CChannel* c, const CTimer* t)
             ++ self->m_iHeadPtr;
          else
             self->m_iHeadPtr = 0;
+
+//cout <<"SENT OUT STH " << self->m_pUnitQueue[self->m_iHeadPtr].m_Packet.getLength() << endl;
       }
       else
       {
@@ -904,14 +922,16 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
       unit->m_Packet.setLength(self->m_iPayloadSize);
 
       // reading next incoming packet
+//cout << "why why 1 " << long(unit->m_pAddr) << " " << long(unit->m_Packet.m_pcData) << endl;
       if (self->m_pChannel->recvfrom(unit->m_pAddr, unit->m_Packet) <= 0)
+{
+//cout << "why why 2 " << long(unit->m_pAddr) << " " << long(unit->m_Packet.m_pcData) << endl;
          continue;
+}
       if (unit == &temp)
          continue;
 
-//cout << "recv sth!!! " << unit->m_Packet.getLength() << endl;
-
-      unit->m_bValid = true;
+//cout << "recv sth!!! " << unit->m_Packet.getLength() << " " << long(unit->m_Packet.m_pcData) << endl;
 
       if ((self->m_iAQTailPtr == self->m_iAQHeadPtr) && (self->m_iPQTailPtr == self->m_iPQHeadPtr))
          empty = true;
@@ -921,6 +941,9 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
          // queue is full, disgard the packet
          if ((self->m_iAQTailPtr + 1 == self->m_iAQHeadPtr) || ((self->m_iAQTailPtr == self->m_iQueueLen - 1) && (self->m_iAQHeadPtr == 0)))
             continue;
+
+         self->m_UnitQueue.m_iCount ++;
+         unit->m_bValid = true;
 
          // this is a data packet, put it into active queue
          self->m_pActiveQueue[self->m_iAQTailPtr] = unit;
@@ -935,6 +958,9 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
          // queue is full, disgard the packet
          if ((self->m_iPQTailPtr + 1 == self->m_iPQHeadPtr) || ((self->m_iPQTailPtr == self->m_iQueueLen - 1) && (self->m_iPQHeadPtr == 0)))
             continue;
+
+         self->m_UnitQueue.m_iCount ++;
+         unit->m_bValid = true;
 
          // this is a control packet, put it into passive queue
          self->m_pPassiveQueue[self->m_iPQTailPtr] = unit;
@@ -999,7 +1025,10 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
             // process the control packet, pass the connection request to listening socket, or temporally store in in hash table
 
             if (u->m_bConnected && !u->m_bBroken)
-               u->process(self->m_pPassiveQueue[self->m_iPQHeadPtr]->m_Packet);
+            {
+               u->processCtrl(self->m_pPassiveQueue[self->m_iPQHeadPtr]->m_Packet);
+               u->checkTimers();
+            }
             else if (u->m_bListening)
                u->listen(self->m_pPassiveQueue[self->m_iPQHeadPtr]->m_pAddr, self->m_pPassiveQueue[self->m_iPQHeadPtr]->m_Packet);
             else
@@ -1027,15 +1056,20 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
          if (NULL != u)
          {
             if (u->m_bConnected && !u->m_bBroken)
-               u->process(self->m_pActiveQueue[self->m_iAQHeadPtr]->m_Packet);
+            {
+               u->processData(self->m_pActiveQueue[self->m_iAQHeadPtr]);
+               u->checkTimers();
+            }
 
             self->m_pRcvUList->remove(id);
             if (u->m_bConnected && !u->m_bBroken)
                self->m_pRcvUList->insert(id, u);
          }
-
-         self->m_pActiveQueue[self->m_iAQHeadPtr]->m_bValid = false;
-         self->m_UnitQueue.m_iCount --;
+         else
+         {
+            self->m_pActiveQueue[self->m_iAQHeadPtr]->m_bValid = false;
+            self->m_UnitQueue.m_iCount --;
+         }
 
          if (self->m_iQueueLen != self->m_iAQHeadPtr + 1)
             ++ self->m_iAQHeadPtr;
@@ -1046,7 +1080,6 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
       {
          // wait for a new packet
          #ifndef WIN32
-//cout << "into cs!\n";
             timespec timeout;
             uint64_t now = CTimer::getTime() + 10000;
 
@@ -1055,7 +1088,6 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
 
             if (0 == pthread_cond_timedwait(&self->m_QueueCond, &self->m_QueueLock, &timeout))
                continue;
-//cout << "leave cs!\n";
          #else
             WaitForSingleObject(self->m_QueueCond, 1);
          #endif
@@ -1064,16 +1096,8 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
       // take care of the timing event for all UDT sockets
 
       CUDTList* ul = self->m_pRcvUList->m_pUList;
-/*
-if (ul == NULL)
-   cout << "nothing??\n";
-else
-   cout << "something!!! " << ul->m_iID << endl;
-*/
       uint64_t currtime;
       CTimer::rdtsc(currtime);
-
-//      cout << "activate " << (NULL == ul) << " " << ul->m_llTimeStamp << " " << currtime - 10000 * CTimer::getCPUFrequency() << endl;
 
       while ((NULL != ul) && (ul->m_llTimeStamp < currtime - 10000 * CTimer::getCPUFrequency()))
       {
@@ -1085,7 +1109,7 @@ else
 
          if (u->m_bConnected && !u->m_bBroken)
          {
-            u->process(packet);
+            u->checkTimers();
 
             self->m_pRcvUList->remove(id);
             self->m_pRcvUList->insert(id, u);

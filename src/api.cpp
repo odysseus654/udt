@@ -101,7 +101,7 @@ CUDTSocket::~CUDTSocket()
 CUDTUnited::CUDTUnited()
 {
    srand((unsigned int)CTimer::getTime());
-   m_SocketID = 1 + (int)(1 << 30) * (rand()/(RAND_MAX + 1.0));
+   m_SocketID = 1 + (int)((1 << 30) * (rand()/(RAND_MAX + 1.0)));
 
    #ifndef WIN32
       pthread_mutex_init(&m_ControlLock, NULL);
@@ -663,28 +663,6 @@ int CUDTUnited::close(const UDTSOCKET u)
 
    s->m_pUDT->close();
 
-   // decrease multiplexer reference count, and remove it if necessary
-   int port;
-   if (4 == s->m_iIPversion)
-      port = ntohl(((sockaddr_in*)(s->m_pSelfAddr))->sin_port);
-   else
-      port = ntohl(((sockaddr_in6*)(s->m_pSelfAddr))->sin6_port);
-
-   for (vector<CMultiplexer>::iterator i = m_vMultiplexer.begin(); i != m_vMultiplexer.end(); ++ i)
-   {
-      if (port == i->m_iPort)
-      {
-         i->m_iRefCount --;
-         if (0 == i->m_iRefCount)
-         {
-            delete i->m_pSndQueue;
-            delete i->m_pRcvQueue;
-            m_vMultiplexer.erase(i);
-         }
-         break;
-      }
-   }
-
    // a socket will not be immediated removed when it is closed
    // in order to prevent other methods from accessing invalid address
    // a timer is started and the socket will be removed after approximately 1 second
@@ -912,6 +890,18 @@ void CUDTUnited::removeSocket(const UDTSOCKET u)
    if (i == m_Sockets.end())
       return;
 
+   // decrease multiplexer reference count, and remove it if necessary
+   int port;
+   if (4 == i->second->m_iIPversion)
+      port = ntohl(((sockaddr_in*)(i->second->m_pSelfAddr))->sin_port);
+   else
+      port = ntohl(((sockaddr_in6*)(i->second->m_pSelfAddr))->sin6_port);
+
+   vector<CMultiplexer>::iterator m;
+   for (m = m_vMultiplexer.begin(); m != m_vMultiplexer.end(); ++ m)
+      if (port == m->m_iPort)
+         break;
+
    if (0 != i->second->m_ListenSocket)
    {
       // if it is an accepted socket, remove it from the listener's queue
@@ -928,6 +918,8 @@ void CUDTUnited::removeSocket(const UDTSOCKET u)
          m_Sockets[*j]->m_pUDT->close();
          delete m_Sockets[*j];
          m_Sockets.erase(*j);
+
+         m->m_iRefCount --;
       }
    }
 
@@ -935,6 +927,14 @@ void CUDTUnited::removeSocket(const UDTSOCKET u)
    m_Sockets[u]->m_pUDT->close();
    delete m_Sockets[u];
    m_Sockets.erase(u);
+
+   m->m_iRefCount --;
+   if (0 == m->m_iRefCount)
+   {
+      delete m->m_pSndQueue;
+      delete m->m_pRcvQueue;
+      m_vMultiplexer.erase(m);
+   }
 }
 
 void CUDTUnited::setError(CUDTException* e)

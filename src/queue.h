@@ -56,6 +56,7 @@ struct CUnit
 class CUnitQueue
 {
 friend class CRcvQueue;
+friend class CRcvBuffer;
 
 public:
    CUnitQueue();
@@ -69,16 +70,18 @@ public:
    CUnit* getNextAvailUnit();
 
 private:
-   CUnit* m_pUnit;		// unit queue
+   vector<CUnit*> m_vpUnit;	// unit queue
    vector<char*> m_vpBuffer;	// data buffer
    vector<char*> m_vpAddrBuf;	// addr information
+   vector<int> m_viSize;	// size of each queue
 
-   int m_iSize;			// size of the unit queue, in number of packets
-   int m_iCount;		// number of valid packets in the queue
+   int m_iSize;			// total size of the unit queue, in number of packets
+   int m_iCount;		// total number of valid packets in the queue
 
    int m_iMSS;			// unit buffer size
 
    CUnit* m_pAvailUnit;		// recent available unit
+   int m_iVQ;			// recent available quque
 };
 
 

@@ -38,7 +38,7 @@ written by
 
 #include "udt.h"
 #include "list.h"
-
+#include "queue.h"
 
 class CSndBuffer
 {
@@ -166,20 +166,9 @@ private:
 class CRcvBuffer
 {
 public:
-   CRcvBuffer(const int& mss);
-   CRcvBuffer(const int& mss, const int& bufsize);
+   CRcvBuffer(CUnitQueue* queue);
+   CRcvBuffer(const int& bufsize, CUnitQueue* queue);
    ~CRcvBuffer();
-
-      // Functionality:
-      //    Find a position in the buffer to receive next packet.
-      // Parameters:
-      //    0) [out] data: the pointer to the next data position.
-      //    1) [in] offset: offset from last ACK point.
-      //    2) [in] len: size of data to be written.
-      // Returned value:
-      //    true if found, otherwise false.
-
-   bool nextDataPos(char** data, int offset, const int& len);
 
       // Functionality:
       //    Write data into the buffer.
@@ -190,7 +179,7 @@ public:
       // Returned value:
       //    true if a position that can hold the data is found, otherwise false.
 
-   bool addData(char** data, int offset, int len);
+   void addData(CUnit* unit, int offset);
 
       // Functionality:
       //    Move part of the data in buffer to the direction of the ACK point by some length.
@@ -200,17 +189,7 @@ public:
       // Returned value:
       //    None.
 
-   void moveData(int offset, const int& len);
-
-      // Functionality:
-      //    Read data from the buffer into user buffer.
-      // Parameters:
-      //    0) [out] data: data read from protocol buffer.
-      //    1) [in] len: size of data to be read.
-      // Returned value:
-      //    true if there is enough data to read, otherwise return false.
-
-   bool readBuffer(char* data, const int& len);
+   int readBuffer(char* data, const int& len);
 
       // Functionality:
       //    Update the ACK point of the buffer.
@@ -219,7 +198,7 @@ public:
       // Returned value:
       //    1 if a user buffer is fulfilled, otherwise 0.
 
-   int ackData(const int& len);
+   void ackData(const int& len);
 
       // Functionality:
       //    Insert the user buffer into the protocol buffer.
@@ -231,17 +210,6 @@ public:
       //    3) [in] context parameter for the buffer process routine.
       // Returned value:
       //    Size of data that has been received by now.
-
-   int registerUserBuf(char* buf, const int& len, const int& handle, const UDT_MEM_ROUTINE func, void* context);
-
-      // Functionality:
-      //    remove the user buffer from the protocol buffer.
-      // Parameters:
-     //    None
-      // Returned value:
-      //    None.
-
-   void removeUserBuf();
 
       // Functionality:
       //    Query how many buffer space left for data receiving.
@@ -261,31 +229,6 @@ public:
 
    int getRcvDataSize() const;
 
-      // Functionality:
-      //    Query the progress of the buffer sending identified by handle.
-      // Parameters:
-      //    1) [in] handle: descriptor of this overlapped IO
-      //    2) [out] progress: the current progress of the overlapped IO
-      // Returned value:
-      //    if the overlapped IO is completed.
-
-   bool getOverlappedResult(const int& handle, int& progress);
-
-      // Functionality:
-      //    Query the total size of overlapped recv buffers.
-      // Parameters:
-      //    None.
-      // Returned value:
-      //    Total size of the pending overlapped recv buffers.
-
-   int getPendingQueueSize() const;
-
-      // Functionality:
-      //    Initialize the received message list.
-      // Parameters:
-      //    None.
-      // Returned value:
-      //    None.
 
    void initMsgList();
 
@@ -342,37 +285,16 @@ public:
 
 
 private:
-   char* m_pcData;                      // pointer to the protocol buffer
+   CUnit** m_pUnit;                     // pointer to the protocol buffer
    int m_iSize;                         // size of the protocol buffer
+   CUnitQueue* m_pUnitQueue;
 
    int m_iStartPos;                     // the head position for I/O (inclusive)
    int m_iLastAckPos;                   // the last ACKed position (exclusive)
 					// EMPTY: m_iStartPos = m_iLastAckPos   FULL: m_iStartPos = m_iLastAckPos + 1
-   int m_iMaxOffset;                    // the furthest "dirty" position (absolute distance from m_iLastAckPos)
 
-   char* m_pcUserBuf;                   // pointer to the user registered buffer
-   int m_iUserBufSize;                  // size of the user buffer
-   int m_iUserBufAck;                   // last ACKed position of the user buffer
-   int m_iHandle;                       // unique handle to represet this IO request
-   UDT_MEM_ROUTINE m_pMemRoutine;       // function to process user buffer after receiving
-   void* m_pContext;                    // context parameter for the buffer processing routine
+   int m_iNotch;			// the starting read point of the first unit
 
-   struct Block
-   {
-      char* m_pcData;                   // pointer to the overlapped recv buffer
-      int m_iLength;                    // length of the block
-
-      int m_iHandle;                    // a unique handle to represent this receiving request
-      UDT_MEM_ROUTINE m_pMemRoutine;    // function to process buffer after a complete receiving
-      void* m_pContext;                 // context parameter for the buffer processing routine
-
-      Block* m_next;                    // next block
-   } *m_pPendingBlock, *m_pLastBlock;
-
-   // m_pPendingBlock:                  // the list of pending overlapped recv buffers
-   // m_pLastBlock:                     // the last block of pending buffers
-
-   int m_iPendingSize;                  // total size of pending recv buffers
 
    struct MsgInfo
    {
@@ -396,7 +318,7 @@ private:
 
    int m_iValidMsgCount;                // number valid message
 
-   int m_iMSS;                          // maximum seqment/packet size
+   int m_iMSS;
 };
 
 

@@ -45,7 +45,7 @@ written by
 #include "channel.h"
 #include "api.h"
 #include "ccc.h"
-
+#include "queue.h"
 
 class UDT_API CUDT
 {
@@ -371,14 +371,6 @@ private: // Receiving related data
    int32_t m_iAckSeqNo;                         // Last ACK sequence number
    int32_t m_iRcvCurrSeqNo;                     // Largest received sequence number
 
-   volatile bool m_bReadBuf;                    // Application has called "recv" but has not finished
-   volatile char* m_pcTempData;                 // Pointer to the buffer that application want to put received data into
-   volatile int m_iTempLen;                     // Size of the "m_pcTempData"
-   volatile UDT_MEM_ROUTINE m_pTempRoutine;     // pointer to a routine function to process "m_pcTempData"
-   volatile void* m_pTempContext;		// context parameter for "m_pTempRoutine"
-
-   int32_t m_iUserBufBorder;                    // Sequence number of last packet that will fulfill a user buffer
-
    uint64_t m_ullLastWarningTime;               // Last time that a warning message is sent
 
    int32_t m_iPeerISN;                          // Initial Sequence Number of the peer side
@@ -402,9 +394,6 @@ private: // synchronization: mutexes and conditions
 
    pthread_cond_t m_RecvDataCond;               // used to block "recv" when there is no data
    pthread_mutex_t m_RecvDataLock;              // lock associated to m_RecvDataCond
-
-   pthread_cond_t m_OverlappedRecvCond;         // used to block "recv" when overlapped receving is in progress
-   pthread_mutex_t m_OverlappedRecvLock;        // lock associated to m_OverlappedRecvCond
 
    pthread_mutex_t m_HandleLock;                // used to generate unique send/recv handle
 
@@ -447,8 +436,9 @@ private: // Trace
    int m_iRecvNAK;                              // number of NAKs received in the last trace interval
 
 private:
-   int pack(CPacket& packet, uint64_t& ts);
-   void process(CPacket& packet);
+   int packData(CPacket& packet, uint64_t& ts);
+   void checkTimers();
+   void processData(CUnit* unit);
    int listen(sockaddr* addr, CPacket& packet);
 
    uint64_t m_ullNextACKTime;			// Next ACK time, in CPU clock cycles

@@ -100,7 +100,7 @@ m_iQuickStartPkts(16)
    m_bSynRecving = true;
    m_iFlightFlagSize = 25600;
    m_iSndQueueLimit = 20000000;
-   m_iUDTBufSize = 20000000;
+   m_iUDTBufSize = 25600;
    m_Linger.l_onoff = 1;
    m_Linger.l_linger = 180;
    m_iUDPSndBufSize = 65536;
@@ -480,7 +480,6 @@ void CUDT::open(const sockaddr* addr)
    m_iRcvLastAckAck = 0;
    m_ullLastAckTime = 0;
    m_iRcvCurrSeqNo = -1;
-   m_bReadBuf = false;
 
    m_iLastDecSeq = -1;
    m_iNAKCount = 0;
@@ -789,14 +788,13 @@ void CUDT::connect(const sockaddr* serv_addr)
    m_iRcvLastAckAck = res->m_iISN;
    m_iRcvCurrSeqNo = res->m_iISN - 1;
    m_PeerID = res->m_iID;
-   m_iUserBufBorder = m_iRcvLastAck + (int32_t)ceil(double(m_iUDTBufSize) / m_iPayloadSize);
 
    delete [] resdata;
 
    // Prepare all structures
    m_pTimer = new CTimer;
    m_pSndBuffer = new CSndBuffer(m_iPayloadSize);
-   m_pRcvBuffer = new CRcvBuffer(m_iPayloadSize, m_iUDTBufSize);
+   m_pRcvBuffer = new CRcvBuffer(m_iUDTBufSize, &(m_pRcvQueue->m_UnitQueue));
    if (SOCK_DGRAM == m_iSockType)
       m_pRcvBuffer->initMsgList();
 
@@ -866,12 +864,10 @@ void CUDT::connect(const sockaddr* peer, CHandShake* hs)
    m_iPktSize = m_iMSS - 28;
    m_iPayloadSize = m_iPktSize - CPacket::m_iPktHdrSize;
 
-   m_iUserBufBorder = m_iRcvLastAck + (int32_t)ceil(double(m_iUDTBufSize) / m_iPayloadSize);
-
    // Prepare all structures
    m_pTimer = new CTimer;
    m_pSndBuffer = new CSndBuffer(m_iPayloadSize);
-   m_pRcvBuffer = new CRcvBuffer(m_iPayloadSize, m_iUDTBufSize);
+   m_pRcvBuffer = new CRcvBuffer(m_iUDTBufSize, &(m_pRcvQueue->m_UnitQueue));
    if (SOCK_DGRAM == m_iSockType)
       m_pRcvBuffer->initMsgList();
    m_pSndLossList = new CSndLossList(m_iMaxFlowWindowSize * 2);
@@ -1052,19 +1048,7 @@ void CUDT::sendCtrl(const int& pkttype, void* lparam, void* rparam, const int& s
 
          m_iRcvLastAck = ack;
 
-         if (m_pRcvBuffer->ackData(acksize * m_iPayloadSize - m_pIrrPktList->currErrorSize(m_iRcvLastAck)) && m_bSynRecving)
-         {
-            //singal an blocking overlapped IO. 
-            #ifndef WIN32
-               pthread_mutex_lock(&m_OverlappedRecvLock);
-               pthread_cond_signal(&m_OverlappedRecvCond);
-               pthread_mutex_unlock(&m_OverlappedRecvLock);
-            #else
-               SetEvent(m_OverlappedRecvCond);
-            #endif
-         }
-
-         m_iUserBufBorder = m_iRcvLastAck + (int32_t)ceil(double(m_pRcvBuffer->getAvailBufSize()) / m_iPayloadSize);
+         m_pRcvBuffer->ackData(acksize);
 
          if (m_iSockType == SOCK_STREAM)
          {
@@ -1123,9 +1107,9 @@ void CUDT::sendCtrl(const int& pkttype, void* lparam, void* rparam, const int& s
          #ifndef CUSTOM_CC
          flowControl(m_pRcvTimeWindow->getPktRcvSpeed());
          data[3] = m_iFlowControlWindow;
-         if (data[3] > (int32_t)(m_pRcvBuffer->getAvailBufSize() / m_iPayloadSize))
+         if (data[3] > m_pRcvBuffer->getAvailBufSize());
          #endif
-            data[3] = (int32_t)(m_pRcvBuffer->getAvailBufSize() / m_iPayloadSize);
+            data[3] = m_pRcvBuffer->getAvailBufSize();
          if (data[3] < 2)
             data[3] = 2;
 
@@ -1140,6 +1124,8 @@ void CUDT::sendCtrl(const int& pkttype, void* lparam, void* rparam, const int& s
          m_pTimer->rdtsc(m_ullLastAckTime);
 
          ++ m_iSentACK;
+
+         //cout << "ACK " << m_iRcvLastAck << endl;
       }
 
       break;
@@ -1250,6 +1236,29 @@ void CUDT::sendCtrl(const int& pkttype, void* lparam, void* rparam, const int& s
 
 void CUDT::processCtrl(CPacket& ctrlpkt)
 {
+   // Just heard from the peer, reset the expiration count.
+   m_iEXPCount = 1;
+   m_ullEXPInt = (m_iRTT + 4 * m_iRTTVar) * m_ullCPUFrequency + m_ullSYNInt;
+   if (CSeqNo::incseq(m_iSndCurrSeqNo) == m_iSndLastAck)
+   {
+      m_pTimer->rdtsc(m_ullNextEXPTime);
+      m_ullNextEXPTime += m_ullEXPInt;
+   }
+
+   if ((2 == ctrlpkt.getType()) || (6 == ctrlpkt.getType()))
+   {
+      m_ullNAKInt = (m_iRTT + 4 * m_iRTTVar) * m_ullCPUFrequency;
+      //do not resent the loss report within too short period
+      if (m_ullNAKInt < m_ullSYNInt)
+         m_ullNAKInt = m_ullSYNInt;
+   }
+
+   uint64_t currtime;
+   m_pTimer->rdtsc(currtime);
+   if ((2 <= ctrlpkt.getType()) && (4 >= ctrlpkt.getType()))
+      m_ullNextEXPTime = currtime + m_ullEXPInt;
+
+
    switch (ctrlpkt.getType())
    {
    case 2: //010 - Acknowledgement
@@ -1635,11 +1644,11 @@ int CUDT::send(char* data, const int& len, int* overlapped, const UDT_MEM_ROUTIN
             }
             else
             {
-               uint64_t currtime = CTimer::getTime(); 
+               uint64_t exptime = CTimer::getTime() + m_iSndTimeOut * 1000ULL;
                timespec locktime; 
     
-               locktime.tv_sec = currtime / 1000000 + (currtime % 1000000 + m_iSndTimeOut * 1000ULL) / 1000000;
-               locktime.tv_nsec = (m_iSndTimeOut * 1000ULL + currtime % 1000000) % 1000000 * 1000;
+               locktime.tv_sec = exptime / 1000000;
+               locktime.tv_nsec = (exptime % 1000000) * 1000;
     
                pthread_cond_timedwait(&m_SendBlockCond, &m_SendBlockLock, &locktime);
             }
@@ -1712,15 +1721,13 @@ int CUDT::recv(char* data, const int& len, int* overlapped, UDT_MEM_ROUTINE func
    // throw an exception if not connected
    if (!m_bConnected)
       throw CUDTException(2, 2, 0);
-   else if ((m_bBroken) && (0 == m_pRcvBuffer->getRcvDataSize()))
+   else if (m_bBroken && (0 == m_pRcvBuffer->getRcvDataSize()))
       throw CUDTException(2, 1, 0);
-   else if ((m_bSynRecving || (NULL == overlapped)) && (0 < m_pRcvBuffer->getPendingQueueSize()))
-      throw CUDTException(6, 4, 0);
 
    if (len <= 0)
       return 0;
 
-   if ((NULL == overlapped) && (0 == m_pRcvBuffer->getRcvDataSize()))
+   if (0 == m_pRcvBuffer->getRcvDataSize())
    {
       if (!m_bSynRecving)
          throw CUDTException(6, 2, 0);
@@ -1735,11 +1742,11 @@ int CUDT::recv(char* data, const int& len, int* overlapped, UDT_MEM_ROUTINE func
             }
             else
             {
-               uint64_t currtime = CTimer::getTime(); 
+               uint64_t exptime = CTimer::getTime() + m_iRcvTimeOut * 1000ULL; 
                timespec locktime; 
     
-               locktime.tv_sec = currtime / 1000000 + (currtime % 1000000 + m_iRcvTimeOut * 1000ULL) / 1000000;
-               locktime.tv_nsec = (m_iRcvTimeOut * 1000ULL + currtime % 1000000) % 1000000 * 1000;
+               locktime.tv_sec = exptime / 1000000;
+               locktime.tv_nsec = (exptime % 1000000) * 1000;
     
                pthread_cond_timedwait(&m_RecvDataCond, &m_RecvDataLock, &locktime); 
             }
@@ -1756,100 +1763,7 @@ int CUDT::recv(char* data, const int& len, int* overlapped, UDT_MEM_ROUTINE func
       }
    }
 
-   if ((NULL == overlapped) || (m_bSynRecving && m_bBroken))
-   {
-      int avail = m_pRcvBuffer->getRcvDataSize();
-      if (len <= avail)
-         avail = len;
-
-      if (avail > 0)
-         m_pRcvBuffer->readBuffer(data, avail);
-      else if (m_bBroken)
-         throw CUDTException(2, 1, 0);
-
-      return avail;
-   }
-
-   // Overlapped IO begins.
-   if (!m_bSynRecving && m_bBroken)
-      throw CUDTException(2, 1, 0);
-   else if (m_iUDTBufSize <= m_pRcvBuffer->getPendingQueueSize())
-      throw CUDTException(6, 3, 0);
-
-   #ifndef WIN32
-      pthread_mutex_lock(&m_OverlappedRecvLock);
-   #else
-      WaitForSingleObject(m_OverlappedRecvLock, INFINITE);
-   #endif
-
-   #ifndef WIN32
-      pthread_mutex_lock(&m_HandleLock);
-   #else
-      WaitForSingleObject(m_HandleLock, INFINITE);
-   #endif
-   if (-1 == m_iRcvHandle)
-      m_iRcvHandle = -(1 << 30);
-   // "recv" handle descriptor is NEGATIVE and INCREASING
-   *overlapped = ++ m_iRcvHandle;
-   #ifndef WIN32
-      pthread_mutex_unlock(&m_HandleLock);
-   #else
-      ReleaseMutex(m_HandleLock);
-   #endif
-
-   if (len <= m_pRcvBuffer->getRcvDataSize())
-   {
-      m_pRcvBuffer->readBuffer(data, len);
-
-      if (NULL != func)
-         func(data, len, context);
-
-      #ifndef WIN32
-         pthread_mutex_unlock(&m_OverlappedRecvLock);
-      #else
-         ReleaseMutex(m_OverlappedRecvLock);
-      #endif
-
-      return len;
-   }
-
-   m_pcTempData = data;
-   m_iTempLen = len;
-   m_pTempRoutine = func;
-   m_pTempContext = context;
-   m_bReadBuf = true;
-
-   #ifndef WIN32
-      while (m_bReadBuf && !m_bBroken)
-         pthread_cond_wait(&m_OverlappedRecvCond, &m_OverlappedRecvLock);
-      while (!m_bBroken && (!m_bSynRecving || (0 != m_pRcvBuffer->getPendingQueueSize())))
-         pthread_cond_wait(&m_OverlappedRecvCond, &m_OverlappedRecvLock);
-      pthread_mutex_unlock(&m_OverlappedRecvLock);
-   #else
-      ReleaseMutex(m_OverlappedRecvLock);
-      while (m_bReadBuf && !m_bBroken)
-         WaitForSingleObject(m_OverlappedRecvCond, INFINITE);
-      while (!m_bBroken && (!m_bSynRecving || (0 != m_pRcvBuffer->getPendingQueueSize())))
-         WaitForSingleObject(m_OverlappedRecvCond, INFINITE);
-   #endif
-
-   if (!m_bSynRecving)
-      return 0;
-
-   // check if the receiving is successful or the connection is broken
-   if (m_bBroken)
-   {
-      // remove incompleted overlapped recv buffer
-      m_pRcvBuffer->removeUserBuf();
-
-      // connection broken and and no data received, report error
-      if (0 == m_pRcvBuffer->getRcvDataSize())
-         throw CUDTException(2, 1, 0);
-
-      return (len <= m_pRcvBuffer->getRcvDataSize()) ? len : m_pRcvBuffer->getRcvDataSize();
-   }
-
-   return len;
+   return m_pRcvBuffer->readBuffer(data, len);
 }
 
 int CUDT::sendmsg(const char* data, const int& len, const int& msttl, const bool& inorder)
@@ -1981,25 +1895,7 @@ bool CUDT::getOverlappedResult(const int& handle, int& progress, const bool& wai
       return res;
    }
 
-   // check receiving buffer
-   CGuard recvguard(m_RecvLock);
-
-   bool res = m_pRcvBuffer->getOverlappedResult(handle, progress);
-   while (wait && !res && !m_bBroken)
-   {
-      #ifndef WIN32
-         usleep(1);
-      #else
-         Sleep(1);
-      #endif
-
-      res = m_pRcvBuffer->getOverlappedResult(handle, progress);
-   }
-
-   if (m_bBroken)
-      throw CUDTException(2, 1, 0);
-
-   return res;
+   return false;
 }
 
 int64_t CUDT::sendfile(ifstream& ifs, const int64_t& offset, const int64_t& size, const int& block)
@@ -2249,8 +2145,6 @@ void CUDT::initSynch()
       pthread_cond_init(&m_SendBlockCond, NULL);
       pthread_mutex_init(&m_RecvDataLock, NULL);
       pthread_cond_init(&m_RecvDataCond, NULL);
-      pthread_mutex_init(&m_OverlappedRecvLock, NULL);
-      pthread_cond_init(&m_OverlappedRecvCond, NULL);
       pthread_mutex_init(&m_SendLock, NULL);
       pthread_mutex_init(&m_RecvLock, NULL);
       pthread_mutex_init(&m_AckLock, NULL);
@@ -2263,8 +2157,6 @@ void CUDT::initSynch()
       m_SendBlockCond = CreateEvent(NULL, false, false, NULL);
       m_RecvDataLock = CreateMutex(NULL, false, NULL);
       m_RecvDataCond = CreateEvent(NULL, false, false, NULL);
-      m_OverlappedRecvLock = CreateMutex(NULL, false, NULL);
-      m_OverlappedRecvCond = CreateEvent(NULL, false, false, NULL);
       m_SendLock = CreateMutex(NULL, false, NULL);
       m_RecvLock = CreateMutex(NULL, false, NULL);
       m_AckLock = CreateMutex(NULL, false, NULL);
@@ -2282,8 +2174,6 @@ void CUDT::destroySynch()
       pthread_cond_destroy(&m_SendBlockCond);
       pthread_mutex_destroy(&m_RecvDataLock);
       pthread_cond_destroy(&m_RecvDataCond);
-      pthread_mutex_destroy(&m_OverlappedRecvLock);
-      pthread_cond_destroy(&m_OverlappedRecvCond);
       pthread_mutex_destroy(&m_SendLock);
       pthread_mutex_destroy(&m_RecvLock);
       pthread_mutex_destroy(&m_AckLock);
@@ -2296,8 +2186,6 @@ void CUDT::destroySynch()
       CloseHandle(m_SendBlockCond);
       CloseHandle(m_RecvDataLock);
       CloseHandle(m_RecvDataCond);
-      CloseHandle(m_OverlappedRecvLock);
-      CloseHandle(m_OverlappedRecvCond);
       CloseHandle(m_SendLock);
       CloseHandle(m_RecvLock);
       CloseHandle(m_AckLock);
@@ -2326,10 +2214,6 @@ void CUDT::releaseSynch()
       pthread_cond_signal(&m_RecvDataCond);
       pthread_mutex_unlock(&m_RecvDataLock);
 
-      pthread_mutex_lock(&m_OverlappedRecvLock);
-      pthread_cond_signal(&m_OverlappedRecvCond);
-      pthread_mutex_unlock(&m_OverlappedRecvLock);
-
       pthread_mutex_lock(&m_RecvLock);
       pthread_mutex_unlock(&m_RecvLock);
    #else
@@ -2339,14 +2223,13 @@ void CUDT::releaseSynch()
       WaitForSingleObject(m_SendLock, INFINITE);
       ReleaseMutex(m_SendLock);
       SetEvent(m_RecvDataCond);
-      SetEvent(m_OverlappedRecvCond);
       WaitForSingleObject(m_RecvLock, INFINITE);
       ReleaseMutex(m_RecvLock);
    #endif
 }
 
 
-int CUDT::pack(CPacket& packet, uint64_t& ts)
+int CUDT::packData(CPacket& packet, uint64_t& ts)
 {
    CGuard cg(m_ConnectionLock);
    if (m_bClosing)
@@ -2483,7 +2366,7 @@ int CUDT::pack(CPacket& packet, uint64_t& ts)
    return payload;
 }
 
-void CUDT::process(CPacket& packet)
+void CUDT::checkTimers()
 {
    CGuard cg(m_ConnectionLock);
    if (m_bClosing)
@@ -2491,7 +2374,6 @@ void CUDT::process(CPacket& packet)
 
    // time
    uint64_t currtime;
-   int offset;
 
    #ifdef CUSTOM_CC
       // update CC parameters
@@ -2499,50 +2381,14 @@ void CUDT::process(CPacket& packet)
       m_dCongestionWindow = m_pCC->m_dCWndSize;
    #endif
 
-   // "recv"/"recvfile" is called, overlapped mode is activated, and not enough received data in the protocol buffer
-   if (m_bReadBuf)
-   {
-      // Check if there is enough data now.
-      #ifndef WIN32
-         pthread_mutex_lock(&(m_OverlappedRecvLock));
-         m_bReadBuf = m_pRcvBuffer->readBuffer(const_cast<char*>(m_pcTempData), const_cast<int&>(m_iTempLen));
-         pthread_mutex_unlock(&(m_OverlappedRecvLock));
-      #else
-         WaitForSingleObject(m_OverlappedRecvLock, INFINITE);
-         m_bReadBuf = m_pRcvBuffer->readBuffer(const_cast<char*>(m_pcTempData), const_cast<int&>(m_iTempLen));
-         ReleaseMutex(m_OverlappedRecvLock);
-      #endif
-
-      // Still no?! Register the application buffer.
-      if (!m_bReadBuf)
-      {
-         offset = m_pRcvBuffer->registerUserBuf(const_cast<char*>(m_pcTempData), const_cast<int&>(m_iTempLen), m_iRcvHandle, m_pTempRoutine, (void*)(m_pTempContext));
-         // there is no seq. wrap for user buffer border. If it exceeds the max. seq., we just ignore it.
-         m_iUserBufBorder = m_iRcvLastAck + (int32_t)ceil(double(m_iTempLen - offset) / m_iPayloadSize);
-      }
-
-      // Otherwise, inform the blocked "recv"/"recvfile" call that the expected data has arrived.
-      // or returns immediately in non-blocking IO mode.
-      if (m_bReadBuf || !m_bSynRecving)
-      {
-         m_bReadBuf = false;
-         #ifndef WIN32
-            pthread_mutex_lock(&(m_OverlappedRecvLock));
-            pthread_cond_signal(&(m_OverlappedRecvCond));
-            pthread_mutex_unlock(&(m_OverlappedRecvLock));
-         #else
-            SetEvent(m_OverlappedRecvCond);
-         #endif
-      }
-   }
-
-
    m_pTimer->rdtsc(currtime);
    int32_t loss = m_pRcvLossList->getFirstLostSeq();
 
    // Query the timers if any of them is expired.
-   if ((currtime > m_ullNextACKTime) || (loss >= m_iUserBufBorder) || ((m_iRcvCurrSeqNo >= m_iUserBufBorder - 1) && (loss < 0)))
+   if (currtime > m_ullNextACKTime)
    {
+//cout << "TO SEND ACK...\n";
+
       // ACK timer expired, or user buffer is fulfilled.
       sendCtrl(2);
 
@@ -2643,14 +2489,11 @@ void CUDT::process(CPacket& packet)
          m_ullNextRTO = currtime + self->m_pCC->m_iRTO * self->m_ullCPUFrequency;
       }
    #endif
+}
 
-
-   ////////////////////////////////////////////////////////////////////////////////////////////
-   // Below is the packet receiving/processing part.
-
-   // Got nothing?
-   if (packet.getLength() <= 0)
-      return;
+void CUDT::processData(CUnit* unit)
+{
+   CPacket& packet = unit->m_Packet;
 
    // Just heard from the peer, reset the expiration count.
    m_iEXPCount = 1;
@@ -2659,26 +2502,6 @@ void CUDT::process(CPacket& packet)
    {
       m_pTimer->rdtsc(m_ullNextEXPTime);
       m_ullNextEXPTime += m_ullEXPInt;
-   }
-
-   // But this is control packet, process it!
-   if (packet.getFlag())
-   {
-      processCtrl(packet);
-
-      if ((2 == packet.getType()) || (6 == packet.getType()))
-      {
-         m_ullNAKInt = (m_iRTT + 4 * m_iRTTVar) * m_ullCPUFrequency;
-         //do not resent the loss report within too short period
-         if (m_ullNAKInt < m_ullSYNInt)
-            m_ullNAKInt = m_ullSYNInt;
-      }
-
-      m_pTimer->rdtsc(currtime);
-      if ((2 <= packet.getType()) && (4 >= packet.getType()))
-         m_ullNextEXPTime = currtime + m_ullEXPInt;
-
-      return;
    }
 
    #ifdef CUSTOM_CC
@@ -2699,15 +2522,11 @@ void CUDT::process(CPacket& packet)
 
    ++ m_llTraceRecv;
 
-   offset = CSeqNo::seqoff(m_iRcvLastAck, packet.m_iSeqNo);
+   int32_t offset = CSeqNo::seqoff(m_iRcvLastAck, packet.m_iSeqNo);
    if ((offset >= m_iFlightFlagSize) || (offset < 0))
       return;
 
-   //!!!! ADDDATA changed the data position, no need for this in this version!!!
-   char* pos = packet.m_pcData;
-
-   if (!(m_pRcvBuffer->addData(&pos, offset * m_iPayloadSize - m_pIrrPktList->currErrorSize(packet.m_iSeqNo), packet.getLength())))
-      return;
+   m_pRcvBuffer->addData(unit, offset);
 
    // Loss detection.
    if (CSeqNo::seqcmp(packet.m_iSeqNo, CSeqNo::incseq(m_iRcvCurrSeqNo)) > 0)
@@ -2742,17 +2561,11 @@ void CUDT::process(CPacket& packet)
    }
 
    // Update the current largest sequence number that has been received.
+   // Or it is a retransmitted packet, remove it from receiver loss list.
    if (CSeqNo::seqcmp(packet.m_iSeqNo, m_iRcvCurrSeqNo) > 0)
       m_iRcvCurrSeqNo = packet.m_iSeqNo;
    else
-   {
-      // Or it is a retransmitted packet, remove it from receiver loss list.
-      // rearrange receiver buffer if it is a first-come irregular packet
-      // However, buffer will not be rearranged in sock_dgram mode
-
-      if (m_pRcvLossList->remove(packet.m_iSeqNo) && (packet.getLength() < m_iPayloadSize) && (m_iSockType == SOCK_STREAM))
-         m_pRcvBuffer->moveData(offset * m_iPayloadSize - m_pIrrPktList->currErrorSize(packet.m_iSeqNo) + packet.getLength(), m_iPayloadSize - packet.getLength());
-   }
+      m_pRcvLossList->remove(packet.m_iSeqNo);
 
    #ifdef CUSTOM_CC
       m_pCC->onPktReceived(&packet);

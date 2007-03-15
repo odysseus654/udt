@@ -256,6 +256,7 @@ int CChannel::recvfrom(sockaddr* addr, CPacket& packet) const
 
    if (res <= 0)
    {
+      perror("recvfrom");
       packet.setLength(-1);
       return -1;
    }
