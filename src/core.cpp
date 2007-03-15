@@ -75,9 +75,9 @@ CUDT::CUDT():
 // These constants are defined in UDT specification. They MUST NOT be changed!
 //
 m_iVersion(4),
+m_iQuickStartPkts(16),
 m_iSYNInterval(10000),
-m_iSelfClockInterval(64),
-m_iQuickStartPkts(16)
+m_iSelfClockInterval(64)
 {
    m_pSndBuffer = NULL;
    m_pRcvBuffer = NULL;
@@ -135,9 +135,9 @@ m_iQuickStartPkts(16)
 
 CUDT::CUDT(const CUDT& ancestor):
 m_iVersion(ancestor.m_iVersion),
+m_iQuickStartPkts(ancestor.m_iQuickStartPkts),
 m_iSYNInterval(ancestor.m_iSYNInterval),
-m_iSelfClockInterval(ancestor.m_iSelfClockInterval),
-m_iQuickStartPkts(ancestor.m_iQuickStartPkts)
+m_iSelfClockInterval(ancestor.m_iSelfClockInterval)
 {
    m_pSndBuffer = NULL;
    m_pRcvBuffer = NULL;
@@ -2228,7 +2228,6 @@ void CUDT::releaseSynch()
    #endif
 }
 
-
 int CUDT::packData(CPacket& packet, uint64_t& ts)
 {
    CGuard cg(m_ConnectionLock);
@@ -2387,8 +2386,6 @@ void CUDT::checkTimers()
    // Query the timers if any of them is expired.
    if (currtime > m_ullNextACKTime)
    {
-//cout << "TO SEND ACK...\n";
-
       // ACK timer expired, or user buffer is fulfilled.
       sendCtrl(2);
 

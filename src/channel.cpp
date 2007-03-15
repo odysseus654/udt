@@ -124,14 +124,9 @@ void CChannel::open(const sockaddr* addr)
       freeaddrinfo(res);
    }
 
-   try
-   {
-      setChannelOpt();
-   }
-   catch (CUDTException e)
-   {
-      throw e;
-   }
+   if ((0 != setsockopt(m_iSocket, SOL_SOCKET, SO_RCVBUF, (char *)&m_iRcvBufSize, sizeof(int))) ||
+       (0 != setsockopt(m_iSocket, SOL_SOCKET, SO_SNDBUF, (char *)&m_iSndBufSize, sizeof(int))))
+      throw CUDTException(1, 3, NET_ERROR);
 }
 
 void CChannel::close() const
@@ -183,14 +178,6 @@ void CChannel::getPeerAddr(sockaddr* addr) const
    socklen_t namelen = (AF_INET == m_iIPversion) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
 
    getpeername(m_iSocket, addr, &namelen);
-}
-
-void CChannel::setChannelOpt()
-{
-   // set sending and receiving buffer size
-   if ((0 != setsockopt(m_iSocket, SOL_SOCKET, SO_RCVBUF, (char *)&m_iRcvBufSize, sizeof(int))) ||
-       (0 != setsockopt(m_iSocket, SOL_SOCKET, SO_SNDBUF, (char *)&m_iSndBufSize, sizeof(int))))
-      throw CUDTException(1, 3, NET_ERROR);
 }
 
 int CChannel::sendto(const sockaddr* addr, CPacket& packet) const

@@ -169,7 +169,7 @@ CUnit* CUnitQueue::getNextAvailUnit()
             return m_pAvailUnit;
 }
 
-      if (m_iVQ != m_vpUnit.size() - 1)
+      if (m_iVQ != int(m_vpUnit.size() - 1))
          m_pAvailUnit = (CUnit*)m_vpUnit[++ m_iVQ];
       else
       {

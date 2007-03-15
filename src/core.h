@@ -258,25 +258,10 @@ private:
    UDTSOCKET m_SocketID;                        // UDT socket number
    int m_iSockType;                             // Type of the UDT connection (SOCK_STREAM or SOCK_DGRAM)
 
-   // peer id, for multiplexer
-   UDTSOCKET m_PeerID;
+   UDTSOCKET m_PeerID;				// peer id, for multiplexer
 
 private: // Version
    const int m_iVersion;                        // UDT version, for compatibility use
-
-private: // Threads, data channel, and timing facility
-#ifndef WIN32
-   bool m_bSndThrStart;                         // lazy snd thread creation
-#endif
-   pthread_t m_SndThread;                       // Sending thread
-   pthread_t m_RcvThread;                       // Receiving thread
-   //CChannel* m_pChannel;                        // UDP channel
-   CTimer* m_pTimer;                            // Timing facility
-   uint64_t m_ullCPUFrequency;                  // CPU clock frequency, used for Timer
-
-private: // Timing intervals
-   const int m_iSYNInterval;                    // Periodical Rate Control Interval, 10 microseconds
-   const int m_iSelfClockInterval;              // ACK interval for self-clocking
 
 private: // Packet size and sequence number attributes
    int m_iPktSize;                              // Maximum/regular packet size, in bytes
@@ -317,15 +302,6 @@ private: // Status
    bool m_bFreeze;                              // freeze the data sending
    int m_iEXPCount;                             // Expiration counter
    int m_iBandwidth;                            // Estimated bandwidth
-
-private: // connection setup
-   pthread_t m_ListenThread;
-
-   #ifndef WIN32
-      static void* listenHandler(void* listener);
-   #else
-      static DWORD WINAPI listenHandler(LPVOID listener);
-   #endif
 
 private: // Sending related data
    CSndBuffer* m_pSndBuffer;                    // Sender buffer
@@ -408,9 +384,13 @@ private: // congestion control
    void rateControl();
    void flowControl(const int& recvrate);
 
-private: // Generation and processing of control packet
+private: // Generation and processing of packets
    void sendCtrl(const int& pkttype, void* lparam = NULL, void* rparam = NULL, const int& size = 0);
    void processCtrl(CPacket& ctrlpkt);
+   int packData(CPacket& packet, uint64_t& ts);
+   void processData(CUnit* unit);
+   int listen(sockaddr* addr, CPacket& packet);
+   void checkTimers();
 
 private: // Trace
    uint64_t m_StartTime;                        // timestamp when the UDT entity is started
@@ -435,11 +415,12 @@ private: // Trace
    int m_iSentNAK;                              // number of NAKs sent in the last trace interval
    int m_iRecvNAK;                              // number of NAKs received in the last trace interval
 
-private:
-   int packData(CPacket& packet, uint64_t& ts);
-   void checkTimers();
-   void processData(CUnit* unit);
-   int listen(sockaddr* addr, CPacket& packet);
+private: // Timers
+   CTimer* m_pTimer;                            // Timing facility
+   uint64_t m_ullCPUFrequency;                  // CPU clock frequency, used for Timer
+
+   const int m_iSYNInterval;                    // Periodical Rate Control Interval, 10 microseconds
+   const int m_iSelfClockInterval;              // ACK interval for self-clocking
 
    uint64_t m_ullNextACKTime;			// Next ACK time, in CPU clock cycles
    uint64_t m_ullNextNAKTime;			// Next NAK time
@@ -458,7 +439,7 @@ private:
 
    uint64_t m_ullTargetTime;			// target time of next packet sending
 
-public: // for udp multiplexer
+public: // UDP multiplexer
    CSndQueue* m_pSndQueue;			// packet sending queue
    CRcvQueue* m_pRcvQueue;			// packet receivinf queue
    sockaddr* m_pPeerAddr;			// peer address

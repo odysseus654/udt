@@ -151,9 +151,6 @@ private:
 
    int m_iSndBufSize;                   // UDP sending buffer size
    int m_iRcvBufSize;                   // UDP receiving buffer size
-
-private:
-   void setChannelOpt();
 };
 
 
