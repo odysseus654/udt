@@ -314,15 +314,9 @@ m_iSize(65536),
 m_pUnitQueue(queue),
 m_iStartPos(0),
 m_iLastAckPos(0),
-m_pMessageList(NULL)
+m_iMaxPos(0)
 {
    m_pUnit = new CUnit* [m_iSize];
-
-   #ifndef WIN32
-      pthread_mutex_init(&m_MsgLock, NULL);
-   #else
-      m_MsgLock = CreateMutex(NULL, false, NULL);
-   #endif
 }
 
 CRcvBuffer::CRcvBuffer(const int& bufsize, CUnitQueue* queue):
@@ -331,17 +325,11 @@ m_iSize(bufsize),
 m_pUnitQueue(queue),
 m_iStartPos(0),
 m_iLastAckPos(0),
-m_pMessageList(NULL)
+m_iMaxPos(0)
 {
    m_pUnit = new CUnit* [m_iSize];
    for (int i = 0; i < m_iSize; ++ i)
       m_pUnit[i] = NULL;
-
-   #ifndef WIN32
-      pthread_mutex_init(&m_MsgLock, NULL);
-   #else
-      m_MsgLock = CreateMutex(NULL, false, NULL);
-   #endif
 }
 
 CRcvBuffer::~CRcvBuffer()
@@ -356,23 +344,15 @@ CRcvBuffer::~CRcvBuffer()
    }
 
    delete [] m_pUnit;
-
-   if (NULL != m_pMessageList)
-      delete [] m_pMessageList;
-
-   #ifndef WIN32
-      pthread_mutex_destroy(&m_MsgLock);
-   #else
-      CloseHandle(m_MsgLock);
-   #endif
 }
 
 void CRcvBuffer::addData(CUnit* unit, int offset)
 {
-   int pos = (m_iLastAckPos + offset) % m_iSize;
-   m_pUnit[pos] = unit;
+   int pos = (m_iLastAckPos + offset);
+   if (pos > m_iMaxPos)
+      m_iMaxPos = pos;
 
-//cout << "ADD " << pos << endl;
+   m_pUnit[pos % m_iSize] = unit;
 }
 
 int CRcvBuffer::readBuffer(char* data, const int& len)
@@ -442,7 +422,7 @@ void CRcvBuffer::ackData(const int& len)
 {
    m_iLastAckPos = (m_iLastAckPos + len) % m_iSize;
 
-   //cout << "BUF ACK " << m_iStartPos << " " << m_iLastAckPos << endl;
+   m_iMaxPos -= len;
 }
 
 int CRcvBuffer::getAvailBufSize() const
@@ -458,115 +438,91 @@ int CRcvBuffer::getRcvDataSize() const
    return m_iSize + m_iLastAckPos - m_iStartPos;
 }
 
-
-void CRcvBuffer::initMsgList()
-{
-   // the message list should contain the maximum possible number of messages: when each packet is a message
-   m_iMsgInfoSize = m_iSize / m_iMSS + 1;
-
-   m_pMessageList = new MsgInfo[m_iMsgInfoSize];
-
-   m_iPtrFirstMsg = -1;
-   m_iPtrRecentACK = -1;
-   m_iLastMsgNo = 0;
-   m_iValidMsgCount = 0;
-
-   for (int i = 0; i < m_iMsgInfoSize; ++ i)
-   {
-      m_pMessageList[i].m_pcData = NULL;
-      m_pMessageList[i].m_iMsgNo = -1;
-      m_pMessageList[i].m_iStartSeq = -1;
-      m_pMessageList[i].m_iEndSeq = -1;
-      m_pMessageList[i].m_iSizeDiff = 0;
-      m_pMessageList[i].m_bValid = false;
-      m_pMessageList[i].m_bDropped = false;
-      m_pMessageList[i].m_bInOrder = false;
-      m_pMessageList[i].m_iMsgNo = -1;
-   }
-}
-
-void CRcvBuffer::checkMsg(const int& type, const int32_t& msgno, const int32_t& seqno, const char* ptr, const bool& inorder, const int& diff)
-{
-   CGuard msgguard(m_MsgLock);
-
-   int pos;
-
-   if (-1 == m_iPtrFirstMsg)
-   {
-      pos = m_iPtrFirstMsg = 0;
-      m_iPtrRecentACK = -1;
-   }
-   else
-   {
-      pos = CMsgNo::msgoff(m_pMessageList[m_iPtrFirstMsg].m_iMsgNo, msgno);
-
-      if (pos >= 0)
-         pos = (m_iPtrFirstMsg + pos) % m_iMsgInfoSize;
-      else
-      {
-         pos = (m_iPtrFirstMsg + pos + m_iMsgInfoSize) % m_iMsgInfoSize;
-         m_iPtrFirstMsg = pos;
-      }
-   }
-
-   MsgInfo* p = m_pMessageList + pos;
-
-   p->m_iMsgNo = msgno;
-
-   switch (type)
-   {
-   case 3: // 11
-      // single packet message
-      p->m_pcData = (char*)ptr;
-      p->m_iStartSeq = p->m_iEndSeq = seqno;
-      p->m_bInOrder = inorder;
-      p->m_iSizeDiff = diff;
-
-      break;
-
-   case 2: // 10
-      // first packet of the message
-      p->m_pcData = (char*)ptr;
-      p->m_iStartSeq = seqno;
-      p->m_bInOrder = inorder;
-
-      break;
-
-   case 1: // 01
-      // last packet of the message
-      p->m_iEndSeq = seqno;
-      p->m_iSizeDiff = diff;
-
-      break;
-   }
-
-   // update the largest msg no so far
-   if (CMsgNo::msgcmp(m_iLastMsgNo, msgno) < 0)
-      m_iLastMsgNo = msgno;
-}
-
-bool CRcvBuffer::ackMsg(const int32_t& ack, const CRcvLossList* rll)
-{
-   CGuard msgguard(m_MsgLock);
-
-   return (m_iValidMsgCount > 0);
-}
-
 void CRcvBuffer::dropMsg(const int32_t& msgno)
 {
-   CGuard msgguard(m_MsgLock);
+   for (int i = 0, n = m_iMaxPos + getRcvDataSize(); i < n; ++ i)
+      if ((NULL != m_pUnit[i]) && (msgno == m_pUnit[i]->m_Packet.m_iMsgNo))
+      {
+         m_pUnit[i]->m_bValid = false;
+         m_pUnitQueue->m_iCount --;
+         m_pUnit[i] = NULL;
+      }
 }
 
 int CRcvBuffer::readMsg(char* data, const int& len)
 {
-   CGuard msgguard(m_MsgLock);
+   // empty buffer
+   if (m_iStartPos == m_iLastAckPos)
+      return 0;
 
-   return 0;
-}
+   int p = m_iStartPos;
+   int q = -1;
+   bool sfound = false;
+   while ((p != m_iLastAckPos) && (-1 == q))
+   {
+      if (NULL != m_pUnit[p])
+      {
+         switch (m_pUnit[p]->m_Packet.getMsgBoundary())
+         {
+         case 3: // 11
+            q = p;
+            break;
 
-int CRcvBuffer::getValidMsgCount()
-{
-   CGuard msgguard(m_MsgLock);
+         case 2: // 10
+            sfound = true;
+            break;
 
-   return m_iValidMsgCount;
+         case 1: // 01
+            if (sfound) q = p;
+         }
+      }
+      else
+      {
+         if (sfound) sfound = false;
+      }
+
+      if (++ p == m_iSize)
+         p = 0;
+   }
+
+   // no msg found
+   if (-1 == q)
+      return 0;
+
+   int rs = len;
+
+   // remove all dropped units
+   while (m_iStartPos != p)
+   {
+       m_pUnit[m_iStartPos]->m_bValid = false;
+       m_pUnitQueue->m_iCount --;
+       m_pUnit[m_iStartPos] = NULL;
+
+      if (++ m_iStartPos == m_iSize)
+         m_iStartPos = 0;
+   }
+
+   do
+   {
+       int unitsize = m_pUnit[p]->m_Packet.getLength();
+       if ((rs >= 0) && (unitsize > rs))
+          unitsize = rs;
+
+       if (unitsize > 0)
+       {
+          memcpy(data, m_pUnit[p]->m_Packet.m_pcData, unitsize);
+          data += unitsize;
+       }
+
+       m_pUnit[p]->m_bValid = false;
+       m_pUnitQueue->m_iCount --;
+       m_pUnit[p] = NULL;
+
+      if (++ p == m_iSize)
+         p = 0;
+   } while (p != q);
+
+   m_iStartPos = (q + 1) % m_iSize;
+
+   return len - rs;
 }

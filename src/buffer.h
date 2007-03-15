@@ -229,32 +229,6 @@ public:
 
    int getRcvDataSize() const;
 
-
-   void initMsgList();
-
-      // Functionality:
-      //    Check the message boundaries.
-      // Parameters:
-      //    0) [in] type: boundary type: start and/or end.
-      //    1) [in] msgno: message number
-      //    2) [in] seqno: sequence number
-      //    3) [in] ptr: pointer to the protocol buffer
-      //    4) [in] diff: size difference of an irredular packet
-      // Returned value:
-      //    None.
-
-   void checkMsg(const int& type, const int32_t& msgno, const int32_t& seqno, const char* ptr, const bool& inorder, const int& diff);
-
-      // Functionality:
-      //    acknowledgment check for the message list.
-      // Parameters:
-      //    0) [in] ackno: latest acknowledged sequence number.
-      //    1) [in] rll: receiver's loss list
-      // Returned value:
-      //    None.
-
-   bool ackMsg(const int32_t& ackno, const CRcvLossList* rll);
-
       // Functionality:
       //    mark the message to be dropped from the message list.
       // Parameters:
@@ -274,16 +248,6 @@ public:
 
    int readMsg(char* data, const int& len);
 
-      // Functionality:
-      //    get the number of valid message currently available.
-      // Parameters:
-      //    None.
-      // Returned value:
-      //    number of valid message.
-
-   int getValidMsgCount();
-
-
 private:
    CUnit** m_pUnit;                     // pointer to the protocol buffer
    int m_iSize;                         // size of the protocol buffer
@@ -292,33 +256,9 @@ private:
    int m_iStartPos;                     // the head position for I/O (inclusive)
    int m_iLastAckPos;                   // the last ACKed position (exclusive)
 					// EMPTY: m_iStartPos = m_iLastAckPos   FULL: m_iStartPos = m_iLastAckPos + 1
+   int m_iMaxPos;			// the furthest data position
 
    int m_iNotch;			// the starting read point of the first unit
-
-
-   struct MsgInfo
-   {
-      char* m_pcData;	                // location of the message in the protocol buffer
-      int32_t m_iMsgNo;	                // message number
-      int32_t m_iStartSeq;              // sequence number of the first packet in the message
-      int32_t m_iEndSeq;                // sequence number of the last packet in the message
-      int m_iSizeDiff;	                // the size difference of the last packet (that may be an irregular sized packet)
-      int m_iLength;	                // length of this message
-      bool m_bValid;                    // if the message is valid
-      bool m_bDropped;                  // if the message is droped by the sender
-      bool m_bInOrder;                  // if the message should be delivered in order
-   } *m_pMessageList;                   // a list of the received message
-
-   int m_iMsgInfoSize;	                // size of the message info list
-   int m_iPtrFirstMsg;                  // pointer to the first message in the list
-   int m_iPtrRecentACK;                 // the most recent ACK'ed message
-   int32_t m_iLastMsgNo;                // the last msg no ever received
-
-   pthread_mutex_t m_MsgLock;           // used to synchronize MsgInfo operation
-
-   int m_iValidMsgCount;                // number valid message
-
-   int m_iMSS;
 };
 
 

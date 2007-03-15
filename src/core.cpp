@@ -795,8 +795,6 @@ void CUDT::connect(const sockaddr* serv_addr)
    m_pTimer = new CTimer;
    m_pSndBuffer = new CSndBuffer(m_iPayloadSize);
    m_pRcvBuffer = new CRcvBuffer(m_iUDTBufSize, &(m_pRcvQueue->m_UnitQueue));
-   if (SOCK_DGRAM == m_iSockType)
-      m_pRcvBuffer->initMsgList();
 
    // after introducing lite ACK, the sndlosslist may not be cleared in time, so it requires twice space.
    m_pSndLossList = new CSndLossList(m_iMaxFlowWindowSize * 2);
@@ -868,8 +866,6 @@ void CUDT::connect(const sockaddr* peer, CHandShake* hs)
    m_pTimer = new CTimer;
    m_pSndBuffer = new CSndBuffer(m_iPayloadSize);
    m_pRcvBuffer = new CRcvBuffer(m_iUDTBufSize, &(m_pRcvQueue->m_UnitQueue));
-   if (SOCK_DGRAM == m_iSockType)
-      m_pRcvBuffer->initMsgList();
    m_pSndLossList = new CSndLossList(m_iMaxFlowWindowSize * 2);
    m_pRcvLossList = new CRcvLossList(m_iFlightFlagSize);
    m_pIrrPktList = new CIrregularPktList(m_iFlightFlagSize);
@@ -1050,37 +1046,18 @@ void CUDT::sendCtrl(const int& pkttype, void* lparam, void* rparam, const int& s
 
          m_pRcvBuffer->ackData(acksize);
 
-         if (m_iSockType == SOCK_STREAM)
-         {
-            // signal a waiting "recv" call if there is any data available
-            #ifndef WIN32
-               pthread_mutex_lock(&m_RecvDataLock);
-               if ((m_bSynRecving) && (0 != m_pRcvBuffer->getRcvDataSize()))
-                  pthread_cond_signal(&m_RecvDataCond);
-               pthread_mutex_unlock(&m_RecvDataLock);
-            #else
-               if ((m_bSynRecving) && (0 != m_pRcvBuffer->getRcvDataSize()))
-                  SetEvent(m_RecvDataCond);
-            #endif
+         // signal a waiting "recv" call if there is any data available
+         #ifndef WIN32
+            pthread_mutex_lock(&m_RecvDataLock);
+            if ((m_bSynRecving) && (0 != m_pRcvBuffer->getRcvDataSize()))
+               pthread_cond_signal(&m_RecvDataCond);
+            pthread_mutex_unlock(&m_RecvDataLock);
+         #else
+            if ((m_bSynRecving) && (0 != m_pRcvBuffer->getRcvDataSize()))
+               SetEvent(m_RecvDataCond);
+         #endif
 
-            m_pIrrPktList->deleteIrregularPkt(m_iRcvLastAck);
-         }
-         else
-         {
-            // message mode, check if there is any new messages...
-            if (m_pRcvBuffer->ackMsg(m_iRcvLastAck, m_pRcvLossList))
-            {
-               #ifndef WIN32
-                  pthread_mutex_lock(&m_RecvDataLock);
-                  if ((m_bSynRecving) && (0 != m_pRcvBuffer->getValidMsgCount()))
-                     pthread_cond_signal(&m_RecvDataCond);
-                  pthread_mutex_unlock(&m_RecvDataLock);
-               #else
-                  if ((m_bSynRecving) && (0 != m_pRcvBuffer->getValidMsgCount()))
-                     SetEvent(m_RecvDataCond);
-               #endif
-            }
-         }
+         m_pIrrPktList->deleteIrregularPkt(m_iRcvLastAck);
       }
       else if (ack == m_iRcvLastAck)
       {
@@ -1833,34 +1810,47 @@ int CUDT::recvmsg(char* data, const int& len)
    // throw an exception if not connected
    if (!m_bConnected)
       throw CUDTException(2, 2, 0);
-   else if ((m_bBroken) && (0 == m_pRcvBuffer->getValidMsgCount()))
-      throw CUDTException(2, 1, 0);
 
    if (len <= 0)
       return 0;
 
-   if (0 == m_pRcvBuffer->getValidMsgCount())
+   if (m_bBroken)
    {
-      if (!m_bSynRecving)
-         throw CUDTException(6, 2, 0);
+      int res = m_pRcvBuffer->readMsg(data, len);
+      if (0 == res)
+         throw CUDTException(2, 1, 0);
       else
-      {
-         #ifndef WIN32
-            pthread_mutex_lock(&m_RecvDataLock);
-            while (!m_bBroken && (0 == m_pRcvBuffer->getValidMsgCount()))
-               pthread_cond_wait(&m_RecvDataCond, &m_RecvDataLock);
-            pthread_mutex_unlock(&m_RecvDataLock);
-         #else
-            while (!m_bBroken && (0 == m_pRcvBuffer->getValidMsgCount()))
-               WaitForSingleObject(m_RecvDataCond, INFINITE);
-         #endif
-      }
+         return res;
    }
 
-   if (m_bBroken && (0 == m_pRcvBuffer->getValidMsgCount()))
-      throw CUDTException(2, 1, 0);
+   if (!m_bSynRecving)
+   {
+      int res = m_pRcvBuffer->readMsg(data, len);
+      if (0 == res)
+         throw CUDTException(6, 2, 0);
+      else
+         return res;
+   }
 
-   return m_pRcvBuffer->readMsg(data, len);
+   int res = m_pRcvBuffer->readMsg(data, len);
+
+   while (0 == res)
+   {
+      #ifndef WIN32
+         pthread_mutex_lock(&m_RecvDataLock);
+         pthread_cond_wait(&m_RecvDataCond, &m_RecvDataLock);
+         pthread_mutex_unlock(&m_RecvDataLock);
+      #else
+         WaitForSingleObject(m_RecvDataCond, INFINITE);
+      #endif
+
+      if (m_bBroken)
+         CUDTException(2, 1, 0);
+
+      res = m_pRcvBuffer->readMsg(data, len);
+   }
+
+   return res;
 }
 
 bool CUDT::getOverlappedResult(const int& handle, int& progress, const bool& wait)
@@ -2542,14 +2532,8 @@ void CUDT::processData(CUnit* unit)
       m_iTraceRcvLoss += CSeqNo::seqlen(m_iRcvCurrSeqNo, packet.m_iSeqNo) - 2;
    }
 
-   // checking message bounaries...
-   if (m_iSockType == SOCK_DGRAM)
-   {
-      if (packet.getMsgBoundary() != 0)
-         m_pRcvBuffer->checkMsg(packet.getMsgBoundary(), packet.getMsgSeq(), packet.m_iSeqNo, packet.m_pcData, packet.getMsgOrderFlag(), m_iPayloadSize - packet.getLength());
-   }
    // This is not a regular fixed size packet...
-   else if (packet.getLength() != m_iPayloadSize)
+   if (packet.getLength() != m_iPayloadSize)
    {
       m_pIrrPktList->addIrregularPkt(packet.m_iSeqNo, m_iPayloadSize - packet.getLength());
 
