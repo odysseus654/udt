@@ -387,7 +387,7 @@ private: // Generation and processing of packets
    void sendCtrl(const int& pkttype, void* lparam = NULL, void* rparam = NULL, const int& size = 0);
    void processCtrl(CPacket& ctrlpkt);
    int packData(CPacket& packet, uint64_t& ts);
-   void processData(CUnit* unit);
+   int processData(CUnit* unit);
    int listen(sockaddr* addr, CPacket& packet);
    void checkTimers();
 

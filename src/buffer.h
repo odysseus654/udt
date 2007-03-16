@@ -259,6 +259,8 @@ private:
    int m_iMaxPos;			// the furthest data position
 
    int m_iNotch;			// the starting read point of the first unit
+
+   pthread_mutex_t m_BufLock;           // used to synchronize buffer operation
 };
 
 

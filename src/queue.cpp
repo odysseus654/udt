@@ -164,10 +164,7 @@ CUnit* CUnitQueue::getNextAvailUnit()
    {
       for (CUnit* sentinel = (CUnit*)m_vpUnit[m_iVQ] + m_viSize[m_iVQ] - 1; m_pAvailUnit != sentinel; ++ m_pAvailUnit)
          if (!m_pAvailUnit->m_bValid)
-{
-//cout << "NEXT AVA " << m_iVQ << " " << m_viSize[m_iVQ] << " " << m_iSize << " " << sentinel - m_pAvailUnit << " " << long(m_pAvailUnit->m_Packet.m_pcData) << endl;
             return m_pAvailUnit;
-}
 
       if (m_iVQ != int(m_vpUnit.size() - 1))
          m_pAvailUnit = (CUnit*)m_vpUnit[++ m_iVQ];
@@ -560,8 +557,6 @@ void CSndQueue::init(const int& size, const CChannel* c, const CTimer* t)
             ++ self->m_iHeadPtr;
          else
             self->m_iHeadPtr = 0;
-
-//cout <<"SENT OUT STH " << self->m_pUnitQueue[self->m_iHeadPtr].m_Packet.getLength() << endl;
       }
       else
       {
@@ -922,16 +917,10 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
       unit->m_Packet.setLength(self->m_iPayloadSize);
 
       // reading next incoming packet
-//cout << "why why 1 " << long(unit->m_pAddr) << " " << long(unit->m_Packet.m_pcData) << endl;
       if (self->m_pChannel->recvfrom(unit->m_pAddr, unit->m_Packet) <= 0)
-{
-//cout << "why why 2 " << long(unit->m_pAddr) << " " << long(unit->m_Packet.m_pcData) << endl;
          continue;
-}
       if (unit == &temp)
          continue;
-
-//cout << "recv sth!!! " << unit->m_Packet.getLength() << " " << long(unit->m_Packet.m_pcData) << endl;
 
       if ((self->m_iAQTailPtr == self->m_iAQHeadPtr) && (self->m_iPQTailPtr == self->m_iPQHeadPtr))
          empty = true;
@@ -1022,7 +1011,7 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
 
          if (NULL != u)
          {
-            // process the control packet, pass the connection request to listening socket, or temporally store in in hash table
+            // process the control packet, pass the connection request to listening socket, or temporally store in hash table
 
             if (u->m_bConnected && !u->m_bBroken)
             {
@@ -1057,7 +1046,11 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
          {
             if (u->m_bConnected && !u->m_bBroken)
             {
-               u->processData(self->m_pActiveQueue[self->m_iAQHeadPtr]);
+               if (0 != u->processData(self->m_pActiveQueue[self->m_iAQHeadPtr]))
+               {
+                  self->m_pActiveQueue[self->m_iAQHeadPtr]->m_bValid = false;
+                  self->m_UnitQueue.m_iCount --;
+               }
                u->checkTimers();
             }
 

@@ -99,7 +99,7 @@ m_iSelfClockInterval(64)
    m_bSynRecving = true;
    m_iFlightFlagSize = 25600;
    m_iSndQueueLimit = 20000000;
-   m_iUDTBufSize = 25600;
+   m_iUDTBufSize = 1024; // must be *greater than* m_iQuickStartPkts(16).
    m_Linger.l_onoff = 1;
    m_Linger.l_linger = 180;
    m_iUDPSndBufSize = 65536;
@@ -294,10 +294,11 @@ void CUDT::setOpt(UDTOpt optName, const void* optval, const int&)
       if (*(int*)optval <= 0)
          throw CUDTException(5, 3, 0);
 
-      if (m_iUDTBufSize > (m_iMSS - 28) * 16)
+      // Mimimum recv buffer size is 32 packets
+      if (m_iUDTBufSize > (m_iMSS - 28) * 32)
          m_iUDTBufSize = *(int*)optval;
       else
-         m_iUDTBufSize = (m_iMSS - 28) * 16;
+         m_iUDTBufSize = (m_iMSS - 28) * 32;
 
       break;
 
@@ -1073,7 +1074,7 @@ void CUDT::sendCtrl(const int& pkttype, void* lparam, void* rparam, const int& s
          #ifndef CUSTOM_CC
          flowControl(m_pRcvTimeWindow->getPktRcvSpeed());
          data[3] = m_iFlowControlWindow;
-         if (data[3] > m_pRcvBuffer->getAvailBufSize());
+         if (data[3] > m_pRcvBuffer->getAvailBufSize())
          #endif
             data[3] = m_pRcvBuffer->getAvailBufSize();
          if (data[3] < 2)
@@ -1090,8 +1091,6 @@ void CUDT::sendCtrl(const int& pkttype, void* lparam, void* rparam, const int& s
          m_pTimer->rdtsc(m_ullLastAckTime);
 
          ++ m_iSentACK;
-
-         //cout << "ACK " << m_iRcvLastAck << endl;
       }
 
       break;
@@ -2467,7 +2466,7 @@ void CUDT::checkTimers()
    #endif
 }
 
-void CUDT::processData(CUnit* unit)
+int CUDT::processData(CUnit* unit)
 {
    CPacket& packet = unit->m_Packet;
 
@@ -2500,7 +2499,7 @@ void CUDT::processData(CUnit* unit)
 
    int32_t offset = CSeqNo::seqoff(m_iRcvLastAck, packet.m_iSeqNo);
    if ((offset >= m_iFlightFlagSize) || (offset < 0))
-      return;
+      return -1;
 
    m_pRcvBuffer->addData(unit, offset);
 
@@ -2540,6 +2539,8 @@ void CUDT::processData(CUnit* unit)
    #if defined (CUSTOM_CC) || defined (NO_BUSY_WAITING)
       m_iPktCount ++;
    #endif
+
+   return 0;
 }
 
 int CUDT::listen(sockaddr* addr, CPacket& packet)
