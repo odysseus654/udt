@@ -1235,7 +1235,10 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
       {
          ack = *(int32_t *)ctrlpkt.m_pcData;
          if (CSeqNo::seqcmp(ack, const_cast<int32_t&>(m_iSndLastAck)) > 0)
+         {
+            m_iFlowWindowSize -= CSeqNo::seqcmp(ack, const_cast<int32_t&>(m_iSndLastAck));
             m_iSndLastAck = ack;
+         }
 
          #ifdef CUSTOM_CC
             m_pCC->onACK(ack);
@@ -1256,7 +1259,11 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
       ack = *(int32_t *)ctrlpkt.m_pcData;
 
       if (CSeqNo::seqcmp(ack, const_cast<int32_t&>(m_iSndLastAck)) > 0)
+      {
+         // Update Flow Window Size, must update before and together m_iSndLastAck
+         m_iFlowWindowSize = *((int32_t *)ctrlpkt.m_pcData + 3);
          m_iSndLastAck = ack;
+      }
 
       // protect packet retransmission
       #ifndef WIN32
@@ -1305,9 +1312,6 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
       // Update RTT
       m_iRTT = *((int32_t *)ctrlpkt.m_pcData + 1);
       m_iRTTVar = *((int32_t *)ctrlpkt.m_pcData + 2);
-
-      // Update Flow Window Size
-      m_iFlowWindowSize = *((int32_t *)ctrlpkt.m_pcData + 3);
 
       #ifndef CUSTOM_CC
          // quick start
@@ -2498,7 +2502,7 @@ int CUDT::processData(CUnit* unit)
    ++ m_llTraceRecv;
 
    int32_t offset = CSeqNo::seqoff(m_iRcvLastAck, packet.m_iSeqNo);
-   if ((offset >= m_iFlightFlagSize) || (offset < 0))
+   if (offset < 0)
       return -1;
 
    m_pRcvBuffer->addData(unit, offset);
