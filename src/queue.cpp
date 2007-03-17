@@ -29,7 +29,7 @@ This file contains the implementation of UDT multiplexer.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/13/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/17/2007
 *****************************************************************************/
 
 #include "common.h"
@@ -389,24 +389,14 @@ int CSndUList::pop(int32_t& id, CUDT*& u)
 
 //
 CSndQueue::CSndQueue():
-m_pUnitQueue(NULL),
-m_iQueueLen(0),
-m_iHeadPtr(0),
-m_iTailPtr(0),
 m_pSndUList(NULL),
 m_pChannel(NULL),
 m_pTimer(NULL)
 {
    #ifndef WIN32
-      pthread_cond_init(&m_QueueCond, NULL);
-      pthread_mutex_init(&m_QueueLock, NULL);
-
       pthread_cond_init(&m_WindowCond, NULL);
       pthread_mutex_init(&m_WindowLock, NULL);
    #else
-      m_QueueLock = CreateMutex(NULL, false, NULL);
-      m_QueueCond = CreateEvent(NULL, false, false, NULL);
-
       m_WindowLock = CreateMutex(NULL, false, NULL);
       m_WindowCond = CreateEvent(NULL, false, false, NULL);
    #endif
@@ -415,29 +405,16 @@ m_pTimer(NULL)
 CSndQueue::~CSndQueue()
 {
    #ifndef WIN32
-      pthread_cond_destroy(&m_QueueCond);
-      pthread_mutex_destroy(&m_QueueLock);
-
       pthread_cond_destroy(&m_WindowCond);
       pthread_mutex_destroy(&m_WindowLock);
    #else
-      CloseHandle(m_QueueLock);
-      CloseHandle(m_QueueCond);
-
       CloseHandle(m_WindowLock);
       CloseHandle(m_WindowCond);
    #endif
-
-   if (NULL == m_pUnitQueue)
-      return;
-
-   delete [] m_pUnitQueue;
 }
 
-void CSndQueue::init(const int& size, const CChannel* c, const CTimer* t)
+void CSndQueue::init(const CChannel* c, const CTimer* t)
 {
-   m_iQueueLen = size;
-   m_pUnitQueue = new CUnit[size];
    m_pChannel = (CChannel*)c;
    m_pTimer = (CTimer*)t;
    m_pSndUList = new CSndUList;
@@ -445,24 +422,23 @@ void CSndQueue::init(const int& size, const CChannel* c, const CTimer* t)
    m_pSndUList->m_pWindowCond = &m_WindowCond;
 
    #ifndef WIN32
-      pthread_create(&m_enQThread, NULL, CSndQueue::enQueue, this);
-      pthread_detach(m_enQThread);
-      pthread_create(&m_deQThread, NULL, CSndQueue::deQueue, this);
-      pthread_detach(m_deQThread);
+      pthread_create(&m_WorkerThread, NULL, CSndQueue::worker, this);
+      pthread_detach(m_WorkerThread);
    #else
       DWORD threadID;
-      m_enQThread = CreateThread(NULL, 0, CSndQueue::enQueue, this, 0, &threadID);
-      m_deQThread = CreateThread(NULL, 0, CSndQueue::deQueue, this, 0, &threadID);
+      m_WorkerThread = CreateThread(NULL, 0, CSndQueue::worker, this, 0, &threadID);
    #endif
 }
 
 #ifndef WIN32
-   void* CSndQueue::enQueue(void* param)
+   void* CSndQueue::worker(void* param)
 #else
-   DWORD WINAPI CSndQueue::enQueue(LPVOID param)
+   DWORD WINAPI CSndQueue::worker(LPVOID param)
 #endif
 {
    CSndQueue* self = (CSndQueue*)param;
+
+   CPacket pkt;
 
    while (true)
    {
@@ -480,41 +456,10 @@ void CSndQueue::init(const int& size, const CChannel* c, const CTimer* t)
          if (self->m_pSndUList->pop(id, u) < 0)
             continue;
 
-         while ((self->m_iTailPtr + 1 == self->m_iHeadPtr) || ((self->m_iTailPtr == self->m_iQueueLen - 1) && (self->m_iHeadPtr == 0)))
-         {
-            // add pthread_cond_wait here
-            #ifndef WIN32
-               pthread_cond_signal(&self->m_QueueCond);
-            #else
-               SetEvent(self->m_QueueCond);
-            #endif
-         }
-
          // pack a packet from the socket
          uint64_t ts;
-         int ps = u->packData(self->m_pUnitQueue[self->m_iTailPtr].m_Packet, ts);
-
-         if (ps > 0)
-         {
-            // insert the packet to the sending queue
-            self->m_pUnitQueue[self->m_iTailPtr].m_pAddr = u->m_pPeerAddr;
-
-            if (self->m_iQueueLen != self->m_iTailPtr + 1)
-               ++ self->m_iTailPtr;
-            else
-               self->m_iTailPtr = 0;
-
-            // activate the dequeue process
-            #ifndef WIN32
-               pthread_mutex_lock(&self->m_QueueLock);
-               if ((self->m_iHeadPtr + 1 == self->m_iTailPtr) || (0 == self->m_iTailPtr))
-                  pthread_cond_signal(&self->m_QueueCond);
-               pthread_mutex_unlock(&self->m_QueueLock);
-            #else
-               if ((self->m_iHeadPtr + 1 == self->m_iTailPtr) || (0 == self->m_iTailPtr))
-                  SetEvent(self->m_QueueCond);
-            #endif
-         }
+         if (u->packData(pkt, ts) > 0)
+            self->m_pChannel->sendto(u->m_pPeerAddr, pkt);
 
          // insert a new entry, ts is the next processing time
          if (ts > 0)
@@ -530,44 +475,6 @@ void CSndQueue::init(const int& size, const CChannel* c, const CTimer* t)
             pthread_mutex_unlock(&self->m_WindowLock);
          #else
             WaitForSingleObject(self->m_WindowCond, INFINITE);
-         #endif
-      }
-   }
-
-   return NULL;
-}
-
-#ifndef WIN32
-   void* CSndQueue::deQueue(void* param)
-#else
-   DWORD WINAPI CSndQueue::deQueue(LPVOID param)
-#endif
-{
-   CSndQueue* self = (CSndQueue*)param;
-
-   while (true)
-   {
-      if (self->m_iHeadPtr != self->m_iTailPtr)
-      {
-         // send the first packet on the queue
-         self->m_pChannel->sendto(self->m_pUnitQueue[self->m_iHeadPtr].m_pAddr, self->m_pUnitQueue[self->m_iHeadPtr].m_Packet);
-
-         // and remove it from the queue
-         if (self->m_iQueueLen != self->m_iHeadPtr + 1)
-            ++ self->m_iHeadPtr;
-         else
-            self->m_iHeadPtr = 0;
-      }
-      else
-      {
-         // no packet to be sent? wait here
-         #ifndef WIN32
-            pthread_mutex_lock(&self->m_QueueLock);
-            if (self->m_iHeadPtr == self->m_iTailPtr)
-               pthread_cond_wait(&self->m_QueueCond, &self->m_QueueLock);
-            pthread_mutex_unlock(&self->m_QueueLock);
-         #else
-            WaitForSingleObject(self->m_QueueCond, 1);
          #endif
       }
    }
@@ -821,13 +728,6 @@ void CHash::remove(const int32_t& id)
 
 //
 CRcvQueue::CRcvQueue():
-m_iQueueLen(0),
-m_pActiveQueue(NULL),
-m_iAQHeadPtr(0),
-m_iAQTailPtr(0),
-m_pPassiveQueue(NULL),
-m_iPQHeadPtr(0),
-m_iPQTailPtr(0),
 m_pRcvUList(NULL),
 m_pHash(NULL),
 m_pChannel(NULL),
@@ -845,12 +745,6 @@ m_ListenerID(-1)
 
 CRcvQueue::~CRcvQueue()
 {
-   if (NULL != m_pActiveQueue)
-      delete [] m_pActiveQueue;
-
-   if (NULL != m_pPassiveQueue)
-      delete [] m_pPassiveQueue;
-
    #ifndef WIN32
       pthread_cond_destroy(&m_QueueCond);
       pthread_mutex_destroy(&m_QueueLock);
@@ -862,13 +756,9 @@ CRcvQueue::~CRcvQueue()
 
 void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, const CChannel* cc, const CTimer* t)
 {
-   m_iQueueLen = qsize;
    m_iPayloadSize = payload;
 
    m_UnitQueue.init(qsize, payload);
-
-   m_pActiveQueue = new CUnit*[qsize];
-   m_pPassiveQueue = new CUnit*[qsize];
 
    m_pHash = new CHash;
    m_pHash->init(hsize);
@@ -879,26 +769,22 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
    m_pRcvUList = new CRcvUList;
 
    #ifndef WIN32
-      pthread_create(&m_enQThread, NULL, CRcvQueue::enQueue, this);
-      pthread_detach(m_enQThread);
-      pthread_create(&m_deQThread, NULL, CRcvQueue::deQueue, this);
-      pthread_detach(m_deQThread);
+      pthread_create(&m_WorkerThread, NULL, CRcvQueue::worker, this);
+      pthread_detach(m_WorkerThread);
    #else
       DWORD threadID;
-      m_enQThread = CreateThread(NULL, 0, CRcvQueue::enQueue, this, 0, &threadID);
-      m_deQThread = CreateThread(NULL, 0, CRcvQueue::deQueue, this, 0, &threadID);
+      m_WorkerThread = CreateThread(NULL, 0, CRcvQueue::wroker, this, 0, &threadID);
    #endif
 }
 
 #ifndef WIN32
-   void* CRcvQueue::enQueue(void* param)
+   void* CRcvQueue::worker(void* param)
 #else
-   DWORD WINAPI CRcvQueue::enQueue(LPVOID param)
+   DWORD WINAPI CRcvQueue::worker(LPVOID param)
 #endif
 {
    CRcvQueue* self = (CRcvQueue*)param;
 
-   bool empty = false;
    CUnit temp;
    temp.m_Packet.m_pcData = new char[self->m_iPayloadSize];
    CUnit* unit;
@@ -913,179 +799,67 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
       unit = self->m_UnitQueue.getNextAvailUnit();
       if (NULL == unit)
          unit = &temp;
-      
+
       unit->m_Packet.setLength(self->m_iPayloadSize);
+
+      CUDT* u;
+      int32_t id;
 
       // reading next incoming packet
       if (self->m_pChannel->recvfrom(unit->m_pAddr, unit->m_Packet) <= 0)
-         continue;
+         goto TIMER_CHECK;
       if (unit == &temp)
-         continue;
+         goto TIMER_CHECK;
 
-      if ((self->m_iAQTailPtr == self->m_iAQHeadPtr) && (self->m_iPQTailPtr == self->m_iPQHeadPtr))
-         empty = true;
+      id = unit->m_Packet.m_iID;
 
-      if (0 == unit->m_Packet.getFlag())
+      // ID 0 is for connection request, which should be passed to the listening socket or rendezvous sockets
+      if (0 == id)
       {
-         // queue is full, disgard the packet
-         if ((self->m_iAQTailPtr + 1 == self->m_iAQHeadPtr) || ((self->m_iAQTailPtr == self->m_iQueueLen - 1) && (self->m_iAQHeadPtr == 0)))
-            continue;
-
-         self->m_UnitQueue.m_iCount ++;
-         unit->m_bValid = true;
-
-         // this is a data packet, put it into active queue
-         self->m_pActiveQueue[self->m_iAQTailPtr] = unit;
-
-         if (self->m_iQueueLen != self->m_iAQTailPtr + 1)
-            ++ self->m_iAQTailPtr;
-         else
-            self->m_iAQTailPtr = 0;
-      }
-      else
-      {
-         // queue is full, disgard the packet
-         if ((self->m_iPQTailPtr + 1 == self->m_iPQHeadPtr) || ((self->m_iPQTailPtr == self->m_iQueueLen - 1) && (self->m_iPQHeadPtr == 0)))
-            continue;
-
-         self->m_UnitQueue.m_iCount ++;
-         unit->m_bValid = true;
-
-         // this is a control packet, put it into passive queue
-         self->m_pPassiveQueue[self->m_iPQTailPtr] = unit;
-
-         if (self->m_iQueueLen != self->m_iPQTailPtr + 1)
-            ++ self->m_iPQTailPtr;
-         else
-            self->m_iPQTailPtr = 0;
+         if (-1 != self->m_ListenerID)
+            id = self->m_ListenerID;
+         else if (0 != self->m_vRendezvousID.size())
+            for (vector<CRL>::iterator i = self->m_vRendezvousID.begin(); i != self->m_vRendezvousID.end(); ++ i)
+               if (CIPAddress::ipcmp(unit->m_pAddr, i->m_pPeerAddr /*IPversion*/))
+               {
+                  id = i->m_iID;
+                  break;
+               }
       }
 
-      if (empty)
+      u = self->m_pHash->lookup(id);
+
+      if (NULL != u)
       {
-         #ifndef WIN32
-            pthread_cond_signal(&self->m_QueueCond);
-         #else
-            SetEvent(self->m_QueueCond);
-         #endif
-
-         empty = false;
-      }
-   }
-
-   delete [] temp.m_Packet.m_pcData;
-
-   return NULL;
-}
-
-#ifndef WIN32
-   void* CRcvQueue::deQueue(void* param)
-#else
-   DWORD WINAPI CRcvQueue::deQueue(LPVOID param)
-#endif
-{
-   CRcvQueue* self = (CRcvQueue*)param;
-
-   while (true)
-   {
-      if (self->m_iPQTailPtr != self->m_iPQHeadPtr)
-      {
-         // check passive queue first, which has higher priority
-
-         int32_t id = self->m_pPassiveQueue[self->m_iPQHeadPtr]->m_Packet.m_iID;
-
-         // ID 0 is for connection request, which should be passed to the listening socket or rendezvous sockets
-         if (0 == id)
+         if (0 == unit->m_Packet.getFlag())
          {
-            if (-1 != self->m_ListenerID)
-               id = self->m_ListenerID;
-            else if (0 != self->m_vRendezvousID.size())
-               for (vector<CRL>::iterator i = self->m_vRendezvousID.begin(); i != self->m_vRendezvousID.end(); ++ i)
-                  if (CIPAddress::ipcmp(self->m_pPassiveQueue[self->m_iPQHeadPtr]->m_pAddr, i->m_pPeerAddr /*IPversion*/))
-                  {
-                     id = i->m_iID;
-                     break;
-                  }
+            if (u->m_bConnected && !u->m_bBroken)
+            {
+               u->processData(unit);
+               u->checkTimers();
+            }
          }
-
-         CUDT* u = self->m_pHash->lookup(id);
-
-         if (NULL != u)
+         else
          {
             // process the control packet, pass the connection request to listening socket, or temporally store in hash table
 
             if (u->m_bConnected && !u->m_bBroken)
             {
-               u->processCtrl(self->m_pPassiveQueue[self->m_iPQHeadPtr]->m_Packet);
+               u->processCtrl(unit->m_Packet);
                u->checkTimers();
             }
             else if (u->m_bListening)
-               u->listen(self->m_pPassiveQueue[self->m_iPQHeadPtr]->m_pAddr, self->m_pPassiveQueue[self->m_iPQHeadPtr]->m_Packet);
+               u->listen(unit->m_pAddr, unit->m_Packet);
             else
-               self->m_pHash->setUnit(id, self->m_pPassiveQueue[self->m_iPQHeadPtr]);
-
-            self->m_pRcvUList->remove(id);
-            if (u->m_bConnected && !u->m_bBroken)
-               self->m_pRcvUList->insert(id, u);
+               self->m_pHash->setUnit(id, unit);
          }
 
-         self->m_pPassiveQueue[self->m_iPQHeadPtr]->m_bValid = false;
-         self->m_UnitQueue.m_iCount --;
-
-         if (self->m_iQueueLen != self->m_iPQHeadPtr + 1)
-            ++ self->m_iPQHeadPtr;
-         else
-            self->m_iPQHeadPtr = 0;
-      }
-      else if (self->m_iAQTailPtr != self->m_iAQHeadPtr)
-      {
-         int32_t id = self->m_pActiveQueue[self->m_iAQHeadPtr]->m_Packet.m_iID;
-
-         CUDT* u = self->m_pHash->lookup(id);
-
-         if (NULL != u)
-         {
-            if (u->m_bConnected && !u->m_bBroken)
-            {
-               if (0 != u->processData(self->m_pActiveQueue[self->m_iAQHeadPtr]))
-               {
-                  self->m_pActiveQueue[self->m_iAQHeadPtr]->m_bValid = false;
-                  self->m_UnitQueue.m_iCount --;
-               }
-               u->checkTimers();
-            }
-
-            self->m_pRcvUList->remove(id);
-            if (u->m_bConnected && !u->m_bBroken)
-               self->m_pRcvUList->insert(id, u);
-         }
-         else
-         {
-            self->m_pActiveQueue[self->m_iAQHeadPtr]->m_bValid = false;
-            self->m_UnitQueue.m_iCount --;
-         }
-
-         if (self->m_iQueueLen != self->m_iAQHeadPtr + 1)
-            ++ self->m_iAQHeadPtr;
-         else
-            self->m_iAQHeadPtr = 0;
-      }
-      else
-      {
-         // wait for a new packet
-         #ifndef WIN32
-            timespec timeout;
-            uint64_t now = CTimer::getTime() + 10000;
-
-            timeout.tv_sec = now / 1000000;
-            timeout.tv_nsec = (now % 1000000) * 1000;
-
-            if (0 == pthread_cond_timedwait(&self->m_QueueCond, &self->m_QueueLock, &timeout))
-               continue;
-         #else
-            WaitForSingleObject(self->m_QueueCond, 1);
-         #endif
+         self->m_pRcvUList->remove(id);
+         if (u->m_bConnected && !u->m_bBroken)
+            self->m_pRcvUList->insert(id, u);
       }
 
+TIMER_CHECK:
       // take care of the timing event for all UDT sockets
 
       CUDTList* ul = self->m_pRcvUList->m_pUList;
@@ -1115,6 +889,9 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
          ul = self->m_pRcvUList->m_pUList;
       }
    }
+
+
+   delete [] temp.m_Packet.m_pcData;
 
    return NULL;
 }

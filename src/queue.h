@@ -295,13 +295,12 @@ public:
       // Functionality:
       //    Initialize the sending queue.
       // Parameters:
-      //    1) [in] size: queue size
-      //    2) [in] c: UDP channel to be associated to the queue
-      //    3) [in] t: Timer
+      //    1) [in] c: UDP channel to be associated to the queue
+      //    2) [in] t: Timer
       // Returned value:
       //    None.
 
-   void init(const int& size, const CChannel* c, const CTimer* t);
+   void init(const CChannel* c, const CTimer* t);
 
       // Functionality:
       //    Send out a packet to a given address.
@@ -315,22 +314,12 @@ public:
 
 private:
 #ifndef WIN32
-   static void* enQueue(void* param);
-   static void* deQueue(void* param);
+   static void* worker(void* param);
 #else
-   static DWORD WINAPI enQueue(LPVOID param);
-   static DWORD WINAPI deQueue(LPVOID param);
+   static DWORD WINAPI worker(LPVOID param);
 #endif
 
-   pthread_t m_enQThread;
-   pthread_t m_deQThread;
-
-private:
-   CUnit* m_pUnitQueue;			// The queue
-   int m_iQueueLen;			// Length of the queue
-
-   volatile int m_iHeadPtr;		// Head pointer of the queue
-   volatile int m_iTailPtr;		// Tail pointer of the queue
+   pthread_t m_WorkerThread;
 
 private:
    CSndUList* m_pSndUList;		// List of UDT instances for data sending
@@ -338,9 +327,6 @@ private:
    CTimer* m_pTimer;			// Timing facility
 
 private:
-   pthread_mutex_t m_QueueLock;
-   pthread_cond_t m_QueueCond;
-
    pthread_mutex_t m_WindowLock;
    pthread_cond_t m_WindowCond;
 };
@@ -383,28 +369,15 @@ public:
 
 private:
 #ifndef WIN32
-   static void* enQueue(void* param);
-   static void* deQueue(void* param);
+   static void* worker(void* param);
 #else
-   static DWORD WINAPI enQueue(LPVOID param);
-   static DWORD WINAPI deQueue(LPVOID param);
+   static DWORD WINAPI worker(LPVOID param);
 #endif
 
-   pthread_t m_enQThread;
-   pthread_t m_deQThread;
+   pthread_t m_WorkerThread;
 
 private:
    CUnitQueue m_UnitQueue;	// The received packet queue
-
-   int m_iQueueLen;		// length of AQ and PQ
-
-   CUnit** m_pActiveQueue;	// Queue for data packets
-   int m_iAQHeadPtr;		// Header pointer for AQ, first available packet
-   int m_iAQTailPtr;		// Tail pointer for AQ, next avilable slot
-
-   CUnit** m_pPassiveQueue;	// Queue for control packets
-   int m_iPQHeadPtr;		// Header pointer for PQ, first available packet
-   int m_iPQTailPtr;		// Tail pointer for PQ, next avilable slot
 
 private:
    CRcvUList* m_pRcvUList;	// List of UDT instances that will read packets from the queue

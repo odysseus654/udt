@@ -173,21 +173,20 @@ public:
       // Functionality:
       //    Write data into the buffer.
       // Parameters:
-      //    0) [in/out] data: [in] pointer to data to be copied, [out] pointer to the protoco buffer location where the data is added.
+      //    0) [in] unit: pointer to a data unit containing new packet
       //    1) [in] offset: offset from last ACK point.
-      //    2) [in] len: size of data to be written.
       // Returned value:
-      //    true if a position that can hold the data is found, otherwise false.
+      //    0 is success, -1 if data is repeated.
 
-   void addData(CUnit* unit, int offset);
+   int addData(CUnit* unit, int offset);
 
       // Functionality:
-      //    Move part of the data in buffer to the direction of the ACK point by some length.
+      //    Read data into a user buffer.
       // Parameters:
-      //    0) [in] offset: From where to move the data.
-      //    1) [in] len: How much to move.
+      //    0) [in] data: pointer to user buffer.
+      //    1) [in] len: length of user buffer.
       // Returned value:
-      //    None.
+      //    size of data read.
 
    int readBuffer(char* data, const int& len);
 
@@ -259,8 +258,6 @@ private:
    int m_iMaxPos;			// the furthest data position
 
    int m_iNotch;			// the starting read point of the first unit
-
-   pthread_mutex_t m_BufLock;           // used to synchronize buffer operation
 };
 
 

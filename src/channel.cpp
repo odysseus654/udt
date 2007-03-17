@@ -127,6 +127,32 @@ void CChannel::open(const sockaddr* addr)
    if ((0 != setsockopt(m_iSocket, SOL_SOCKET, SO_RCVBUF, (char *)&m_iRcvBufSize, sizeof(int))) ||
        (0 != setsockopt(m_iSocket, SOL_SOCKET, SO_SNDBUF, (char *)&m_iSndBufSize, sizeof(int))))
       throw CUDTException(1, 3, NET_ERROR);
+
+   timeval tv;
+   tv.tv_sec = 0;
+   #if defined (BSD) || defined (OSX)
+      // Known BSD bug as the day I wrote this code.
+      // A small time out value will cause the socket to block forever.
+      tv.tv_usec = 10000;
+   #else
+      tv.tv_usec = 100;
+   #endif
+
+   #ifdef UNIX
+      // Set non-blocking I/O
+      // UNIX does not support SO_RCVTIMEO
+      int opts = fcntl(m_iSocket, F_GETFL);
+      if (-1 == fcntl(m_iSocket, F_SETFL, opts | O_NONBLOCK))
+         throw CUDTException(1, 3, NET_ERROR);
+   #elif WIN32
+      DWORD ot = 1; //milliseconds
+      if (setsockopt(m_iSocket, SOL_SOCKET, SO_RCVTIMEO, (char *)&ot, sizeof(DWORD)) < 0)
+         throw CUDTException(1, 3, NET_ERROR);
+   #else
+      // Set receiving time-out value
+      if (setsockopt(m_iSocket, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv, sizeof(timeval)) < 0)
+         throw CUDTException(1, 3, NET_ERROR);
+   #endif
 }
 
 void CChannel::close() const
@@ -243,7 +269,6 @@ int CChannel::recvfrom(sockaddr* addr, CPacket& packet) const
 
    if (res <= 0)
    {
-      perror("recvfrom");
       packet.setLength(-1);
       return -1;
    }

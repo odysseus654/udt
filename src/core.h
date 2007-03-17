@@ -364,9 +364,6 @@ private: // synchronization: mutexes and conditions
 
    pthread_mutex_t m_AckLock;                   // used to protected sender's loss list when processing ACK
 
-   pthread_cond_t m_WindowCond;                 // used to block sending when flow window is exceeded
-   pthread_mutex_t m_WindowLock;                // lock associated to m_WindowLock
-
    pthread_cond_t m_RecvDataCond;               // used to block "recv" when there is no data
    pthread_mutex_t m_RecvDataLock;              // lock associated to m_RecvDataCond
 
@@ -415,7 +412,6 @@ private: // Trace
    int m_iRecvNAK;                              // number of NAKs received in the last trace interval
 
 private: // Timers
-   CTimer* m_pTimer;                            // Timing facility
    uint64_t m_ullCPUFrequency;                  // CPU clock frequency, used for Timer
 
    const int m_iSYNInterval;                    // Periodical Rate Control Interval, 10 microseconds
