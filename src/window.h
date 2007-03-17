@@ -29,7 +29,7 @@ This header file contains the definition of Window structures used in UDT.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/13/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/17/2007
 *****************************************************************************/
 
 #ifndef __UDT_WINDOW_H__

@@ -63,9 +63,41 @@ public:
    ~CUnitQueue();
 
 public:
+
+      // Functionality:
+      //    Initialize the unit queue.
+      // Parameters:
+      //    1) [in] size: queue size
+      //    2) [in] mss: maximum segament size
+      // Returned value:
+      //    0: success, -1: failure.
+
    int init(const int& size, const int& mss);
+
+      // Functionality:
+      //    Increase (double) the unit queue size.
+      // Parameters:
+      //    None.
+      // Returned value:
+      //    0: success, -1: failure.
+
    int increase();
+
+      // Functionality:
+      //    Decrease (halve) the unit queue size.
+      // Parameters:
+      //    None.
+      // Returned value:
+      //    0: success, -1: failure.
+
    int shrink();
+
+      // Functionality:
+      //    find an available unit for incoming packet.
+      // Parameters:
+      //    None.
+      // Returned value:
+      //    Pointer to the available unit, NULL if not found.
 
    CUnit* getNextAvailUnit();
 

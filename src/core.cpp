@@ -34,7 +34,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/16/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/17/2007
 *****************************************************************************/
 
 #ifndef WIN32
@@ -1905,6 +1905,7 @@ int64_t CUDT::sendfile(ifstream& ifs, const int64_t& offset, const int64_t& size
 
       try
       {
+         tempbuf = NULL;
          tempbuf = new char[unitsize];
       }
       catch (...)
@@ -1993,8 +1994,6 @@ int64_t CUDT::recvfile(ofstream& ofs, const int64_t& offset, const int64_t& size
       throw CUDTException(4, 3);
    }
 
-   int overlapid;
-
    // receiving...
    while (torecv > 0)
    {
@@ -2002,10 +2001,10 @@ int64_t CUDT::recvfile(ofstream& ofs, const int64_t& offset, const int64_t& size
 
       try
       {
-         recvsize = recv(tempbuf, unitsize, &overlapid);
+         recvsize = recv(tempbuf, unitsize);
          ofs.write(tempbuf, recvsize);
 
-         if (recvsize < unitsize)
+         if (recvsize <= 0)
          {
              m_bSynRecving = syn;
              return size - torecv + recvsize;

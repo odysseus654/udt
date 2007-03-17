@@ -29,7 +29,7 @@ This header file contains the definition of UDT/CCC base class.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 01/07/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/16/2007
 *****************************************************************************/
 
 

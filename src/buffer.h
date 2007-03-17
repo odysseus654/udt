@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright © 2001 - 2006, The Board of Trustees of the University of Illinois.
+Copyright © 2001 - 2007, The Board of Trustees of the University of Illinois.
 All Rights Reserved.
 
 UDP-based Data Transfer Library (UDT) special version UDT-m
@@ -29,7 +29,7 @@ This header file contains the definition of UDT buffer structure and operations.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 12/15/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/17/2007
 *****************************************************************************/
 
 #ifndef __UDT_BUFFER_H__
@@ -200,17 +200,6 @@ public:
    void ackData(const int& len);
 
       // Functionality:
-      //    Insert the user buffer into the protocol buffer.
-      // Parameters:
-      //    0) [in] buf: pointer to the user buffer.
-      //    1) [in] len: size of the user buffer.
-      //    2) [in] handle: descriptor of this overlapped receiving.
-      //    3) [in] func: buffer process routine after an overlapped IO is completed.
-      //    3) [in] context parameter for the buffer process routine.
-      // Returned value:
-      //    Size of data that has been received by now.
-
-      // Functionality:
       //    Query how many buffer space left for data receiving.
       // Parameters:
       //    None.
@@ -250,7 +239,7 @@ public:
 private:
    CUnit** m_pUnit;                     // pointer to the protocol buffer
    int m_iSize;                         // size of the protocol buffer
-   CUnitQueue* m_pUnitQueue;
+   CUnitQueue* m_pUnitQueue;		// the shared unit queue
 
    int m_iStartPos;                     // the head position for I/O (inclusive)
    int m_iLastAckPos;                   // the last ACKed position (exclusive)

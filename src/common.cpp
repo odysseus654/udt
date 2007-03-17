@@ -30,7 +30,7 @@ mutex facility, and exception processing.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 03/11/2007
+   Yunhong Gu [ygu@cs.uic.edu], last updated 03/17/2007
 *****************************************************************************/
 
 
