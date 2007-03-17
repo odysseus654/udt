@@ -109,8 +109,6 @@ int CUnitQueue::init(const int& size, const int& mss)
 
 int CUnitQueue::increase()
 {
-cout << "INCREASE!!!! " << m_iCount << " " << m_iSize << endl;
-
    CUnit* tempu = NULL;
    char* tempb = NULL;
    char* tempa = NULL;
@@ -512,7 +510,7 @@ CRcvUList::~CRcvUList()
    #endif
 }
 
-void CRcvUList::insert(const int32_t& id, const CUDT* u)
+void CRcvUList::insert(const CUDT* u)
 {
    CGuard listguard(m_ListLock);
 
@@ -773,7 +771,7 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
       pthread_detach(m_WorkerThread);
    #else
       DWORD threadID;
-      m_WorkerThread = CreateThread(NULL, 0, CRcvQueue::wroker, this, 0, &threadID);
+      m_WorkerThread = CreateThread(NULL, 0, CRcvQueue::worker, this, 0, &threadID);
    #endif
 }
 
@@ -856,7 +854,7 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
 
          self->m_pRcvUList->remove(id);
          if (u->m_bConnected && !u->m_bBroken)
-            self->m_pRcvUList->insert(id, u);
+            self->m_pRcvUList->insert(u);
       }
 
 TIMER_CHECK:
@@ -879,7 +877,7 @@ TIMER_CHECK:
             u->checkTimers();
 
             self->m_pRcvUList->remove(id);
-            self->m_pRcvUList->insert(id, u);
+            self->m_pRcvUList->insert(u);
          }
          else
          {

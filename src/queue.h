@@ -172,12 +172,11 @@ public:
       // Functionality:
       //    Insert a new UDT instance to the list.
       // Parameters:
-      //    1) [in] id: socket ID
-      //    2) [in] u: pointer to the UDT instance
+      //    1) [in] u: pointer to the UDT instance
       // Returned value:
       //    None.
 
-   void insert(const int32_t& id, const CUDT* u);
+   void insert(const CUDT* u);
 
       // Functionality:
       //    Remove the UDT instance to the list.
