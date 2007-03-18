@@ -51,8 +51,6 @@ written by
 #include <cmath>
 #include "queue.h"
 #include "core.h"
-#include <iostream>
-using namespace std;
 
 
 CUDTUnited CUDT::s_UDTUnited;
@@ -1068,6 +1066,7 @@ void CUDT::sendCtrl(const int& pkttype, void* lparam, void* rparam, const int& s
          if (data[3] > m_pRcvBuffer->getAvailBufSize())
          #endif
             data[3] = m_pRcvBuffer->getAvailBufSize();
+         // a minimum flow window of 2 is used, even if buffer is full, to break potential deadlock
          if (data[3] < 2)
             data[3] = 2;
 
@@ -2021,7 +2020,7 @@ int64_t CUDT::recvfile(ofstream& ofs, const int64_t& offset, const int64_t& size
          throw CUDTException(4, 4);
       }
 
-      torecv -= unitsize;
+      torecv -= recvsize;
    }
 
    // recover the original receiving mode
@@ -2454,9 +2453,7 @@ int CUDT::processData(CUnit* unit)
       if (!m_bUserDefinedRTO)
          m_pCC->m_iRTO = m_iRTT + 4 * m_iRTTVar;
       m_ullNextRTO = currtime + m_pCC->m_iRTO * m_ullCPUFrequency;
-   #endif
 
-   #ifdef CUSTOM_CC
       m_pCC->onPktReceived(&packet);
    #endif
 
@@ -2477,7 +2474,7 @@ int CUDT::processData(CUnit* unit)
    ++ m_llTraceRecv;
 
    int32_t offset = CSeqNo::seqoff(m_iRcvLastAck, packet.m_iSeqNo);
-   if (offset < 0)
+   if ((offset < 0) || (offset >= m_pRcvBuffer->getAvailBufSize()))
       return -1;
 
    if (m_pRcvBuffer->addData(unit, offset) < 0)

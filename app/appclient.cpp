@@ -75,9 +75,6 @@ int main(int argc, char* argv[])
    int handle = 0;
    char* data = new char[size];
 
-   for (int i = 0; i < 2500000; ++ i)
-      *((int*)data + i) = i;
-
 #ifndef WIN32
    pthread_create(new pthread_t, NULL, monitor, &client);
 #else

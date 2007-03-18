@@ -136,13 +136,6 @@ DWORD WINAPI recvdata(LPVOID usocket)
          rsize += rs;
       }
 
-      for (int i = 0; i < 2500000; ++ i)
-         if (*((int*)data + i) != i)
-         {
-            cout << i << " " << *((int*)data + i) << endl;
-            break;
-         }
-
       if (rsize < size)
          break;
    }

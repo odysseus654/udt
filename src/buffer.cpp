@@ -39,8 +39,7 @@ written by
 #include <cstring>
 #include <cmath>
 #include "buffer.h"
-#include <iostream>
-using namespace std;
+
 
 CSndBuffer::CSndBuffer(const int& mss):
 m_pBlock(NULL),
@@ -325,7 +324,8 @@ m_iSize(bufsize),
 m_pUnitQueue(queue),
 m_iStartPos(0),
 m_iLastAckPos(0),
-m_iMaxPos(0)
+m_iMaxPos(0),
+m_iNotch(0)
 {
    m_pUnit = new CUnit* [m_iSize];
    for (int i = 0; i < m_iSize; ++ i)
@@ -381,9 +381,10 @@ int CRcvBuffer::readBuffer(char* data, const int& len)
       memcpy(data, m_pUnit[p]->m_Packet.m_pcData + m_iNotch, unitsize);
       data += unitsize;
 
-      m_pUnit[p]->m_bValid = false;
-      -- m_pUnitQueue->m_iCount;
+      CUnit* tmp = m_pUnit[p];
       m_pUnit[p] = NULL;
+      tmp->m_bValid = false;
+      -- m_pUnitQueue->m_iCount;
 
       m_iNotch = 0;
       rs -= unitsize;
@@ -407,9 +408,10 @@ int CRcvBuffer::readBuffer(char* data, const int& len)
          memcpy(data, m_pUnit[p]->m_Packet.m_pcData, unitsize);
          data += unitsize;
 
-         m_pUnit[p]->m_bValid = false;
-         -- m_pUnitQueue->m_iCount;
+         CUnit* tmp = m_pUnit[p];
          m_pUnit[p] = NULL;
+         tmp->m_bValid = false;
+         -- m_pUnitQueue->m_iCount;
 
          rs -= unitsize;
 
@@ -456,9 +458,10 @@ void CRcvBuffer::dropMsg(const int32_t& msgno)
    for (int i = 0, n = m_iMaxPos + getRcvDataSize(); i < n; ++ i)
       if ((NULL != m_pUnit[i]) && (msgno == m_pUnit[i]->m_Packet.m_iMsgNo))
       {
-         m_pUnit[i]->m_bValid = false;
-         -- m_pUnitQueue->m_iCount;
+         CUnit* tmp = m_pUnit[i];
          m_pUnit[i] = NULL;
+         tmp->m_bValid = false;
+         -- m_pUnitQueue->m_iCount;
       }
 }
 
@@ -508,9 +511,10 @@ int CRcvBuffer::readMsg(char* data, const int& len)
    // remove all dropped units
    while (m_iStartPos != p)
    {
-       m_pUnit[m_iStartPos]->m_bValid = false;
-       -- m_pUnitQueue->m_iCount;
-       m_pUnit[m_iStartPos] = NULL;
+      CUnit* tmp = m_pUnit[m_iStartPos];
+      m_pUnit[m_iStartPos] = NULL;
+      tmp->m_bValid = false;
+      -- m_pUnitQueue->m_iCount;
 
       if (++ m_iStartPos == m_iSize)
          m_iStartPos = 0;
@@ -518,19 +522,20 @@ int CRcvBuffer::readMsg(char* data, const int& len)
 
    do
    {
-       int unitsize = m_pUnit[p]->m_Packet.getLength();
-       if ((rs >= 0) && (unitsize > rs))
-          unitsize = rs;
+      int unitsize = m_pUnit[p]->m_Packet.getLength();
+      if ((rs >= 0) && (unitsize > rs))
+         unitsize = rs;
 
-       if (unitsize > 0)
-       {
-          memcpy(data, m_pUnit[p]->m_Packet.m_pcData, unitsize);
-          data += unitsize;
-       }
+      if (unitsize > 0)
+      {
+         memcpy(data, m_pUnit[p]->m_Packet.m_pcData, unitsize);
+         data += unitsize;
+      }
 
-       m_pUnit[p]->m_bValid = false;
-       -- m_pUnitQueue->m_iCount;
-       m_pUnit[p] = NULL;
+      CUnit* tmp = m_pUnit[p];
+      m_pUnit[p] = NULL;
+      tmp->m_bValid = false;
+      -- m_pUnitQueue->m_iCount;
 
       if (++ p == m_iSize)
          p = 0;

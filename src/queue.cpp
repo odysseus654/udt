@@ -35,8 +35,7 @@ written by
 #include "common.h"
 #include "queue.h"
 #include "core.h"
-#include <iostream>
-using namespace std;
+
 
 CUnitQueue::CUnitQueue():
 m_iSize(0),
