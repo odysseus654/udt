@@ -29,7 +29,7 @@ This header file contains the definition of UDT buffer structure and operations.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/17/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/27/2007
 *****************************************************************************/
 
 #ifndef __UDT_CORE_H__
@@ -92,11 +92,11 @@ private:
       // Functionality:
       //    initialize a UDT entity and bind to a local address.
       // Parameters:
-      //    0) [in] addr: pointer to the local address to be bound to.
+      //    None.
       // Returned value:
       //    None.
 
-   void open(const sockaddr* addr = NULL);
+   void open();
 
       // Functionality:
       //    Start listening to any connection request.

@@ -29,7 +29,7 @@ This header file contains the definition of structures related to UDT API.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/16/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/27/2007
 *****************************************************************************/
 
 #ifndef __UDT_API_H__
@@ -166,9 +166,10 @@ private:
    CUDTSocket* locate(const UDTSOCKET u, const sockaddr* peer, const UDTSOCKET& id, const int32_t& isn);
    void checkBrokenSockets();
    void removeSocket(const UDTSOCKET u);
+   void updateMux(CUDT* u, const sockaddr* addr = NULL);
 
 private:
-   vector<CMultiplexer> m_vMultiplexer;			// UDP multiplexer
+   vector<CMultiplexer> m_vMultiplexer;              // UDP multiplexer
    pthread_mutex_t m_MultiplexerLock;
 };
 

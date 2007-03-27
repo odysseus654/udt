@@ -34,7 +34,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/17/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/27/2007
 *****************************************************************************/
 
 #ifndef WIN32
@@ -95,12 +95,12 @@ m_iSelfClockInterval(64)
    m_bSynSending = true;
    m_bSynRecving = true;
    m_iFlightFlagSize = 25600;
-   m_iSndQueueLimit = 20000000;
+   m_iSndQueueLimit = 10000000;
    m_iUDTBufSize = 1024; // must be *greater than* m_iQuickStartPkts(16).
    m_Linger.l_onoff = 1;
    m_Linger.l_linger = 180;
-   m_iUDPSndBufSize = 65536;
-   m_iUDPRcvBufSize = 10000000;
+   m_iUDPSndBufSize = 1000000;
+   m_iUDPRcvBufSize = 1000000;
    m_iMaxMsg = 9000;
    m_iMsgTTL = -1;
    m_iIPversion = AF_INET;
@@ -444,7 +444,7 @@ void CUDT::getOpt(UDTOpt optName, void* optval, int& optlen)
    }
 }
 
-void CUDT::open(const sockaddr* addr)
+void CUDT::open()
 {
    CGuard cg(m_ConnectionLock);
 
@@ -524,74 +524,6 @@ void CUDT::open(const sockaddr* addr)
    m_pRNode->m_pUDT = this;
    m_pRNode->m_llTimeStamp = 1;
    m_pRNode->m_pPrev = m_pRNode->m_pNext = NULL;
-
-   bool nm = false;
-
-   if (0 == s_UDTUnited.m_vMultiplexer.size())
-      nm = true;
-   else if ((NULL != addr) && (((sockaddr_in*)addr)->sin_port != 0))
-   {
-      nm = true;
-
-      for (vector<CMultiplexer>::iterator i = s_UDTUnited.m_vMultiplexer.begin(); i != s_UDTUnited.m_vMultiplexer.end(); ++ i)
-      {
-         if (i->m_iPort == ntohs(((sockaddr_in*)addr)->sin_port))
-         {
-            nm = false;
-            break;
-         }
-      }
-   }
-
-   if (nm)
-   {
-      CMultiplexer m;
-      m.m_pChannel = new CChannel(m_iIPversion);
-      m.m_pChannel->setSndBufSize(m_iUDPSndBufSize);
-      m.m_pChannel->setRcvBufSize(m_iUDPRcvBufSize);
-
-      m.m_pChannel->open(addr);
-
-      sockaddr_in sa;
-      m.m_pChannel->getSockAddr((sockaddr*)&sa);
-      m.m_iPort = ntohs(sa.sin_port);
-
-      m.m_pTimer = new CTimer;
-
-      m.m_pSndQueue = new CSndQueue;
-      m.m_pSndQueue->init(m.m_pChannel, m.m_pTimer);
-      m.m_pRcvQueue = new CRcvQueue;
-      m.m_pRcvQueue->init(1024, m_iPayloadSize, 1024, m.m_pChannel, m.m_pTimer);
-
-      m.m_iMTU = m_iMSS;
-      m.m_iIPversion = m_iIPversion;
-      m.m_iRefCount = 1;
-
-      s_UDTUnited.m_vMultiplexer.insert(s_UDTUnited.m_vMultiplexer.end(), m);
-
-      m_pSndQueue = m.m_pSndQueue;
-      m_pRcvQueue = m.m_pRcvQueue;
-   }
-   else
-   {
-      vector<CMultiplexer>::iterator m;
-
-      if ((NULL == addr) || (0 == ((sockaddr_in*)addr)->sin_port))
-        m = s_UDTUnited.m_vMultiplexer.begin();
-      else
-      {
-         for (m = s_UDTUnited.m_vMultiplexer.begin(); m != s_UDTUnited.m_vMultiplexer.end(); ++ m)
-            if (m->m_iPort == ntohs(((sockaddr_in*)addr)->sin_port))
-               break;
-      }
-
-      m->m_iRefCount ++;
-
-      m_pSndQueue = m->m_pSndQueue;
-      m_pRcvQueue = m->m_pRcvQueue;
-   }
-
-   m_pRcvQueue->m_pHash->insert(m_SocketID, this);
 
    // Now UDT is opened.
    m_bOpened = true;

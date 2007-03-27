@@ -31,7 +31,7 @@ reference: UDT programming manual and socket programming reference
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/16/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/27/2007
 *****************************************************************************/
 
 #ifndef WIN32
@@ -322,7 +322,8 @@ int CUDTUnited::newConnection(const UDTSOCKET listen, const sockaddr* peer, CHan
    try
    {
       // bind to the same addr of listening socket
-      ns->m_pUDT->open(ls->m_pSelfAddr);
+      ns->m_pUDT->open();
+      updateMux(ns->m_pUDT, ls->m_pSelfAddr);
       ns->m_pUDT->connect(peer, hs);
    }
    catch (...)
@@ -430,7 +431,8 @@ int CUDTUnited::bind(const UDTSOCKET u, const sockaddr* name, const int& namelen
    if (CUDTSocket::INIT != s->m_Status)
       throw CUDTException(5, 0, 0);
 
-   s->m_pUDT->open(name);
+   s->m_pUDT->open();
+   updateMux(s->m_pUDT, name);
    s->m_Status = CUDTSocket::OPENED;
 
    // copy address information of local node
@@ -604,7 +606,10 @@ int CUDTUnited::connect(const UDTSOCKET u, const sockaddr* name, const int& name
    if (CUDTSocket::INIT == s->m_Status)
    {
       if (!s->m_pUDT->m_bRendezvous)
+      {
          s->m_pUDT->open();
+         updateMux(s->m_pUDT);
+      }
       else
          throw CUDTException(5, 8, 0);
    }
@@ -783,17 +788,14 @@ int CUDTUnited::select(ud_set* readfds, ud_set* writefds, ud_set* exceptfds, con
 
    } while (to > CTimer::getTime() - entertime);
 
-   if (0 < count)
-   {
-      if (NULL != readfds)
-         *readfds = rs;
+   if (NULL != readfds)
+      *readfds = rs;
 
-      if (NULL != writefds)
-         *writefds = ws;
+   if (NULL != writefds)
+      *writefds = ws;
 
-      if (NULL != exceptfds)
-         *exceptfds = es;
-   }
+   if (NULL != exceptfds)
+      *exceptfds = es;
 
    return count;
 }
@@ -959,6 +961,80 @@ CUDTException* CUDTUnited::getError()
          TlsSetValue(m_TLSError, new CUDTException);
       return (CUDTException*)TlsGetValue(m_TLSError);
    #endif
+}
+
+
+void CUDTUnited::updateMux(CUDT* u, const sockaddr* addr)
+{
+   CGuard cg(m_ControlLock);
+
+   bool nm = false;
+
+   if (0 == m_vMultiplexer.size())
+      nm = true;
+   else if ((NULL != addr) && (((sockaddr_in*)addr)->sin_port != 0))
+   {
+      nm = true;
+
+      for (vector<CMultiplexer>::iterator i = m_vMultiplexer.begin(); i != m_vMultiplexer.end(); ++ i)
+      {
+         if (i->m_iPort == ntohs(((sockaddr_in*)addr)->sin_port))
+         {
+            nm = false;
+            break;
+         }
+      }
+   }
+
+   if (nm)
+   {
+      CMultiplexer m;
+      m.m_pChannel = new CChannel(u->m_iIPversion);
+      m.m_pChannel->setSndBufSize(u->m_iUDPSndBufSize);
+      m.m_pChannel->setRcvBufSize(u->m_iUDPRcvBufSize);
+
+      m.m_pChannel->open(addr);
+
+      sockaddr_in sa;
+      m.m_pChannel->getSockAddr((sockaddr*)&sa);
+      m.m_iPort = ntohs(sa.sin_port);
+
+      m.m_pTimer = new CTimer;
+
+      m.m_pSndQueue = new CSndQueue;
+      m.m_pSndQueue->init(m.m_pChannel, m.m_pTimer);
+      m.m_pRcvQueue = new CRcvQueue;
+      m.m_pRcvQueue->init(1024, u->m_iPayloadSize, 1024, m.m_pChannel, m.m_pTimer);
+
+      m.m_iMTU = u->m_iMSS;
+      m.m_iIPversion = u->m_iIPversion;
+      m.m_iRefCount = 1;
+
+      m_vMultiplexer.insert(m_vMultiplexer.end(), m);
+
+      u->m_pSndQueue = m.m_pSndQueue;
+      u->m_pRcvQueue = m.m_pRcvQueue;
+   }
+   else
+   {
+      vector<CMultiplexer>::iterator m;
+
+      if ((NULL == addr) || (0 == ((sockaddr_in*)addr)->sin_port))
+        m = m_vMultiplexer.begin();
+      else
+      {
+         for (m = m_vMultiplexer.begin(); m != m_vMultiplexer.end(); ++ m)
+            if (m->m_iPort == ntohs(((sockaddr_in*)addr)->sin_port))
+               break;
+      }
+
+      m->m_iRefCount ++;
+
+      u->m_pSndQueue = m->m_pSndQueue;
+      u->m_pRcvQueue = m->m_pRcvQueue;
+   }
+
+   u->m_pRcvQueue->m_pHash->insert(u->m_SocketID, u);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
