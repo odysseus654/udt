@@ -31,7 +31,7 @@ reference: UDT programming manual and socket programming reference
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/27/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/28/2007
 *****************************************************************************/
 
 #ifndef WIN32
@@ -893,11 +893,11 @@ void CUDTUnited::removeSocket(const UDTSOCKET u)
       return;
 
    // decrease multiplexer reference count, and remove it if necessary
-   int port;
-   if (4 == i->second->m_iIPversion)
-      port = ntohl(((sockaddr_in*)(i->second->m_pSelfAddr))->sin_port);
+   short port;
+   if (AF_INET == i->second->m_iIPversion)
+      port = ntohs(((sockaddr_in*)(i->second->m_pSelfAddr))->sin_port);
    else
-      port = ntohl(((sockaddr_in6*)(i->second->m_pSelfAddr))->sin6_port);
+      port = ntohs(((sockaddr_in6*)(i->second->m_pSelfAddr))->sin6_port);
 
    vector<CMultiplexer>::iterator m;
    for (m = m_vMultiplexer.begin(); m != m_vMultiplexer.end(); ++ m)

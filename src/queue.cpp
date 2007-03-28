@@ -29,7 +29,7 @@ This file contains the implementation of UDT multiplexer.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/17/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/27/2007
 *****************************************************************************/
 
 #include "common.h"
@@ -498,6 +498,8 @@ m_pLast(NULL)
    #else
       m_ListLock = CreateMutex(NULL, false, NULL);
    #endif
+
+   m_vNewEntry.clear();
 }
 
 CRcvUList::~CRcvUList()
@@ -511,8 +513,6 @@ CRcvUList::~CRcvUList()
 
 void CRcvUList::insert(const CUDT* u)
 {
-   CGuard listguard(m_ListLock);
-
    CUDTList* n = u->m_pRNode;
    CTimer::rdtsc(n->m_llTimeStamp);
 
@@ -534,8 +534,6 @@ void CRcvUList::insert(const CUDT* u)
 
 void CRcvUList::remove(const int32_t& id)
 {
-   CGuard listguard(m_ListLock);
-
    if (NULL == m_pUList)
       return;
 
@@ -570,26 +568,27 @@ void CRcvUList::remove(const int32_t& id)
    }
 }
 
+void CRcvUList::newEntry(CUDT* u)
+{
+   CGuard listguard(m_ListLock);
+   m_vNewEntry.insert(m_vNewEntry.end(), u);
+}
+
+bool CRcvUList::ifNewEntry()
+{
+   return m_vNewEntry.empty();
+}
+
+CUDT* CRcvUList::newEntry()
+{
+   CGuard listguard(m_ListLock);
+   CUDT* u = (CUDT*)(*m_vNewEntry.begin());
+   m_vNewEntry.erase(m_vNewEntry.begin());
+
+   return u;
+}
 
 //
-CHash::CHash()
-{
-   #ifndef WIN32
-      pthread_mutex_init(&m_ListLock, NULL);
-   #else
-      m_ListLock = CreateMutex(NULL, false, NULL);
-   #endif
-}
-
-CHash::~CHash()
-{
-   #ifndef WIN32
-      pthread_mutex_destroy(&m_ListLock);
-   #else
-      CloseHandle(m_ListLock);
-   #endif
-}
-
 void CHash::init(const int& size)
 {
    m_pBucket = new CBucket* [size];
@@ -602,8 +601,6 @@ void CHash::init(const int& size)
 
 CUDT* CHash::lookup(const int32_t& id)
 {
-   CGuard hashguard(m_ListLock);
-
    // simple hash function (% hash table size); suitable for socket descriptors
    CBucket* b = m_pBucket[id % m_iHashSize];
 
@@ -619,8 +616,6 @@ CUDT* CHash::lookup(const int32_t& id)
 
 int CHash::retrieve(const int32_t& id, CPacket& packet)
 {
-   CGuard hashguard(m_ListLock);
-
    CBucket* b = m_pBucket[id % m_iHashSize];
 
    while (NULL != b)
@@ -650,8 +645,6 @@ int CHash::retrieve(const int32_t& id, CPacket& packet)
 
 void CHash::setUnit(const int32_t& id, CUnit* unit)
 {
-   CGuard hashguard(m_ListLock);
-
    CBucket* b = m_pBucket[id % m_iHashSize];
 
    while (NULL != b)
@@ -662,11 +655,13 @@ void CHash::setUnit(const int32_t& id, CUnit* unit)
          if (NULL != b->m_pUnit)
             return;
 
-         b->m_pUnit = new CUnit;
-         b->m_pUnit->m_Packet.m_pcData = new char [unit->m_Packet.getLength()];
-         memcpy(b->m_pUnit->m_Packet.m_nHeader, unit->m_Packet.m_nHeader, 16);
-         memcpy(b->m_pUnit->m_Packet.m_pcData, unit->m_Packet.m_pcData, unit->m_Packet.getLength());
-         b->m_pUnit->m_Packet.setLength(unit->m_Packet.getLength());
+         CUnit* tmp = new CUnit;
+         tmp->m_Packet.m_pcData = new char [unit->m_Packet.getLength()];
+         memcpy(tmp->m_Packet.m_nHeader, unit->m_Packet.m_nHeader, 16);
+         memcpy(tmp->m_Packet.m_pcData, unit->m_Packet.m_pcData, unit->m_Packet.getLength());
+         tmp->m_Packet.setLength(unit->m_Packet.getLength());
+
+         b->m_pUnit = tmp;
 
          return;
       }
@@ -677,8 +672,6 @@ void CHash::setUnit(const int32_t& id, CUnit* unit)
 
 void CHash::insert(const int32_t& id, const CUDT* u)
 {
-   CGuard hashguard(m_ListLock);
-
    CBucket* b = m_pBucket[id % m_iHashSize];
 
    CBucket* n = new CBucket;
@@ -692,8 +685,6 @@ void CHash::insert(const int32_t& id, const CUDT* u)
 
 void CHash::remove(const int32_t& id)
 {
-   CGuard hashguard(m_ListLock);
-
    CBucket* b = m_pBucket[id % m_iHashSize];
 
    if (NULL == b)
@@ -859,6 +850,10 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, con
 TIMER_CHECK:
       // take care of the timing event for all UDT sockets
 
+      // check waiting list, if new socket, insert it to the list
+      if (self->m_pRcvUList->ifNewEntry())
+         self->m_pRcvUList->insert(self->m_pRcvUList->newEntry());
+
       CUDTList* ul = self->m_pRcvUList->m_pUList;
       uint64_t currtime;
       CTimer::rdtsc(currtime);
@@ -881,6 +876,7 @@ TIMER_CHECK:
          else
          {
             self->m_pRcvUList->remove(id);
+            self->m_pHash->remove(id);
          }
 
          ul = self->m_pRcvUList->m_pUList;
@@ -895,8 +891,6 @@ TIMER_CHECK:
 
 int CRcvQueue::recvfrom(sockaddr* , CPacket& packet, const int32_t& id)
 {
-   // read a packet from the temporay strorage in hash table
-
    int res;
 
    if ((res = m_pHash->retrieve(id, packet)) < 0)

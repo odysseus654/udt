@@ -730,7 +730,7 @@ void CUDT::connect(const sockaddr* serv_addr)
    #endif
 
    // register this socket for receiving data packets
-   m_pRcvQueue->m_pRcvUList->insert(this);
+   m_pRcvQueue->m_pRcvUList->newEntry(this);
 
    m_pPeerAddr = (sockaddr*)new sockaddr_in;
    memcpy(m_pPeerAddr, serv_addr, sizeof(sockaddr_in));
@@ -797,7 +797,7 @@ void CUDT::connect(const sockaddr* peer, CHandShake* hs)
    #endif
 
    // register this socket for receiving data packet
-   m_pRcvQueue->m_pRcvUList->insert(this);
+   m_pRcvQueue->m_pRcvUList->newEntry(this);
 
    m_pPeerAddr = (sockaddr*)new sockaddr_in;
    memcpy(m_pPeerAddr, peer, sizeof(sockaddr_in));
@@ -810,8 +810,6 @@ void CUDT::close()
 {
    if (!m_bConnected)
       m_bClosing = true;
-
-//   CGuard cg(m_ConnectionLock);
 
    if (!m_bOpened)
       return;
@@ -873,8 +871,6 @@ void CUDT::close()
          }
       }
    }
-
-   m_pRcvQueue->m_pHash->remove(m_SocketID);
 
    // waiting all send and recv calls to stop
    CGuard sendguard(m_SendLock);

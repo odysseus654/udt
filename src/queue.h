@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright © 2001 - 2006, The Board of Trustees of the University of Illinois.
+Copyright © 2001 - 2007, The Board of Trustees of the University of Illinois.
 All Rights Reserved.
 
 UDP-based Data Transfer Library (UDT) special version UDT-m
@@ -29,7 +29,7 @@ This header file contains the definition of UDT multiplexer.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 12/12/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/27/2007
 *****************************************************************************/
 
 
@@ -219,6 +219,33 @@ public:
 
    void remove(const int32_t& id);
 
+      // Functionality:
+      //    Insert a new UDT instance to the new entry list.
+      // Parameters:
+      //    1) [in] u: pointer to the UDT instance
+      // Returned value:
+      //    None.
+
+   void newEntry(CUDT* u);
+
+      // Functionality:
+      //    Check if there is a new entry to be inserted to the rcv u list
+      // Parameters:
+      //    None.
+      // Returned value:
+      //    True if yes, otherwise false.
+
+   bool ifNewEntry();
+
+      // Functionality:
+      //    Pick the first new entry on the waiting list.
+      // Parameters:
+      //    None.
+      // Returned value:
+      //    Pointer to a UDT instance.
+
+   CUDT* newEntry();
+
 public:
    CUDTList* m_pUList;		// the head node
 
@@ -226,15 +253,12 @@ private:
    CUDTList* m_pLast;		// the last node
 
 private:
+   vector<CUDT*> m_vNewEntry;	// newly added entries, to be inserted
    pthread_mutex_t m_ListLock;
 };
 
 class CHash
 {
-public:
-   CHash();
-   ~CHash();
-
 public:
 
       // Functionality:
@@ -306,9 +330,6 @@ private:
    } **m_pBucket;		// list of buckets (the hash table)
 
    int m_iHashSize;		// size of hash table
-
-private:
-   pthread_mutex_t m_ListLock;
 };
 
 
