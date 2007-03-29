@@ -582,7 +582,7 @@ bool CRcvUList::ifNewEntry()
 CUDT* CRcvUList::newEntry()
 {
    CGuard listguard(m_ListLock);
-   CUDT* u = (CUDT*)(*m_vNewEntry.begin());
+   CUDT* u = (CUDT*)*(m_vNewEntry.begin());
    m_vNewEntry.erase(m_vNewEntry.begin());
 
    return u;
@@ -851,7 +851,7 @@ TIMER_CHECK:
       // take care of the timing event for all UDT sockets
 
       // check waiting list, if new socket, insert it to the list
-      if (self->m_pRcvUList->ifNewEntry())
+      if (!self->m_pRcvUList->ifNewEntry())
          self->m_pRcvUList->insert(self->m_pRcvUList->newEntry());
 
       CUDTList* ul = self->m_pRcvUList->m_pUList;
