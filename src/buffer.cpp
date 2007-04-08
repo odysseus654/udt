@@ -33,7 +33,7 @@ The receiving buffer is a logically circular memeory block.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/17/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/08/2007
 *****************************************************************************/
 
 #include <cstring>
@@ -68,9 +68,8 @@ CSndBuffer::~CSndBuffer()
    {
       pb = pb->m_next;
 
-      // process user data according with the routine provided by applications
-      if (NULL != m_pBlock->m_pMemRoutine)
-         m_pBlock->m_pMemRoutine(m_pBlock->m_pcData, m_pBlock->m_iLength, m_pBlock->m_pContext);
+      // release sender buffer
+      delete [] m_pBlock->m_pcData;
 
       delete m_pBlock;
       m_pBlock = pb;
@@ -83,7 +82,7 @@ CSndBuffer::~CSndBuffer()
    #endif
 }
 
-void CSndBuffer::addBuffer(const char* data, const int& len, const int& handle, const UDT_MEM_ROUTINE func, void* context, const int& ttl, const int32_t& seqno, const bool& order)
+void CSndBuffer::addBuffer(const char* data, const int& len, const int& ttl, const int32_t& seqno, const bool& order)
 {
    CGuard bufferguard(m_BufLock);
 
@@ -100,9 +99,6 @@ void CSndBuffer::addBuffer(const char* data, const int& len, const int& handle, 
       m_pBlock->m_iSeqNo = seqno;
       m_pBlock->m_iInOrder = order;
       m_pBlock->m_iInOrder <<= 29;
-      m_pBlock->m_iHandle = handle;
-      m_pBlock->m_pMemRoutine = func;
-      m_pBlock->m_pContext = context;
       m_pBlock->m_next = NULL;
       m_pLastBlock = m_pBlock;
       m_pCurrSendBlk = m_pBlock;
@@ -127,9 +123,6 @@ void CSndBuffer::addBuffer(const char* data, const int& len, const int& handle, 
       m_pLastBlock->m_iSeqNo = lastseq + (int32_t)ceil(double(offset) / m_iMSS);
       m_pLastBlock->m_iInOrder = order;
       m_pLastBlock->m_iInOrder <<= 29;
-      m_pLastBlock->m_iHandle = handle;
-      m_pLastBlock->m_pMemRoutine = func;
-      m_pLastBlock->m_pContext = context;
       m_pLastBlock->m_next = NULL;
       if (NULL == m_pCurrSendBlk)
          m_pCurrSendBlk = m_pLastBlock;
@@ -257,9 +250,8 @@ void CSndBuffer::ackData(const int& len, const int& payloadsize)
       m_iCurrBufSize -= m_pCurrAckBlk->m_iLength;
       m_pCurrAckBlk = m_pCurrAckBlk->m_next;
 
-      // process user data according with the routine provided by applications
-      if (NULL != m_pBlock->m_pMemRoutine)
-         m_pBlock->m_pMemRoutine(m_pBlock->m_pcData, m_pBlock->m_iLength, m_pBlock->m_pContext);
+      // release the buffer
+      delete [] m_pBlock->m_pcData;
 
       delete m_pBlock;
       m_pBlock = m_pCurrAckBlk;
@@ -272,37 +264,6 @@ void CSndBuffer::ackData(const int& len, const int& payloadsize)
 int CSndBuffer::getCurrBufSize() const
 {
    return m_iCurrBufSize - m_iCurrAckPnt;
-}
-
-bool CSndBuffer::getOverlappedResult(const int& handle, int& progress)
-{
-   CGuard bufferguard(m_BufLock);
-
-   if (NULL != m_pCurrAckBlk)
-   {
-      if (handle == m_pCurrAckBlk->m_iHandle)
-      {
-         progress = m_iCurrAckPnt;
-         return false;
-      }
-      else 
-      {
-         if (((m_pLastBlock->m_iHandle < m_pCurrAckBlk->m_iHandle) && (handle < m_pCurrAckBlk->m_iHandle) && (m_pLastBlock->m_iHandle <= handle))
-            || ((m_pLastBlock->m_iHandle > m_pCurrAckBlk->m_iHandle) && ((handle < m_pCurrAckBlk->m_iHandle) || (m_pLastBlock->m_iHandle <= handle))))
-         {
-            progress = 0;
-            return false;
-         }
-      }
-   }
-
-   progress = 0;
-   return true;
-}
-
-void CSndBuffer::releaseBuffer(char* buf, int, void*)
-{
-   delete [] buf;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

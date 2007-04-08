@@ -24,12 +24,12 @@ along with this library; if not, write to the Free Software Foundation, Inc.,
 *****************************************************************************/
 
 /*****************************************************************************
-This header file contains the definition of UDT buffer structure and operations.
+This header file contains the definition of UDT core structure and operations.
 *****************************************************************************/
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/27/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/08/2007
 *****************************************************************************/
 
 #ifndef __UDT_CORE_H__
@@ -72,14 +72,12 @@ public: //API
    static int getsockname(UDTSOCKET u, sockaddr* name, int* namelen);
    static int getsockopt(UDTSOCKET u, int level, UDTOpt optname, void* optval, int* optlen);
    static int setsockopt(UDTSOCKET u, int level, UDTOpt optname, const void* optval, int optlen);
-   static int shutdown(UDTSOCKET u, int how);
-   static int send(UDTSOCKET u, const char* buf, int len, int flags = 0, int* handle = NULL, UDT_MEM_ROUTINE routine = NULL, void* context = NULL);
-   static int recv(UDTSOCKET u, char* buf, int len, int flags = 0, int* handle = NULL, UDT_MEM_ROUTINE routine = NULL, void* context = NULL);
+   static int send(UDTSOCKET u, const char* buf, int len, int flags);
+   static int recv(UDTSOCKET u, char* buf, int len, int flags);
    static int sendmsg(UDTSOCKET u, const char* buf, int len, int ttl = -1, bool inorder = false);
    static int recvmsg(UDTSOCKET u, char* buf, int len);
    static int64_t sendfile(UDTSOCKET u, std::ifstream& ifs, const int64_t& offset, int64_t& size, const int& block = 364000);
    static int64_t recvfile(UDTSOCKET u, std::ofstream& ofs, const int64_t& offset, int64_t& size, const int& block = 7280000);
-   static bool getoverlappedresult(UDTSOCKET u, int handle, int& progress, bool wait = false);
    static int select(int nfds, ud_set* readfds, ud_set* writefds, ud_set* exceptfds, const timeval* timeout);
    static CUDTException& getlasterror();
    static int perfmon(UDTSOCKET u, CPerfMon* perf, bool clear = true);
@@ -139,24 +137,20 @@ private:
       // Parameters:
       //    0) [in] data: The address of the application data to be sent.
       //    1) [in] len: The size of the data block.
-      //    2) [in, out] overlapped: A pointer to the returned overlapped IO handle.
-      //    3) [in] func: pointer to a function to process the buffer after overlapped IO is completed.
       // Returned value:
       //    Actual size of data sent.
 
-   int send(char* data, const int& len,  int* overlapped = NULL, const UDT_MEM_ROUTINE func = NULL, void* context = NULL);
+   int send(char* data, const int& len);
 
       // Functionality:
       //    Request UDT to receive data to a memory block "data" with size of "len".
       // Parameters:
       //    0) [out] data: data received.
       //    1) [in] len: The desired size of data to be received.
-      //    2) [out] overlapped: A pointer to the returned overlapped IO handle.
-      //    3) [in] unused.
       // Returned value:
       //    Actual size of data received.
 
-   int recv(char* data, const int& len, int* overlapped = NULL, const UDT_MEM_ROUTINE func = NULL, void* context = NULL);
+   int recv(char* data, const int& len);
 
       // Functionality:
       //    send a message of a memory block "data" with size of "len".
@@ -179,17 +173,6 @@ private:
       //    Actual size of data received.
 
    int recvmsg(char* data, const int& len);
-
-      // Functionality:
-      //    query the result of an overlapped IO indicated by "handle".
-      // Parameters:
-      //    0) [in] handle: the handle that indicates the submitted overlapped IO.
-      //    1) [out] progess: how many data left to be sent/receive.
-      //    2) [in] wait: wait for the IO finished or not.
-      // Returned value:
-      //    if the overlapped IO is completed.
-
-   bool getOverlappedResult(const int& handle, int& progress, const bool& wait = false);
 
       // Functionality:
       //    Request UDT to send out a file described as "fd", starting from "offset", with size of "size".
@@ -254,13 +237,10 @@ public:
    static const UDTSOCKET INVALID_SOCK;         // invalid socket descriptor
    static const int ERROR;                      // socket api error returned value
 
-private:
+private: // Identification
    UDTSOCKET m_SocketID;                        // UDT socket number
    int m_iSockType;                             // Type of the UDT connection (SOCK_STREAM or SOCK_DGRAM)
-
    UDTSOCKET m_PeerID;				// peer id, for multiplexer
-
-private: // Version
    const int m_iVersion;                        // UDT version, for compatibility use
 
 private: // Packet size and sequence number attributes
@@ -283,7 +263,6 @@ private: // Options
    bool m_bRendezvous;                          // Rendezvous connection mode
    int m_iSndTimeOut;                           // sending timeout in milliseconds
    int m_iRcvTimeOut;                           // receiving timeout in milliseconds
-
    const int m_iQuickStartPkts;                 // Number of packets to be sent as a quick start
 
 private: // CCC
@@ -352,10 +331,6 @@ private: // Receiving related data
 
    int m_iFlowControlWindow;                    // flow control window size to be advertised
 
-private: // Overlapped IO related
-   int m_iSndHandle;                            // seed used to generate an overlapped sending handle
-   int m_iRcvHandle;                            // seed used to generate an overlapped receiving handle
-
 private: // synchronization: mutexes and conditions
    pthread_mutex_t m_ConnectionLock;            // used to synchronize connection operation
 
@@ -366,8 +341,6 @@ private: // synchronization: mutexes and conditions
 
    pthread_cond_t m_RecvDataCond;               // used to block "recv" when there is no data
    pthread_mutex_t m_RecvDataLock;              // lock associated to m_RecvDataCond
-
-   pthread_mutex_t m_HandleLock;                // used to generate unique send/recv handle
 
    pthread_mutex_t m_SendLock;                  // used to synchronize "send" call
    pthread_mutex_t m_RecvLock;                  // used to synchronize "recv" call
@@ -434,7 +407,7 @@ private: // Timers
 
    uint64_t m_ullTargetTime;			// target time of next packet sending
 
-public: // UDP multiplexer
+public: // for UDP multiplexer
    CSndQueue* m_pSndQueue;			// packet sending queue
    CRcvQueue* m_pRcvQueue;			// packet receivinf queue
    sockaddr* m_pPeerAddr;			// peer address

@@ -484,9 +484,6 @@ void CUDT::open()
 
    m_iAckSeqNo = 0;
 
-   m_iSndHandle = (1 << 30);
-   m_iRcvHandle = -(1 << 30);
-
    // Initial sending rate = 1us
    m_ullInterval = m_ullCPUFrequency;
    m_ullTimeDiff = 0;
@@ -1497,7 +1494,7 @@ void CUDT::flowControl(const int& recvrate)
    }
 }
 
-int CUDT::send(char* data, const int& len, int* overlapped, const UDT_MEM_ROUTINE func, void* context)
+int CUDT::send(char* data, const int& len)
 {
    if (SOCK_DGRAM == m_iSockType)
       throw CUDTException(5, 10, 0);
@@ -1557,37 +1554,11 @@ int CUDT::send(char* data, const int& len, int* overlapped, const UDT_MEM_ROUTIN
    if ((m_iSndTimeOut >= 0) && (m_iSndQueueLimit < m_pSndBuffer->getCurrBufSize())) 
       return 0; 
 
-   char* buf;
-   int handle = 0;
-   UDT_MEM_ROUTINE r = func;
-
-   if (NULL == overlapped)
-   {
-      buf = new char[len];
-      memcpy(buf, data, len);
-      data = buf;
-      r = CSndBuffer::releaseBuffer;
-   }
-   else
-   {
-      #ifndef WIN32
-         pthread_mutex_lock(&m_HandleLock);
-      #else
-         WaitForSingleObject(m_HandleLock, INFINITE);
-      #endif
-      if (1 == m_iSndHandle)
-         m_iSndHandle = 1 << 30;
-      // "send" handle descriptor is POSITIVE and DECREASING
-      *overlapped = handle = -- m_iSndHandle;
-      #ifndef WIN32
-         pthread_mutex_unlock(&m_HandleLock);
-      #else
-         ReleaseMutex(m_HandleLock);
-      #endif
-   }
+   char* buf = new char[len];
+   memcpy(buf, data, len);
 
    // insert the user buffer into the sening list
-   m_pSndBuffer->addBuffer(data, len, handle, r, context);
+   m_pSndBuffer->addBuffer(buf, len);
 
    // insert this socket to snd list if it is not on the list yet
    m_pSndQueue->m_pSndUList->update(m_SocketID, this, false);
@@ -1596,7 +1567,7 @@ int CUDT::send(char* data, const int& len, int* overlapped, const UDT_MEM_ROUTIN
    return len;
 }
 
-int CUDT::recv(char* data, const int& len, int* overlapped, UDT_MEM_ROUTINE func, void* context)
+int CUDT::recv(char* data, const int& len)
 {
    if (SOCK_DGRAM == m_iSockType)
       throw CUDTException(5, 10, 0);
@@ -1690,17 +1661,11 @@ int CUDT::sendmsg(const char* data, const int& len, const int& msttl, const bool
       }
    }
 
-   char* buf;
-   int handle = 0;
-   UDT_MEM_ROUTINE r = CSndBuffer::releaseBuffer;
-
-   buf = new char[len];
+   char* buf = new char[len];
    memcpy(buf, data, len);
-   data = buf;
-   r = CSndBuffer::releaseBuffer;
 
    // insert the user buffer into the sening list
-   m_pSndBuffer->addBuffer(data, len, handle, r, NULL, msttl, m_iSndCurrSeqNo, inorder);
+   m_pSndBuffer->addBuffer(buf, len, msttl, m_iSndCurrSeqNo, inorder);
 
    // insert this socket to the snd list if it is not on the list yet
    m_pSndQueue->m_pSndUList->update(m_SocketID, this, false);
@@ -1761,41 +1726,6 @@ int CUDT::recvmsg(char* data, const int& len)
    return res;
 }
 
-bool CUDT::getOverlappedResult(const int& handle, int& progress, const bool& wait)
-{
-   if (SOCK_DGRAM == m_iSockType)
-      throw CUDTException(5, 10, 0);
-
-   // throw an exception if not connected
-   if (m_bBroken)
-      throw CUDTException(2, 1, 0);
-   else if (!m_bConnected)
-      throw CUDTException(2, 2, 0);
-
-   // check sending buffer
-   if (handle > 0)
-   {
-      bool res = m_pSndBuffer->getOverlappedResult(handle, progress);
-      while (wait && !res && !m_bBroken)
-      {
-         #ifndef WIN32
-            usleep(1);
-         #else
-            Sleep(1);
-         #endif
-
-         res = m_pSndBuffer->getOverlappedResult(handle, progress);
-      }
-
-      if (m_bBroken)
-         throw CUDTException(2, 1, 0);
-
-      return res;
-   }
-
-   return false;
-}
-
 int64_t CUDT::sendfile(ifstream& ifs, const int64_t& offset, const int64_t& size, const int& block)
 {
    if (SOCK_DGRAM == m_iSockType)
@@ -1850,15 +1780,14 @@ int64_t CUDT::sendfile(ifstream& ifs, const int64_t& offset, const int64_t& size
          throw CUDTException(4, 2);
       }
 
-      #ifndef WIN32
-         while (!m_bBroken && m_bConnected && (m_pSndBuffer->getCurrBufSize() >= m_iSndQueueLimit))
+      while (!m_bBroken && m_bConnected && (m_pSndBuffer->getCurrBufSize() >= m_iSndQueueLimit))
+         #ifndef WIN32
             usleep(10);
-         m_pSndBuffer->addBuffer(tempbuf, unitsize, 0, CSndBuffer::releaseBuffer, NULL);
-      #else
-         while (!m_bBroken && m_bConnected && (m_pSndBuffer->getCurrBufSize() >= m_iSndQueueLimit))
+         #else
             Sleep(1);
-         m_pSndBuffer->addBuffer(tempbuf, unitsize, 0, CSndBuffer::releaseBuffer, NULL);
-      #endif
+         #endif
+
+      m_pSndBuffer->addBuffer(tempbuf, unitsize);
 
       if (m_bBroken)
          throw CUDTException(2, 1, 0);
@@ -2046,7 +1975,6 @@ void CUDT::initSynch()
       pthread_mutex_init(&m_RecvLock, NULL);
       pthread_mutex_init(&m_AckLock, NULL);
       pthread_mutex_init(&m_ConnectionLock, NULL);
-      pthread_mutex_init(&m_HandleLock, NULL);
    #else
       m_SendBlockLock = CreateMutex(NULL, false, NULL);
       m_SendBlockCond = CreateEvent(NULL, false, false, NULL);
@@ -2056,7 +1984,6 @@ void CUDT::initSynch()
       m_RecvLock = CreateMutex(NULL, false, NULL);
       m_AckLock = CreateMutex(NULL, false, NULL);
       m_ConnectionLock = CreateMutex(NULL, false, NULL);
-      m_HandleLock = CreateMutex(NULL, false, NULL);
    #endif
 }
 
@@ -2071,7 +1998,6 @@ void CUDT::destroySynch()
       pthread_mutex_destroy(&m_RecvLock);
       pthread_mutex_destroy(&m_AckLock);
       pthread_mutex_destroy(&m_ConnectionLock);
-      pthread_mutex_destroy(&m_HandleLock);
    #else
       CloseHandle(m_SendBlockLock);
       CloseHandle(m_SendBlockCond);
@@ -2081,7 +2007,6 @@ void CUDT::destroySynch()
       CloseHandle(m_RecvLock);
       CloseHandle(m_AckLock);
       CloseHandle(m_ConnectionLock);
-      CloseHandle(m_HandleLock);
    #endif
 }
 

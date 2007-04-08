@@ -72,7 +72,6 @@ int main(int argc, char* argv[])
    //   cchandle->setRate(500);
 
    int size = 10000000;
-   int handle = 0;
    char* data = new char[size];
 
 #ifndef WIN32
@@ -83,12 +82,21 @@ int main(int argc, char* argv[])
 
    for (int i = 0; i < 1000; i ++)
    {
-      if (UDT::ERROR == UDT::send(client, data, size, 0, &handle))
-      //if (UDT::ERROR == UDT::sendmsg(client, data, size))
+      int ssize = 0;
+      int ss;
+      while (ssize < size)
       {
-         cout << "send: " << UDT::getlasterror().getErrorMessage() << endl;
-         return 0;
+         if (UDT::ERROR == (ss = UDT::send(client, data + ssize, size - ssize, 0)))
+         {
+            cout << "send:" << UDT::getlasterror().getErrorMessage() << endl;
+            break;
+         }
+
+         ssize += ss;
       }
+
+      if (ssize < size)
+         break;
    }
 
    UDT::close(client);

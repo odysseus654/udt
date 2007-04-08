@@ -29,7 +29,7 @@ This header file contains the definition of UDT buffer structure and operations.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/17/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/08/2007
 *****************************************************************************/
 
 #ifndef __UDT_BUFFER_H__
@@ -51,16 +51,13 @@ public:
       // Parameters:
       //    0) [in] data: pointer to the user data block.
       //    1) [in] len: size of the block.
-      //    2) [in] handle: handle of this request IO.
-      //    3) [in] func: routine to process the buffer after IO completed.
-      //    4) [in] context: context parameter for the buffer process routine
       //    5) [in] ttl: time to live in milliseconds
       //    6) [in] seqno: sequence number of the first packet in the block, for DGRAM only
       //    7) [in] order: if the block should be delivered in order, for DGRAM only
       // Returned value:
       //    None.
 
-   void addBuffer(const char* data, const int& len, const int& handle, const UDT_MEM_ROUTINE func, void* context, const int& ttl = -1, const int32_t& seqno = 0, const bool& order = false);
+   void addBuffer(const char* data, const int& len, const int& ttl = -1, const int32_t& seqno = 0, const bool& order = false);
 
       // Functionality:
       //    Find data position to pack a DATA packet from the furthest reading point.
@@ -106,26 +103,6 @@ public:
 
    int getCurrBufSize() const;
 
-      // Functionality:
-      //    Query the progress of the buffer sending identified by handle.
-      // Parameters:
-      //    1) [in] handle: descriptor of this overlapped IO
-      //    2) [out] progress: the current progress of the overlapped IO
-      // Returned value:
-      //    if the overlapped IO is completed.
-
-   bool getOverlappedResult(const int& handle, int& progress);
-
-      // Functionality:
-      //    helper function to release the user buffer.
-      // Parameters:
-      //    1) [in]: pointer to the buffer
-      //    2) [in]: buffer size
-      // Returned value:
-      //    Current size of the data in the sending list
-
-  static void releaseBuffer(char* buf, int, void*);
-
 private:
    pthread_mutex_t m_BufLock;           // used to synchronize buffer operation
 
@@ -139,10 +116,6 @@ private:
       int32_t m_iMsgNo;                 // message number
       int32_t m_iSeqNo;                 // sequence number of first packet
       int m_iInOrder;                   // flag indicating if the block should be delivered in order
-
-      int m_iHandle;                    // a unique handle to represent this senidng request
-      UDT_MEM_ROUTINE m_pMemRoutine;    // function to process buffer after sending
-      void* m_pContext;                 // context parameter for the memory processing routine
 
       Block* m_next;                    // next block
    } *m_pBlock, *m_pLastBlock, *m_pCurrSendBlk, *m_pCurrAckBlk;

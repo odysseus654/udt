@@ -1227,33 +1227,13 @@ int CUDT::setsockopt(UDTSOCKET u, int, UDTOpt optname, const void* optval, int o
    }
 }
 
-int CUDT::shutdown(UDTSOCKET, int)
-{
-   try
-   {
-      //CUDT* udt = s_UDTUnited.lookup(u);
-      //udt->shutdown(how);
-      return 0;
-   }
-   catch (CUDTException e)
-   {
-      s_UDTUnited.setError(new CUDTException(e));
-      return ERROR;
-   }
-   catch (...)
-   {
-      s_UDTUnited.setError(new CUDTException(-1, 0, 0));
-      return ERROR;
-   }
-}
-
-int CUDT::send(UDTSOCKET u, const char* buf, int len, int, int* handle, UDT_MEM_ROUTINE routine, void* context)
+int CUDT::send(UDTSOCKET u, const char* buf, int len, int flags)
 {
    try
    {
       CUDT* udt = s_UDTUnited.lookup(u);
 
-      return udt->send((char*)buf, len, handle, routine, context);
+      return udt->send((char*)buf, len);
    }
    catch (CUDTException e)
    {
@@ -1272,13 +1252,13 @@ int CUDT::send(UDTSOCKET u, const char* buf, int len, int, int* handle, UDT_MEM_
    }
 }
 
-int CUDT::recv(UDTSOCKET u, char* buf, int len, int, int* handle, UDT_MEM_ROUTINE routine, void* context)
+int CUDT::recv(UDTSOCKET u, char* buf, int len, int flags)
 {
    try
    {
       CUDT* udt = s_UDTUnited.lookup(u);
 
-      return udt->recv(buf, len, handle, routine, context);
+      return udt->recv(buf, len);
    }
    catch (CUDTException e)
    {
@@ -1379,29 +1359,6 @@ int64_t CUDT::recvfile(UDTSOCKET u, ofstream& ofs, const int64_t& offset, int64_
    {
       s_UDTUnited.setError(new CUDTException(-1, 0, 0));
       return ERROR;
-   }
-}
-
-bool CUDT::getoverlappedresult(UDTSOCKET u, int handle, int& progress, bool wait)
-{
-   try
-   {
-      CUDT* udt = s_UDTUnited.lookup(u);
-
-      return udt->getOverlappedResult(handle, progress, wait);
-   }
-   catch (CUDTException e)
-   {
-      // false and -1 means an error; false and positive value means incompleted IO.
-      progress = -1;
-
-      s_UDTUnited.setError(new CUDTException(e));
-      return false;
-   }
-   catch (...)
-   {
-      s_UDTUnited.setError(new CUDTException(-1, 0, 0));
-      return false;
    }
 }
 
@@ -1526,19 +1483,14 @@ int setsockopt(UDTSOCKET u, int level, SOCKOPT optname, const void* optval, int 
    return CUDT::setsockopt(u, level, optname, optval, optlen);
 }
 
-int shutdown(UDTSOCKET u, int how)
+int send(UDTSOCKET u, const char* buf, int len, int flags)
 {
-   return CUDT::shutdown(u, how);
+   return CUDT::send(u, buf, len, flags);
 }
 
-int send(UDTSOCKET u, const char* buf, int len, int flags, int* handle, UDT_MEM_ROUTINE routine, void* context)
+int recv(UDTSOCKET u, char* buf, int len, int flags)
 {
-   return CUDT::send(u, buf, len, flags, handle, routine, context);
-}
-
-int recv(UDTSOCKET u, char* buf, int len, int flags, int* handle, UDT_MEM_ROUTINE routine, void* context)
-{
-   return CUDT::recv(u, buf, len, flags, handle, routine, context);
+   return CUDT::recv(u, buf, len, flags);
 }
 
 int sendmsg(UDTSOCKET u, const char* buf, int len, int ttl, bool inorder)
@@ -1559,11 +1511,6 @@ int64_t sendfile(UDTSOCKET u, ifstream& ifs, const int64_t& offset, int64_t& siz
 int64_t recvfile(UDTSOCKET u, ofstream& ofs, const int64_t& offset, int64_t& size, const int& block)
 {
    return CUDT::recvfile(u, ofs, offset, size, block);
-}
-
-bool getoverlappedresult(UDTSOCKET u, int handle, int& progress, bool wait)
-{
-   return CUDT::getoverlappedresult(u, handle, progress, wait);
 }
 
 int select(int nfds, UDSET* readfds, UDSET* writefds, UDSET* exceptfds, const struct timeval* timeout)
