@@ -31,7 +31,7 @@ reference: UDT programming manual and socket programming reference
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/28/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/08/2007
 *****************************************************************************/
 
 #ifndef WIN32
@@ -968,72 +968,52 @@ void CUDTUnited::updateMux(CUDT* u, const sockaddr* addr)
 {
    CGuard cg(m_ControlLock);
 
-   bool nm = false;
-
-   if (0 == m_vMultiplexer.size())
-      nm = true;
-   else if ((NULL != addr) && (((sockaddr_in*)addr)->sin_port != 0))
+   for (vector<CMultiplexer>::iterator i = m_vMultiplexer.begin(); i != m_vMultiplexer.end(); ++ i)
    {
-      nm = true;
-
-      for (vector<CMultiplexer>::iterator i = m_vMultiplexer.begin(); i != m_vMultiplexer.end(); ++ i)
+      if ((i->m_iIPversion == u->m_iIPversion) && (i->m_iMTU == u->m_iMSS))
       {
-         if (i->m_iPort == ntohs(((sockaddr_in*)addr)->sin_port))
+         if ((NULL == addr) ||
+             ((AF_INET == i->m_iIPversion) && (i->m_iPort == ntohs(((sockaddr_in*)addr)->sin_port))) ||
+             ((AF_INET6 == i->m_iIPversion) && (i->m_iPort == ntohs(((sockaddr_in6*)addr)->sin6_port))))
          {
-            nm = false;
-            break;
+            // reuse the existing multiplexer
+            ++ i->m_iRefCount;
+            u->m_pSndQueue = i->m_pSndQueue;
+            u->m_pRcvQueue = i->m_pRcvQueue;
+            u->m_pRcvQueue->m_pHash->insert(u->m_SocketID, u);
+            return;
          }
       }
    }
 
-   if (nm)
-   {
-      CMultiplexer m;
-      m.m_pChannel = new CChannel(u->m_iIPversion);
-      m.m_pChannel->setSndBufSize(u->m_iUDPSndBufSize);
-      m.m_pChannel->setRcvBufSize(u->m_iUDPRcvBufSize);
+   // a new multiplexer is needed
+   CMultiplexer m;
+   m.m_iMTU = u->m_iMSS;
+   m.m_iIPversion = u->m_iIPversion;
+   m.m_iRefCount = 1;
 
-      m.m_pChannel->open(addr);
+   m.m_pChannel = new CChannel(u->m_iIPversion);
+   m.m_pChannel->setSndBufSize(u->m_iUDPSndBufSize);
+   m.m_pChannel->setRcvBufSize(u->m_iUDPRcvBufSize);
 
-      sockaddr_in sa;
-      m.m_pChannel->getSockAddr((sockaddr*)&sa);
-      m.m_iPort = ntohs(sa.sin_port);
+   m.m_pChannel->open(addr);
 
-      m.m_pTimer = new CTimer;
+   sockaddr* sa = (AF_INET == u->m_iIPversion) ? (sockaddr*) new sockaddr_in : (sockaddr*) new sockaddr_in6;
+   m.m_pChannel->getSockAddr(sa);
+   m.m_iPort = (AF_INET == u->m_iIPversion) ? ntohs(((sockaddr_in*)sa)->sin_port) : ntohs(((sockaddr_in6*)sa)->sin6_port);
+   if (AF_INET == u->m_iIPversion) delete (sockaddr_in*)sa; else delete (sockaddr_in6*)sa;
 
-      m.m_pSndQueue = new CSndQueue;
-      m.m_pSndQueue->init(m.m_pChannel, m.m_pTimer);
-      m.m_pRcvQueue = new CRcvQueue;
-      m.m_pRcvQueue->init(1024, u->m_iPayloadSize, 1024, m.m_pChannel, m.m_pTimer);
+   m.m_pTimer = new CTimer;
 
-      m.m_iMTU = u->m_iMSS;
-      m.m_iIPversion = u->m_iIPversion;
-      m.m_iRefCount = 1;
+   m.m_pSndQueue = new CSndQueue;
+   m.m_pSndQueue->init(m.m_pChannel, m.m_pTimer);
+   m.m_pRcvQueue = new CRcvQueue;
+   m.m_pRcvQueue->init(1024, u->m_iPayloadSize, 1024, m.m_iIPversion, m.m_pChannel, m.m_pTimer);
 
-      m_vMultiplexer.insert(m_vMultiplexer.end(), m);
+   m_vMultiplexer.insert(m_vMultiplexer.end(), m);
 
-      u->m_pSndQueue = m.m_pSndQueue;
-      u->m_pRcvQueue = m.m_pRcvQueue;
-   }
-   else
-   {
-      vector<CMultiplexer>::iterator m;
-
-      if ((NULL == addr) || (0 == ((sockaddr_in*)addr)->sin_port))
-        m = m_vMultiplexer.begin();
-      else
-      {
-         for (m = m_vMultiplexer.begin(); m != m_vMultiplexer.end(); ++ m)
-            if (m->m_iPort == ntohs(((sockaddr_in*)addr)->sin_port))
-               break;
-      }
-
-      m->m_iRefCount ++;
-
-      u->m_pSndQueue = m->m_pSndQueue;
-      u->m_pRcvQueue = m->m_pRcvQueue;
-   }
-
+   u->m_pSndQueue = m.m_pSndQueue;
+   u->m_pRcvQueue = m.m_pRcvQueue;
    u->m_pRcvQueue->m_pHash->insert(u->m_SocketID, u);
 }
 

@@ -29,7 +29,7 @@ This header file contains the definition of UDT multiplexer.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/27/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/08/2007
 *****************************************************************************/
 
 
@@ -69,10 +69,11 @@ public:
       // Parameters:
       //    1) [in] size: queue size
       //    2) [in] mss: maximum segament size
+      //    3) [in] version: IP version
       // Returned value:
       //    0: success, -1: failure.
 
-   int init(const int& size, const int& mss);
+   int init(const int& size, const int& mss, const int& version);
 
       // Functionality:
       //    Increase (double) the unit queue size.
@@ -111,6 +112,7 @@ private:
    int m_iCount;		// total number of valid packets in the queue
 
    int m_iMSS;			// unit buffer size
+   int m_iIPversion;		// IP version
 
    CUnit* m_pAvailUnit;		// recent available unit
    int m_iVQ;			// recent available quque
@@ -185,7 +187,6 @@ public:
 private:
    CUDTList* m_pLast;		// The last node
 
-private:
    pthread_mutex_t m_ListLock;
 
    pthread_mutex_t* m_pWindowLock;
@@ -252,7 +253,6 @@ public:
 private:
    CUDTList* m_pLast;		// the last node
 
-private:
    vector<CUDT*> m_vNewEntry;	// newly added entries, to be inserted
    pthread_mutex_t m_ListLock;
 };
@@ -400,13 +400,14 @@ public:
       // Parameters:
       //    1) [in] size: queue size
       //    2) [in] mss: maximum packet size
-      //    3) [in] hsize: hash table size
-      //    4) [in] c: UDP channel to be associated to the queue
-      //    5) [in] t: timer
+      //    3) [in] version: IP version
+      //    4) [in] hsize: hash table size
+      //    5) [in] c: UDP channel to be associated to the queue
+      //    6) [in] t: timer
       // Returned value:
       //    None.
 
-   void init(const int& size, const int& payload, const int& hsize, const CChannel* c, const CTimer* t);
+   void init(const int& size, const int& payload, const int& version, const int& hsize, const CChannel* c, const CTimer* t);
 
       // Functionality:
       //    Read a packet for a specific UDT socket id.

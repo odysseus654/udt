@@ -34,7 +34,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/27/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/08/2007
 *****************************************************************************/
 
 #ifndef WIN32
@@ -732,8 +732,8 @@ void CUDT::connect(const sockaddr* serv_addr)
    // register this socket for receiving data packets
    m_pRcvQueue->m_pRcvUList->newEntry(this);
 
-   m_pPeerAddr = (sockaddr*)new sockaddr_in;
-   memcpy(m_pPeerAddr, serv_addr, sizeof(sockaddr_in));
+   m_pPeerAddr = (AF_INET == m_iIPversion) ? (sockaddr*)new sockaddr_in : (sockaddr*)new sockaddr_in6;
+   memcpy(m_pPeerAddr, serv_addr, (AF_INET == m_iIPversion) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6));
 
    // And, I am connected too.
    m_bConnected = true;
@@ -799,8 +799,8 @@ void CUDT::connect(const sockaddr* peer, CHandShake* hs)
    // register this socket for receiving data packet
    m_pRcvQueue->m_pRcvUList->newEntry(this);
 
-   m_pPeerAddr = (sockaddr*)new sockaddr_in;
-   memcpy(m_pPeerAddr, peer, sizeof(sockaddr_in));
+   m_pPeerAddr = (AF_INET == m_iIPversion) ? (sockaddr*)new sockaddr_in : (sockaddr*)new sockaddr_in6;
+   memcpy(m_pPeerAddr, peer, (AF_INET == m_iIPversion) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6));
 
    // And of course, it is connected.
    m_bConnected = true;

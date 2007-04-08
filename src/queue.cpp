@@ -29,7 +29,7 @@ This file contains the implementation of UDT multiplexer.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/27/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/08/2007
 *****************************************************************************/
 
 #include "common.h"
@@ -64,7 +64,7 @@ CUnitQueue::~CUnitQueue()
    m_viSize.clear();
 }
 
-int CUnitQueue::init(const int& size, const int& mss)
+int CUnitQueue::init(const int& size, const int& mss, const int& version)
 {
    CUnit* tempu = NULL;
    char* tempb = NULL;
@@ -74,7 +74,7 @@ int CUnitQueue::init(const int& size, const int& mss)
    {
       tempu = new CUnit [size];
       tempb = new char [size * mss];
-      tempa = (char*) new sockaddr_in [size];
+      tempa = (AF_INET == version) ? (char*) new sockaddr_in [size] : (char*) new sockaddr_in6 [size];
    }
    catch (...)
    {
@@ -88,7 +88,7 @@ int CUnitQueue::init(const int& size, const int& mss)
    for (int i = 0; i < size; ++ i)
    {
       tempu[i].m_bValid = false;
-      tempu[i].m_pAddr = (sockaddr*)((sockaddr_in*)tempa + i);
+      tempu[i].m_pAddr = (AF_INET == version) ? (sockaddr*)((sockaddr_in*)tempa + i) : (sockaddr*)((sockaddr_in6*)tempa + i);
       tempu[i].m_Packet.m_pcData = tempb + i * mss;
    }
 
@@ -99,6 +99,7 @@ int CUnitQueue::init(const int& size, const int& mss)
 
    m_iSize = size;
    m_iMSS = mss;
+   m_iIPversion = version;
 
    m_pAvailUnit = (CUnit*)m_vpUnit[0];
    m_iVQ = 0;
@@ -116,7 +117,7 @@ int CUnitQueue::increase()
    {
       tempu = new CUnit [m_iSize];
       tempb = new char [m_iSize * m_iMSS];
-      tempa = (char*) new sockaddr_in [m_iSize];
+      tempa = (AF_INET == m_iIPversion) ? (char*) new sockaddr_in [m_iSize] : (char*) new sockaddr_in6 [m_iSize];;
    }
    catch (...)
    {
@@ -130,7 +131,7 @@ int CUnitQueue::increase()
    for (int i = 0; i < m_iSize; ++ i)
    {
       tempu[i].m_bValid = false;
-      tempu[i].m_pAddr = (sockaddr*)((sockaddr_in*)tempa + i);
+      tempu[i].m_pAddr = (AF_INET == m_iIPversion) ? (sockaddr*)((sockaddr_in*)tempa + i) : (sockaddr*)((sockaddr_in6*)tempa + i);
       tempu[i].m_Packet.m_pcData = tempb + i * m_iMSS;
    }
 
@@ -742,11 +743,11 @@ CRcvQueue::~CRcvQueue()
    #endif
 }
 
-void CRcvQueue::init(const int& qsize, const int& payload, const int& hsize, const CChannel* cc, const CTimer* t)
+void CRcvQueue::init(const int& qsize, const int& payload, const int& version, const int& hsize, const CChannel* cc, const CTimer* t)
 {
    m_iPayloadSize = payload;
 
-   m_UnitQueue.init(qsize, payload);
+   m_UnitQueue.init(qsize, payload, version);
 
    m_pHash = new CHash;
    m_pHash->init(hsize);

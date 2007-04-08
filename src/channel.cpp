@@ -37,7 +37,7 @@ UDT packet definition: packet.h
 
 /****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/17/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/08/2007
 *****************************************************************************/
 
 #ifndef WIN32
@@ -220,7 +220,7 @@ int CChannel::sendto(const sockaddr* addr, CPacket& packet) const
    #ifndef WIN32
       msghdr mh;
       mh.msg_name = (sockaddr*)addr;
-      mh.msg_namelen = sizeof(sockaddr_in);
+      mh.msg_namelen = (AF_INET == m_iIPversion) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
       mh.msg_iov = (iovec*)packet.m_PacketVector;
       mh.msg_iovlen = 2;
       mh.msg_control = NULL;
@@ -230,7 +230,8 @@ int CChannel::sendto(const sockaddr* addr, CPacket& packet) const
       int res = sendmsg(m_iSocket, &mh, 0);
    #else
       DWORD size = CPacket::m_iPktHdrSize + packet.getLength();
-      int res = WSASendTo(m_iSocket, (LPWSABUF)packet.m_PacketVector, 2, &size, 0, addr, sizeof(sockaddr_in), NULL, NULL);
+      int addrsize = (AF_INET == m_iIPversion) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
+      int res = WSASendTo(m_iSocket, (LPWSABUF)packet.m_PacketVector, 2, &size, 0, addr, addrsize, NULL, NULL);
       res = (0 == res) ? size : -1;
    #endif
 
@@ -250,7 +251,7 @@ int CChannel::recvfrom(sockaddr* addr, CPacket& packet) const
    #ifndef WIN32
       msghdr mh;   
       mh.msg_name = addr;
-      mh.msg_namelen = sizeof(sockaddr_in);
+      mh.msg_namelen = (AF_INET == m_iIPversion) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
       mh.msg_iov = packet.m_PacketVector;
       mh.msg_iovlen = 2;
       mh.msg_control = NULL;
@@ -261,7 +262,7 @@ int CChannel::recvfrom(sockaddr* addr, CPacket& packet) const
    #else
       DWORD size = CPacket::m_iPktHdrSize + packet.getLength();
       DWORD flag = 0;
-      int addrsize = sizeof(sockaddr_in);
+      int addrsize = (AF_INET == m_iIPversion) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
 
       int res = WSARecvFrom(m_iSocket, (LPWSABUF)packet.m_PacketVector, 2, &size, &flag, addr, &addrsize, NULL, NULL);
       res = (0 == res) ? size : -1;
