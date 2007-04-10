@@ -30,7 +30,7 @@ mutex facility, and exception processing.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 03/17/2007
+   Yunhong Gu [ygu@cs.uic.edu], last updated 04/09/2007
 *****************************************************************************/
 
 
@@ -487,18 +487,6 @@ const char* CUDTException::getErrorMessage()
         case 2:
            strcpy(m_pcMsg + strlen(m_pcMsg), ": ");
            strcpy(m_pcMsg + strlen(m_pcMsg), "no data available for reading");
-
-           break;
-
-        case 3:
-           strcpy(m_pcMsg + strlen(m_pcMsg), ": ");
-           strcpy(m_pcMsg + strlen(m_pcMsg), "no buffer available for overlapped reading");
-
-           break;
-
-        case 4:
-           strcpy(m_pcMsg + strlen(m_pcMsg), ": ");
-           strcpy(m_pcMsg + strlen(m_pcMsg), "non-blocking overlapped recv is on going");
 
            break;
 

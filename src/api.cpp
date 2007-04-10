@@ -721,7 +721,7 @@ int CUDTUnited::select(ud_set* readfds, ud_set* writefds, ud_set* exceptfds, con
 
    uint64_t to;
    if (NULL == timeout)
-      to = (int64_t)1 << 62;
+      to = 0xFFFFFFFFFFFFFFFFULL;
    else
       to = timeout->tv_sec * 1000000 + timeout->tv_usec;
 

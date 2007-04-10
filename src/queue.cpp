@@ -53,12 +53,12 @@ CUnitQueue::~CUnitQueue()
       delete [] *i;
    m_vpUnit.clear();
 
-   for (vector<char*>::iterator i = m_vpBuffer.begin(); i != m_vpBuffer.end(); ++ i)
-      delete [] *i;
+   for (vector<char*>::iterator j = m_vpBuffer.begin(); j != m_vpBuffer.end(); ++ j)
+      delete [] *j;
    m_vpBuffer.clear();
 
-   for (vector<char*>::iterator i = m_vpAddrBuf.begin(); i != m_vpAddrBuf.end(); ++ i)
-      delete [] *i;
+   for (vector<char*>::iterator k = m_vpAddrBuf.begin(); k != m_vpAddrBuf.end(); ++ k)
+      delete [] *k;
    m_vpAddrBuf.clear();
 
    m_viSize.clear();

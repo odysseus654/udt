@@ -34,7 +34,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 04/08/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/09/2007
 *****************************************************************************/
 
 #ifndef WIN32
@@ -101,8 +101,6 @@ m_iSelfClockInterval(64)
    m_Linger.l_linger = 180;
    m_iUDPSndBufSize = 1000000;
    m_iUDPRcvBufSize = 1000000;
-   m_iMaxMsg = 9000;
-   m_iMsgTTL = -1;
    m_iIPversion = AF_INET;
    m_bRendezvous = false;
    m_iSndTimeOut = -1;
@@ -158,8 +156,6 @@ m_iSelfClockInterval(ancestor.m_iSelfClockInterval)
    m_Linger = ancestor.m_Linger;
    m_iUDPSndBufSize = ancestor.m_iUDPSndBufSize;
    m_iUDPRcvBufSize = ancestor.m_iUDPRcvBufSize;
-   m_iMaxMsg = ancestor.m_iMaxMsg;
-   m_iMsgTTL = ancestor.m_iMsgTTL;
    m_iSockType = ancestor.m_iSockType;
    m_iIPversion = ancestor.m_iIPversion;
    m_bRendezvous = ancestor.m_bRendezvous;
@@ -314,20 +310,6 @@ void CUDT::setOpt(UDTOpt optName, const void* optval, const int&)
       m_iUDPRcvBufSize = *(int*)optval;
       break;
 
-   case UDT_MAXMSG:
-      if (m_bOpened)
-         throw CUDTException(5, 1, 0);
-
-      m_iMaxMsg = *(int*)optval;
-      break;
-
-   case UDT_MSGTTL:
-      if (m_bOpened)
-         throw CUDTException(5, 1, 0);
-
-      m_iMsgTTL = *(int*)optval;
-      break;
-
    case UDT_RENDEZVOUS:
       if (m_bConnected)
          throw CUDTException(5, 1, 0);
@@ -411,16 +393,6 @@ void CUDT::getOpt(UDTOpt optName, void* optval, int& optlen)
 
    case UDP_RCVBUF:
       *(int*)optval = m_iUDPRcvBufSize;
-      optlen = sizeof(int);
-      break;
-
-   case UDT_MAXMSG:
-      *(int*)optval = m_iMaxMsg;
-      optlen = sizeof(int);
-      break;
-
-   case UDT_MSGTTL:
-      *(int*)optval = m_iMsgTTL;
       optlen = sizeof(int);
       break;
 
@@ -1780,28 +1752,34 @@ int64_t CUDT::sendfile(ifstream& ifs, const int64_t& offset, const int64_t& size
          throw CUDTException(4, 2);
       }
 
-      while (!m_bBroken && m_bConnected && (m_pSndBuffer->getCurrBufSize() >= m_iSndQueueLimit))
-         #ifndef WIN32
-            usleep(10);
-         #else
-            Sleep(1);
-         #endif
-
-      m_pSndBuffer->addBuffer(tempbuf, unitsize);
+      #ifndef WIN32
+         pthread_mutex_lock(&m_SendBlockLock);
+         while (!m_bBroken && m_bConnected && (m_iSndQueueLimit < m_pSndBuffer->getCurrBufSize()))
+            pthread_cond_wait(&m_SendBlockCond, &m_SendBlockLock);
+         pthread_mutex_unlock(&m_SendBlockLock);
+      #else
+         while (!m_bBroken && m_bConnected && (m_iSndQueueLimit < m_pSndBuffer->getCurrBufSize()))
+            WaitForSingleObject(m_SendBlockCond, INFINITE);
+      #endif
 
       if (m_bBroken)
          throw CUDTException(2, 1, 0);
+
+      m_pSndBuffer->addBuffer(tempbuf, unitsize);
 
       tosend -= unitsize;
    }
 
    // Wait until all the data is sent out
-   while ((!m_bBroken) && m_bConnected && (m_pSndBuffer->getCurrBufSize() > 0))
-      #ifndef WIN32
-         usleep(10);
-      #else
-         Sleep(1);
-      #endif
+   #ifndef WIN32
+      pthread_mutex_lock(&m_SendBlockLock);
+      while (!m_bBroken && m_bConnected && (m_pSndBuffer->getCurrBufSize() > 0))
+         pthread_cond_wait(&m_SendBlockCond, &m_SendBlockLock);
+      pthread_mutex_unlock(&m_SendBlockLock);
+   #else
+      while (!m_bBroken && m_bConnected && (m_pSndBuffer->getCurrBufSize() > 0))
+         WaitForSingleObject(m_SendBlockCond, INFINITE);
+   #endif
 
    if (m_bBroken && (m_pSndBuffer->getCurrBufSize() > 0))
       throw CUDTException(2, 1, 0);
