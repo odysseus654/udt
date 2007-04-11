@@ -9,7 +9,8 @@
 <body>
 <div class="ref_head">&nbsp;UDT Tutorial</div>
 
-<h5><font color="#000080">Messaging with Partial Reliability</font></h5>
+<h3><font color="#000080">Messaging with Partial Reliability</font></h3>
+
 <p>When a UDT socket is created as SOCK_DGRAM type, UDT will send and receive data as messages. The boundary of the message is preserved and the message is delivered 
 as a whole unit. Sending or receving messages do not need a loop; a message will be either completely delivered or not delivered at all. However, at the receiver 
 side, if the user buffer is shorter than the message length, only part of the message will be copied into the user buffer while the message will still be 
