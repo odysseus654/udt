@@ -16,18 +16,16 @@
 &nbsp; UDTSOCKET <font color="#FFFFFF">u</font><br />
 );</div>
 
-<p>&nbsp;</p>
-<h4>Parameters</h4>
+<h5>Parameters</h5>
 <dl>
   <dt><i>u</i></dt>
   <dd>[in] Descriptor identifying the socket to close.</dd>
 </dl>
 
-<p>&nbsp;</p>
-<h4>Return Value</h4>
+<h5>Return Value</h5>
 <p>If success, 0 is returned; otherwise, UDT::ERROR is returned and specific error information can be retrieved by <a href="error.htm">getlasterror</a>.</p>
 
-<table width="100%" border="1" cellpadding="3" cellspacing="0" bordercolor="#CCCCCC">
+<table width="100%" border="1" cellpadding="2" cellspacing="0" bordercolor="#CCCCCC">
   <tr>
     <td width="17%" class="table_headline"><strong>Error Name</strong></td>
     <td width="17%" class="table_headline"><strong>Error Code</strong></td>
@@ -45,8 +43,7 @@
   </tr>
 </table>
 
-<p>&nbsp;</p>
-<h4>Description</h4>
+<h5>Description</h5>
 <p>The <strong>close</strong> method gracefully shutdowns the UDT connection and releases all related data structures associated with the UDT socket. If there is no connection associated 
 with the socket, <strong>close<strong> simply release the socket resources.</p>
 <p>On a blocking socket, if UDT_LINGER is non-zero, the <strong>close</strong> call will wait until all data in the sending buffer are sent out or the waiting time has exceeded the 
@@ -55,8 +52,7 @@ expiration time set by UDT_LINGER. On a non-blocking socket, <strong>close</stro
 delivered, the peer side will also be closed after a time-out. In UDT, <u>shutdown</u> is not supported.</p>
 <p>All sockets should be closed if they are not used any more.</p>
 
-<p>&nbsp;<p>
-<h4>See Also</h4>
+<h5>See Also</h5>
 <p><strong><a href="socket.htm">socket</a>, <a href="opt.htm">setsockopt</a></strong></p>
 <p>&nbsp;</p>
 

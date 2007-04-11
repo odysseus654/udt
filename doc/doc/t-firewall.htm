@@ -9,8 +9,7 @@
 <body>
 <div class="ref_head">&nbsp;UDT Tutorial</div>
 
-<h1><font color="#000080">Firewall Traversing with UDT</font></h1>
-
+<h3><font color="#000080">Firewall Traversing with UDT</font></h3>
 <p>While UDT was originally written for extremely high speed data transfer, there are many other potential benefits from this reliable UDP-based library. One particular usage is to setup 
 reliable connections between machines behind firewalls, especially those NAT firewall. To meet this requirement, UDT has added the rendezvous connection setup support.</p>
 
@@ -23,15 +22,13 @@ fact, unless the application explicitly bind a socket to a different port, UDT w
 
 <p>Example: Rendezvous connection setup.</p>
 <div class="code">
-<p>
 UDTSOCKET u;<br>
 ...<br>
 <br>
 bool rendzevous = true;<br>
 UDT::setsockopt(u, 0, UDT_RENDEZVOUS, &rendezvous, sizeof(bool));<br>
 UDT::bind(u, &known_addr, sizeof(known_addr));<br>
-UDT::connect(u, &peer_addr, sizeof(peer_addr));<br>
-</p>
+UDT::connect(u, &peer_addr, sizeof(peer_addr));
 </div>
 
 <p>Finally, note that UDT does not automatically traverse any types of firewalls. It just provide a convinient API and applications may still need to finish more work, such as a name 

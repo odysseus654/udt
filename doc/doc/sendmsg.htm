@@ -20,28 +20,26 @@
 &nbsp; bool <font color="#FFFFFF">inorder</font> = false<br />
 );</div>
 
-<p>&nbsp;</p>
-<h4>Parameters</h4>
+<h5>Parameters</h5>
 <dl>
   <dt><i>u</i></dt>
   <dd>[in] Descriptor identifying a connected socket.</dd>
-  <dt>buf</dt>
+  <dt><em>buf</em></dt>
   <dd>[in] The buffer pointed to a message.</dd>
-  <dt>len</dt>
+  <dt><em>len</em></dt>
   <dd>[in] Length of the buffer.</dd>
-  <dt>ttl</dt>
+  <dt><em>ttl</em></dt>
   <dd>[in] Optional. The Time-to-Live of the message (milliseconds). Default is -1, which means infinite.</dd>
-  <dt>inorder</dt>
+  <dt><em>inorder</em></dt>
   <dd>[in] Optional. Flag indicating if the message should be delivered in order. Default is negative.</dd>
 </dl>
 
-<p>&nbsp;</p>
-<h4>Return Value</h4>
+<h5>Return Value</h5>
 <p>On success, <b>sendmsg</b> returns the actual size of message that has just been sent. The size should be equal to <i>len</i>. Otherwise UDT::ERROR is returned and 
 specific error information can be retrieved by <a href="error.htm">getlasterror</a>. If UDT_SNDTIMEO is set to a positive value, zero will be returned if the message 
 cannot be sent before the timer expires.</p>
 
-<table width="100%" border="1" cellpadding="3" cellspacing="0" bordercolor="#CCCCCC">
+<table width="100%" border="1" cellpadding="1" cellspacing="0" bordercolor="#CCCCCC">
   <tr>
     <td width="17%" class="table_headline"><strong>Error Name</strong></td>
     <td width="17%" class="table_headline"><strong>Error Code</strong></td>
@@ -74,8 +72,7 @@ cannot be sent before the timer expires.</p>
   </tr>
 </table>
 
-<p>&nbsp;</p>
-<h4>Description</h4>
+<h5>Description</h5>
 <p>The <strong>sendmsg</strong> method sends a message to the peer side. The UDT socket must be in SOCK_DGRAM mode in order to send or receive messages. 
 Message is the minimum data unit in this situation. In particular, <strong>sendmsg</strong> always tries to send the message out as a whole, that is, the message will 
 either to completely sent or it is not sent at all.</p>
@@ -88,8 +85,7 @@ been set out after TTL, the message will be disgarded.</p>
 <p>On the other hand, the <i>inorder</i> option decides if this message should be delivered in order. That is, the message should not be delivered to the receiver 
 side application unless all messages prior to it are either delivered or discarded.</p>
 
-<p>&nbsp;<p>
-<h4>See Also</h4>
+<h5>See Also</h5>
 <p><strong><a href="select.htm">select</a>, <a href="recvmsg.htm">send</a></strong></p>
 
 <p>&nbsp;</p>

@@ -20,27 +20,25 @@
 &nbsp; const int& <font color="#FFFFFF">block</font> = 366000<br />
 );</div>
 
-<p>&nbsp;</p>
-<h4>Parameters</h4>
+<h5>Parameters</h5>
 <dl>
   <dt><i>u</i></dt>
   <dd>[in] Descriptor identifying a connected socket.</dd>
-  <dt>ofs</dt>
+  <dt><em>ofs</em></dt>
   <dd>[in] C++ ofstream descriptor for the file to store incoming data.</dd>
-  <dt>offset</dt>
+  <dt><em>offset</em></dt>
   <dd>[in] The offset position from where the data is written into the file.</dd>
-  <dt>size</dt>
+  <dt><em>size</em></dt>
   <dd>[in] The total size to be received.</dd>
-  <dt>block</dt>
+  <dt><em>block</em></dt>
   <dd>[in] Optional. The size of every data block for file IO.</dd>
 </dl>
 
-<p>&nbsp;</p>
-<h4>Return Value</h4>
+<h5>Return Value</h5>
 <p>On success, <b>recvfile</b> returns the actual size of received data. Otherwise UDT::ERROR is returned and specific error information can be retrieved by <a 
 href="error.htm">getlasterror</a>.</p>
 
-<table width="100%" border="1" cellpadding="3" cellspacing="0" bordercolor="#CCCCCC">
+<table width="100%" border="1" cellpadding="2" cellspacing="0" bordercolor="#CCCCCC">
   <tr>
     <td width="17%" class="table_headline"><strong>Error Name</strong></td>
     <td width="17%" class="table_headline"><strong>Error Code</strong></td>
@@ -73,13 +71,11 @@ href="error.htm">getlasterror</a>.</p>
   </tr>
 </table>
 
-<p>&nbsp;</p>
-<h4>Description</h4>
+<h5>Description</h5>
 <p>The <strong>recvfile</strong> method reads certain amount of data and write it into a local file. It is always in blocking mode and will not return until the exact amount of data is 
 received or the connection is broken. Neither UDT_RCVSYN nor UDT_RCVTIMEO affects this method.</p>
 
-<p>&nbsp;<p>
-<h4>See Also</h4>
+<h5>See Also</h5>
 <p><strong><a href="send.htm">send</a>, <a href="sendfile.htm">sendfile</a>, <a href="recv.htm">recv</a></strong></p>
 <p>&nbsp;</p>
 

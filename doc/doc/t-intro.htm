@@ -9,8 +9,7 @@
 <body>
 <div class="ref_head">&nbsp;UDT Tutorial</div>
 
-<h1><font color="#000080">Introduction to Programming with UDT</font></h1>
-
+<h3><font color="#000080">Introduction to Programming with UDT</font></h3>
 <p>The prerequisite knowledge for using UDT is sound experience on C++ and socket programing. This is enough to use UDT in distributed applications. If you are familiar with computer 
 networking, you may find UDT more powerful.</p>
 
@@ -27,13 +26,13 @@ For those socket APIs or options not appropriate to UDT, e.g., certain TCP optio
 <p>For example, using BSD socket, you write:</p>
 
 <div class="code">
-<p>int s = socket(AF_INET, SOCK_STREAM, 0);</p>
+int s = socket(AF_INET, SOCK_STREAM, 0);
 </div>
 
 <p>Its counterpart in UDT is like this:</p>
 
 <div class="code">
-<p>UDTSOCKET u = UDT::socket(AF_INET, SOCK_STREAM, 0);</p>
+UDTSOCKET u = UDT::socket(AF_INET, SOCK_STREAM, 0);
 </div>
 
 <p>UDT API is thread-safe. UDT sockets can be shared by multiple threads and UDT API on the same socket can be made concurrently. However, because of its application level nature, UDT 

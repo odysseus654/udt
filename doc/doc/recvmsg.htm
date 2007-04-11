@@ -18,23 +18,21 @@
 &nbsp; int <font color="#FFFFFF">len</font><br />
 );</div>
 
-<p>&nbsp;</p>
-<h4>Parameters</h4>
+<h5>Parameters</h5>
 <dl>
   <dt><i>u</i></dt>
   <dd>[in] Descriptor identifying a connected socket.</dd>
-  <dt>msg</dt>
+  <dt><em>msg</em></dt>
   <dd>[out] The buffer used to store incoming message.</dd>
-  <dt>len</dt>
+  <dt><em>len</em></dt>
   <dd>[in] Length of the buffer.</dd>
 </dl>
 
-<p>&nbsp;</p>
-<h4>Return Value</h4>
+<h5>Return Value</h5>
 <p>On success, <b>recvmsg</b> returns the actual size of received message. Otherwise UDT::ERROR is returned and specific error information can be retrieved by <a 
 href="error.htm">getlasterror</a>. If UDT_RCVTIMEO is set to a positive value, zero will be returned if no message is received before the timer expires.</p>
 
-<table width="100%" border="1" cellpadding="3" cellspacing="0" bordercolor="#CCCCCC">
+<table width="100%" border="1" cellpadding="2" cellspacing="0" bordercolor="#CCCCCC">
   <tr>
     <td width="17%" class="table_headline"><strong>Error Name</strong></td>
     <td width="17%" class="table_headline"><strong>Error Code</strong></td>
@@ -67,8 +65,7 @@ href="error.htm">getlasterror</a>. If UDT_RCVTIMEO is set to a positive value, z
   </tr>
 </table>
 
-<p>&nbsp;</p>
-<h4>Description</h4>
+<h5>Description</h5>
 <p>The <strong>recvmsg</strong> method reads a message from the protocol buffer. The UDT socket must be in SOCK_DGRAM mode in order to send or receive messages. Message is the minimum 
 data unit in this situation. Each <strong>recvmsg</strong> will read no more than one message, even if the message is smaller than the size of <i>buf</i> and there 
 are more messages available. On the other hand, if the <i>buf</i> is not enough to hold the first message, only part of the message will be copied into the buffer, 
@@ -78,8 +75,7 @@ strong>recvmsg</strong> returns immediately and returns error if no message avai
 <p>If UDT_RCVTIMEO is set and the socket is in blocking mode, <strong>recvmsg</strong> only waits a limited time specified by UDT_RCVTIMEO option. If there is still 
 no message available when the timer expires, zero will be returned. UDT_RCVTIMEO has no effect for non-blocking socket.</p>
 
-<p>&nbsp;<p>
-<h4>See Also</h4>
+<h5>See Also</h5>
 <p><strong><a href="select.htm">select</a>, <a href="sendmsg.htm">send</a></strong></p>
 <p>&nbsp;</p>
 

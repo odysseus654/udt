@@ -20,8 +20,7 @@
 &nbsp; const int& <font color="#FFFFFF">block</font> = 7320000<br />
 );</div>
 
-<p>&nbsp;</p>
-<h4>Parameters</h4>
+<h5>Parameters</h5>
 <dl>
   <dt><i>u</i></dt>
   <dd>[in] Descriptor identifying a connected socket.</dd>
@@ -35,12 +34,11 @@
   <dd>[in] Optional. The size of every data block for file IO.</dd>
 </dl>
 
-<p>&nbsp;</p>
-<h4>Return Value</h4>
+<h5>Return Value</h5>
 <p>On success, <b>sendfile</b> returns the actual size of data that has been sent. Otherwise UDT::ERROR is returned and specific error information can be retrieved by 
 <a href="error.htm">getlasterror</a>.</p>
 
-<table width="100%" border="1" cellpadding="3" cellspacing="0" bordercolor="#CCCCCC">
+<table width="100%" border="1" cellpadding="1" cellspacing="0" bordercolor="#CCCCCC">
   <tr>
     <td width="17%" class="table_headline"><strong>Error Name</strong></td>
     <td width="17%" class="table_headline"><strong>Error Code</strong></td>
@@ -73,15 +71,13 @@
   </tr>
 </table>
 
-<p>&nbsp;</p>
-<h4>Description</h4>
+<h5>Description</h5>
 <p>The <strong>sendfile</strong> method sends certain amount of out of a local file. It is always in blocking mode and will not return until the exact 
 amount of data is sent or the connection is broken. Neither UDT_SNDSYN nor UDT_SNDTIMEO affects this method.</p>
 <p>Note that <strong>sendfile</strong> does NOT nessesarily require <strong>recvfile</strong> at the peer side. Send/recvfile and send/recv are orthogonal 
 UDT methods.</p>
 
-<p>&nbsp;<p>
-<h4>See Also</h4>
+<h5>See Also</h5>
 <p><strong><a href="send.htm">send</a>, <a href="recv.htm">recv</a>, <a href="recvfile.htm">recvfile</a></strong></p>
 <p>&nbsp;</p>
 

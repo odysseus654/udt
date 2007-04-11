@@ -31,6 +31,7 @@ body {
 .code {
 	font-family:  "Courier New", Courier, monospace;
 	font-size: 10px;
+	line-height: 12px;
 	background-color: #C0C0C0;
 	padding: 5px 5px 5px 5px;
 }

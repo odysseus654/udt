@@ -18,19 +18,17 @@
 &nbsp; int* <font color="#FFFFFF">addrlen</font><br />
 );</div>
 
-<p>&nbsp;</p>
-<h4>Parameters</h4>
+<h5>Parameters</h5>
 <dl>
   <dt><i>u</i></dt>
   <dd>[in] Descriptor identifying a listening socket.</dd>
-  <dt>addr</dt>
+  <dt><em>addr</em></dt>
   <dd>[out] Address of the peer side of the new accepted connection.</dd>
-  <dt>addrlen</dt>
+  <dt><em>addrlen</em></dt>
   <dd>[out] Length of the <i>addr</i> structure.</dd>
 </dl>
 
-<p>&nbsp;</p>
-<h4>Return Value</h4>
+<h5>Return Value</h5>
 <p>If no error occurs, <b>accept</b> returns the UDT socket descriptor of the new connection; otherwise, it returns
   UDT::INVALID_SOCK.</p>
 <p>On a successful return, the address of the peer 
@@ -38,7 +36,7 @@
 <p>If an error is returned, the error information 
   can be retrieved by <a href="error.htm">getlasterror</a>. One of the following error can cause an <b>accept</b> error:</p>
 
-<table width="100%" border="1" cellpadding="3" cellspacing="0" bordercolor="#CCCCCC">
+<table width="100%" border="1" cellpadding="2" cellspacing="0" bordercolor="#CCCCCC">
   <tr>
     <td width="17%" class="table_headline"><strong>Error Name</strong></td>
     <td width="17%" class="table_headline"><strong>Error Code</strong></td>
@@ -66,16 +64,14 @@
   </tr>
 </table>
 
-<p>&nbsp;</p>
-<h4>Description</h4>
+<h5>Description</h5>
 <p>Once a UDT socket is in listening state, it accepts new connections and maintains the pending connections in a queue. An <strong>accept</strong> call retrieves 
 the first connection in the queue, removes it from the queue, and returns the associate socket descriptor. </p>
 <p>If there is no connections in the queue when <strong>accept</strong> is called, a blocking socket will wait until a new connection is set up, whereas a 
 non-blocking socket will return immediately with an error.</p>
 <p>The accepted sockets will inherit all proper attributes from the listening socket.</p>
 
-<p>&nbsp;<p>
-<h4>See Also</h4>
+<h5>See Also</h5>
 <p><strong><a href="listen.htm">listen</a>, <a href="connect.htm">connect</a>, <a href="opt.htm">setsockopt</a>, <a href="opt.htm">getsockopt</a></strong></p>
 <p>&nbsp;</p>
 

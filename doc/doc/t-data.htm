@@ -9,8 +9,7 @@
 <body>
 <div class="ref_head">&nbsp;UDT Tutorial</div>
 
-<h1><font color="#000080">Transfering Data using UDT</font></h1>
-
+<h3><font color="#000080">Transfering Data using UDT</font></h3>
 <p>This section describes using UDT to transfer data in streaming mode. This is exactly the same as using traditional BSD socket.</p>
 
 <p>In streaming mode, neither a send or a recv call can guarantee that all data are sent or received in one call, because there is no boundary information in the data stream. Application 
@@ -18,41 +17,37 @@ should use loops for both sending and receiving.</p>
 
 <p>Example: send a data block (buf, size) using UDT.</p>
 <div class="code">
-<p>
       int ssize = 0;<br>
       int ss;<br>
       while (ssize < size)<br>
       {<br>
-         if (UDT::ERROR == (ss = UDT::send(usock, buf + ssize, size - ssize, 0)))<br>
-         {<br>
-            cout << "send:" << UDT::getlasterror().getErrorMessage() << endl;<br>
-            break;<br>
-         }<br>
+      &nbsp;&nbsp;if (UDT::ERROR == (ss = UDT::send(usock, buf + ssize, size - ssize, 0)))<br>
+      &nbsp;&nbsp;{<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;cout << "send:" << UDT::getlasterror().getErrorMessage() << endl;<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;break;<br>
+      &nbsp;&nbsp;}<br>
 <br>
-         ssize += ss;<br>
-      }<br>
-</p>
+      &nbsp;&nbsp;ssize += ss;<br>
+      }
 </div>
 
 <p>Similarily, to receive data stream, the following example code can be used. </p>
 <div class="code">
-<p>
       int rsize = 0;<br>
       int rs;<br>
       while (rsize < size)<br>
       {<br>
-         if (UDT::ERROR == (rs = UDT::recv(usock, buf + rsize, size - rsize, 0)))<br>
-         {<br>
-            cout << "recv:" << UDT::getlasterror().getErrorMessage() << endl;<br>
-            break;<br>
-         }<br>
+      &nbsp;&nbsp;if (UDT::ERROR == (rs = UDT::recv(usock, buf + rsize, size - rsize, 0)))<br>
+      &nbsp;&nbsp;<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;cout << "recv:" << UDT::getlasterror().getErrorMessage() << endl;<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;break;<br>
+      &nbsp;&nbsp;}<br>
 <br>
-         rsize += rs;<br>
-      }<br>
-</p>
+       &nbsp;&nbsp;rsize += rs;<br>
+      }
 </div>
 
-<p>Blocking vs. Non-blocking</p>
+<h5>Blocking vs. Non-blocking</h5>
 <p>UDT supports both blocking and non-blocking mode. The above example demonstrated the blocking mode. In non-blocking mode, UDT::send and UDT::recv will return immediately if there is 
 no buffer available. Usually, non-blocking calls are used together with accept.</p>
 <p>UDT also supports timed blocking IO with UDT_SNDTIMEO and UDT_RCVTIMEO. This is in the middle between complete blocking and complete non-blocking calls. Timed IO will block the 

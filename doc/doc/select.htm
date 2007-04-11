@@ -20,29 +20,27 @@
 &nbsp; const struct timeval* <font color="#FFFFFF">timeout</font><br />
 );</div>
 
-<p>&nbsp;</p>
-<h4>Parameters</h4>
+<h5>Parameters</h5>
 <dl>
   <dt><i>nfds</i></dt>
   <dd>[in] Ignored. For compatibility only.</dd>
-  <dt>readfds</dt>
+  <dt><em>readfds</em></dt>
   <dd>[in, out] Optional pointer to a set of sockets to be checked for readability.</dd>
-  <dt>writefds</dt>
+  <dt><em>writefds</em></dt>
   <dd>[in, out] Optional pointer to a set of sockets to be checked for writability.</dd>
-  <dt>exceptfds</dt>
+  <dt><em>exceptfds</em></dt>
   <dd>[in, out] Ignored. For compatibility only.</dd>
-  <dt>timeout</dt>
+  <dt><em>timeout</em></dt>
   <dd>[in] The future time when this call should be timeout.</dd>
 </dl>
 
-<p>&nbsp;</p>
-<h4>Return Value</h4>
+<h5>Return Value</h5>
 <p>If any of the read or write query is positive, <strong>select</strong> returns the number of UDT sockets that are read for read/write. If no socket is ready before timeout, zero is 
 returned. If there is any error, UDT::ERROR is returned and the specific error information can be retrieved using <a href="error.htm">getlasterror</a>. The <i>readfds</i> and/or 
 <i>writefds</i> will be updated to contain the ready sockets only.</p>
 
 
-<table width="100%" border="1" cellpadding="3" cellspacing="0" bordercolor="#CCCCCC">
+<table width="100%" border="1" cellpadding="2" cellspacing="0" bordercolor="#CCCCCC">
   <tr>
     <td width="17%" class="table_headline"><strong>Error Name</strong></td>
     <td width="17%" class="table_headline"><strong>Error Code</strong></td>
@@ -55,8 +53,7 @@ returned. If there is any error, UDT::ERROR is returned and the specific error i
   </tr>
 </table>
 
-<p>&nbsp;</p>
-<h4>Description</h4>
+<h5>Description</h5>
 <p>The UDSET is a structure to store the UDT socket descriptors. If should only be processed with the following macros.</p>
 <dl>
   <dt><b>UD_CLR</b>(<i>u, *set</i>)</dt>
@@ -74,8 +71,7 @@ ready for IO. UD_ISSET can be used to check which one is ready.</p>
 <p><i>readfds</i> is used to detect if any socket in this set is available for reading (recv, recvmsg), for accepting a new connection (accept), or the associated connection is broken. 
 <i>writefds</i> is used to detect if any socket in this set has available buffer for sending (send, sendmsg). Currently <i>exceptfds</i> is not used.</p>
 
-<p>&nbsp;<p>
-<h4>Example</h4>
+<h5>Example</h5>
 <p>The following example shows how to check if a UDT socket is available for <strong>recv</strong>.</p>
 
 <div class="code">

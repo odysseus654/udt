@@ -17,8 +17,7 @@
 &nbsp; int <font color="#FFFFFF">backlog</font><br />
 );</div>
 
-<p>&nbsp;</p>
-<h4>Parameters</h4>
+<h5>Parameters</h5>
 <dl>
   <dt><i>u</i></dt>
   <dd>[in] Descriptor identifying the server socket.</dd>
@@ -26,11 +25,10 @@
   <dd>[in] Maximum number of pending connections.</dd>
 </dl>
 
-<p>&nbsp;</p>
-<h4>Return Value</h4>
+<h5>Return Value</h5>
 <p>If success, 0 is returned; otherwise, UDT::ERROR is returned and specific error information can be retrieved by <a href="error.htm">getlasterror</a>.</p>
 
-<table width="100%" border="1" cellpadding="3" cellspacing="0" bordercolor="#CCCCCC">
+<table width="100%" border="1" cellpadding="2" cellspacing="0" bordercolor="#CCCCCC">
   <tr>
     <td width="17%" class="table_headline"><strong>Error Name</strong></td>
     <td width="17%" class="table_headline"><strong>Error Code</strong></td>
@@ -58,14 +56,12 @@
   </tr>
 </table>
 
-<p>&nbsp;</p>
-<h4>Description</h4>
+<h5>Description</h5>
 <p>The <strong>listen</strong> method lets a UDT socket enter listening state. The socket must call <strong>bind</strong> before a <strong>listen</strong> call. In addition, if the 
 socket is enable for rendezvous mode, neither <strong>listen</strong> nor <strong>accept</strong> can be used on the socket. A UDT socket can call <strong>listen</strong> more than once, 
 in which case only the first call is effective, while all subsequent calls will be ignored if the socket is already in listening state.</p>
 
-<p>&nbsp;<p>
-<h4>See Also</h4>
+<h5>See Also</h5>
 <p><strong><a href="bind.htm">bind</a>, <a href="accept.htm">accpet</a>, <a href="connect.htm">connect</a></strong></p>
 <p>&nbsp;</p>
 

@@ -9,8 +9,7 @@
 <body>
 <div class="ref_head">&nbsp;UDT Tutorial</div>
 
-<h1><font color="#000080">File Transfer using UDT</font></h1>
-
+<h3><font color="#000080">File Transfer using UDT</font></h3>
 <p>While you can always use regular UDT::send and UDT::recv to transfer a file, UDT provides a more convinient and optimized way for file transfer. An application can use UDT::sendfile 
 and UDT::recvfile directly. In addition, file transfer IO API and regular data IO API are orthogonal. E.g., the data stream sent out by UDT::sendfile does not necessarily require 
 UDT::recvfile to accept.</p>
@@ -20,9 +19,8 @@ size parameter for sending or receiving unless errors occur.</p>
 
 <p>UDT uses C++ fstream for file IO.</p>
 
-<p>Example: send a file using UDT.</p>
+<p><strong>Example</strong>: send a file using UDT.</p>
 <div class="code">
-<p>
 UDTSOCKET fhandle;<br>
 ...<br>
 <br>
@@ -33,15 +31,13 @@ ifs.seekg(0, ios::beg);<br>
 <br>
 if (UDT::ERROR == UDT::sendfile(fhandle, ifs, 0, size))<br>
 {<br>
-   cout << "sendfile: " << UDT::getlasterror().getErrorMessage();<br>
-   return 0;<br>
-}<br>
-</p>
+&nbsp;&nbsp;cout << "sendfile: " << UDT::getlasterror().getErrorMessage();<br>
+&nbsp;&nbsp;return 0;<br>
+}
 </div>
 
-<p>Example: Receive data into a file.</p>
+<p><strong>Example</strong>: Receive data into a file.</p>
 <div class="code">
-<p>
 UDTSOCKET recver;<br>
 ...<br>
 <br>
@@ -49,10 +45,9 @@ ofstream& ofs("largefile.dat");<br>
 <br>
 if (UDT::ERROR == UDT::recvfile(fhandle, ofs, 0, size))<br>
 {<br>
-   cout << "recvfile: " << UDT::getlasterror().getErrorMessage();<br>
-   return 0;<br>
-}<br>
-</p>
+&nbsp;&nbsp;cout << "recvfile: " << UDT::getlasterror().getErrorMessage();<br>
+&nbsp;&nbsp;return 0;<br>
+}
 </div>
 
 <p>&nbsp;</p>

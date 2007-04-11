@@ -18,23 +18,21 @@
 &nbsp; int* <font color="#FFFFFF">namelen</font><br />
 );</div>
 
-<p>&nbsp;</p>
-<h4>Parameters</h4>
+<h5>Parameters</h5>
 <dl>
   <dt><i>u</i></dt>
   <dd>[in] Descriptor identifying a connected socket.</dd>
-  <dt>name</dt>
+  <dt><em>name</em></dt>
   <dd>[out] The structure to store the address of the peer.</dd>
-  <dt>addrlen</dt>
+  <dt><em>addrlen</em></dt>
   <dd>[in, out] pointer to the size of the <i>name</i> structure.</dd>
 </dl>
 
-<p>&nbsp;</p>
-<h4>Return Value</h4>
+<h5>Return Value</h5>
 <p>On success, <strong>getlasterror</strong> returns 0 and the peer address information is stored in <i>name</i>; otherwise it returns UDT::ERROR and the specific error information can be 
 retrieved using <a href="error.htm">getlasterror</a>.</p>
 
-<table width="100%" border="1" cellpadding="3" cellspacing="0" bordercolor="#CCCCCC">
+<table width="100%" border="1" cellpadding="2" cellspacing="0" bordercolor="#CCCCCC">
   <tr>
     <td width="17%" class="table_headline"><strong>Error Name</strong></td>
     <td width="17%" class="table_headline"><strong>Error Code</strong></td>
@@ -57,14 +55,12 @@ retrieved using <a href="error.htm">getlasterror</a>.</p>
   </tr>
 </table>
 
-<p>&nbsp;</p>
-<h4>Description</h4>
+<h5>Description</h5>
 <p>The <strong>getpeername</strong> retrieves the address of the peer side associated to the connection. The UDT socket must be connected at the time when this method is called. The 
 <i>namelen<i> must provide the leangth of the <i>name</i> parameter, which should be enough to hold the address information. On return, <i>namelen</i> contains the length of the result.</p>
 
-<p>&nbsp;<p>
-<h4>See Also</h4>
-<p><strong><a href="listen.htm">listen</a>, <a href="connect.htm">connect</a>, <a href="accept.htm">accept</strong></p>
+<h5>See Also</h5>
+<p><strong><a href="listen.htm">listen</a>, <a href="connect.htm">connect</a>, <a href="accept.htm">accept</a></strong></p>
 <p>&nbsp;</p>
 
 </body>

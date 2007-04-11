@@ -9,10 +9,8 @@
 <body>
 <div class="ref_head">&nbsp;UDT Tutorial</div>
 
-<h1><font color="#000080">Configure UDT Options</font></h1>
-
-<p>Options of UDT are read and set through getsockopt and setsockopt methods. Before modifying any option, bear in mind that it is NOT required that you modify the default options. If the 
-application has sound performance with the default options, just leave them alone.</p>
+<h3><font color="#000080">Configure UDT Options</font></h3>
+<p>Options of UDT are read and set through getsockopt and setsockopt methods. Before modifying any option, bear in mind that it is NOT required that you modify the default options. If the application has sound performance with the default options, just use the default configurations.</p>
 
 <p>UDT_MSS is used to configure the packet size. On most of time, the optimal UDT packet size is the network MTU size. The default value is 1500 bytes. A UDT connection will choose the 
 smaller value of the MSS between the two peer sides. For example, if you want to set 9000-byte MSS, you have to set this option at both sides, and one of the value has to be exactly equal to 
@@ -39,7 +37,6 @@ connection, both the peer sides must call connect at approximately the same time
 
 <p>Example: read current UDT settings</p>
 <div class="code">
-<p>
 UDTSOCKET u;<br>
 <br>
 ...<br>
@@ -47,21 +44,18 @@ UDTSOCKET u;<br>
 bool block;<br>
 int size = sizeof(bool);
 <br>
-UDT::getsockopt(u, UDT_SNDSYN, 0, &block, &size);<br>
-</p>
+UDT::getsockopt(u, UDT_SNDSYN, 0, &block, &size);
 </div>
 
 <p>Example: modify UDT settings</p>
 <div class="code">
-<p>
 UDTSOCKET u;<br>
 <br>
 ...<br>
 <br>
 bool block = false;<br>
 <br>
-UDT::setsockopt(u, UDT_SNDSYN, 0, &block, sizeof(bool));<br>
-</p>
+UDT::setsockopt(u, UDT_SNDSYN, 0, &block, sizeof(bool));
 </div>
 
 

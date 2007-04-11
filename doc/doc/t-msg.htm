@@ -9,8 +9,7 @@
 <body>
 <div class="ref_head">&nbsp;UDT Tutorial</div>
 
-<h1><font color="#000080">Messaging with Partial Reliability</font></h1>
-
+<h5><font color="#000080">Messaging with Partial Reliability</font></h5>
 <p>When a UDT socket is created as SOCK_DGRAM type, UDT will send and receive data as messages. The boundary of the message is preserved and the message is delivered 
 as a whole unit. Sending or receving messages do not need a loop; a message will be either completely delivered or not delivered at all. However, at the receiver 
 side, if the user buffer is shorter than the message length, only part of the message will be copied into the user buffer while the message will still be 
@@ -18,16 +17,14 @@ discarded.</p>
 
 <p>Example: send and receive messages using UDT.</p>
 <div class="code">
-<p>
 UDTSOCKET u = UDT::socket(AF_INET, SOCK_DGRAM, 0);<br>
 <br>
 char data[1024];<br>
 int size = 1024;<br>
 <br>
 int ssize = UDT::sendmsg(client, data, size, -1, false);<br>
- <br>
-int rsize = UDT::recvmsg(u, data, size);<br>
-</p>
+<br>
+int rsize = UDT::recvmsg(u, data, size);
 </div>
 
 <p>At the sender side, applications can specify two options for every message. The first is the life time (TTL) of a message. The default value is infinite, which 
