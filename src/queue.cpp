@@ -29,8 +29,13 @@ This file contains the implementation of UDT multiplexer.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 04/08/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/12/2007
 *****************************************************************************/
+
+#ifdef WIN32
+   #include <winsock2.h>
+   #include <ws2tcpip.h>
+#endif
 
 #include "common.h"
 #include "queue.h"
