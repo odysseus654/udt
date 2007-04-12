@@ -15,7 +15,11 @@
 <p>This simple "Hello World!" example includes a server program and a client program just like any socket programming tutorial. These are the simpler version of the appserver and appclient 
 examples in ./app directory.</p>
 
-<p>To compile, use gcc -o server server.cpp -I<udt.h location> -L<libudt.so location> -ludt -lstdc++ -lpthread. For more details, please refer to the Makefile in ./app directory.</p>
+<p>To compile, use <em>gcc -o server server.cpp -I
+  <udt.h location> 
+  -L
+  <libudt.so location>
+-ludt -lstdc++ -lpthread</em>. For more details, please refer to the Makefile in <em>./app</em> directory.</p>
 
 <p><b>UDT server example</b></p>
 
@@ -70,8 +74,7 @@ return 1;<br>
 </div>
 
 <p>This simple server tries to bind itself at port 9000. If succeed, it listens at port 9000 and accepts a client and then reads a string.</p>
-
-
+<p><strong>UDT client example </strong></p>
 <div class="code">
 #include <iostream><br>
 #include <udt.h><br>

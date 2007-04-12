@@ -80,14 +80,14 @@ if (NULL != cchandle)<br>
 group-based approaches (e.g., GTP, CM).</p>
 
 <h5>Note</h5>
-<p>Do NOT call regular UDT API inside CCC or its derived classes. Unknown error could happen.</p>
+<p>1. Do NOT call regular UDT API inside CCC or its derived classes. Unknown error could happen.</p>
 
-<p>CCCFactory<...> is a C++ template class. You do not need to derive any classes from it.</p>
+<p>2. CCCFactory<...> is a C++ template class. You do not need to derive any classes from it.</p>
 
-<p>UDT will not release the CCCFactory<...> instance. The application should release it, at anywhere after the setsockopt() call.</p>
+<p>3. UDT will not release the CCCFactory<...> instance. The application should release it, at anywhere after the setsockopt() call.</p>
 
 <h5>See Also</h5>
-<p>Congestion Control Class</p>
+<p><a href="ccc.htm"><strong>Congestion Control Class</strong></a></p>
 
 <p>&nbsp;</p>
 </body>

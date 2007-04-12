@@ -45,7 +45,7 @@
 
 <h5>Description</h5>
 <p>The <strong>close</strong> method gracefully shutdowns the UDT connection and releases all related data structures associated with the UDT socket. If there is no connection associated 
-with the socket, <strong>close<strong> simply release the socket resources.</p>
+with the socket, <strong>close</strong> simply release the socket resources.</p>
 <p>On a blocking socket, if UDT_LINGER is non-zero, the <strong>close</strong> call will wait until all data in the sending buffer are sent out or the waiting time has exceeded the 
 expiration time set by UDT_LINGER. On a non-blocking socket, <strong>close</strong> will return immediately.</p>
 <p>The closing UDT socket will send a shutdown message to the peer side so that the peer socket will also be closed. This is a best-effort message. If the message is not successfully 

@@ -23,7 +23,7 @@
   <dt><i>u</i></dt>
   <dd>[in] Descriptor identifying a UDT entity.</dd>
   <dt><i>trace</i></dt>
-  <dd>[out] Pointer to the TRACEINFO structure to store the performance information.</dd>
+  <dd>[out] Pointer to the <a href="structure.htm">TRACEINFO</a> structure to store the performance information.</dd>
   <dt><i>clear</i></dt>
   <dd>[in] Flag that indicates if the local traces should be cleared and counts should be restarted.</dd>
 </dl>
@@ -56,8 +56,8 @@ href="error.htm">getlasterror</a>.</p>
 </table>
 
 <h5>Description</h5>
-<p>The <strong>perfmon</strong> method reads teh performance data since the last time <strong>perfmon</strong> is executed, or since the connection is started. The result in written into 
-a <a href="structure.htm">TRACEINFO</a> structure.</p>
+<p>The <strong>perfmon</strong> method reads the performance data since the last time <strong>perfmon</strong> is executed, or since the connection is started. The result in written into a <a href="structure.htm">TRACEINFO</a> structure.</p>
+<p>There are three kinds of performance information that can be read by applications: the total counts since the connection is started, the periodical counts since last time the counts are cleared, and instant parameter values.<p>
 
 </body>
 </html>
