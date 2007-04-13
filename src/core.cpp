@@ -96,7 +96,7 @@ m_iSelfClockInterval(64)
    m_bSynRecving = true;
    m_iFlightFlagSize = 25600;
    m_iSndQueueLimit = 10000000;
-   m_iUDTBufSize = 1024; // must be *greater than* m_iQuickStartPkts(16).
+   m_iUDTBufSize = 25600; // must be *greater than* m_iQuickStartPkts(16).
    m_Linger.l_onoff = 1;
    m_Linger.l_linger = 180;
    m_iUDPSndBufSize = 1000000;
@@ -374,7 +374,7 @@ void CUDT::getOpt(UDTOpt optName, void* optval, int& optlen)
       break;
 
    case UDT_RCVBUF:
-      *(int*)optval = m_iUDTBufSize;
+      *(int*)optval = m_iUDTBufSize * (m_iMSS - 28);
       optlen = sizeof(int);
       break;
 

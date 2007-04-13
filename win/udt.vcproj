@@ -21,7 +21,7 @@
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;UDT_EXPORTS;NO_BUSY_WAITING"
 				MinimalRebuild="TRUE"
 				BasicRuntimeChecks="3"
-				SmallerTypeCheck="TRUE"
+				SmallerTypeCheck="FALSE"
 				RuntimeLibrary="3"
 				StructMemberAlignment="0"
 				BufferSecurityCheck="TRUE"

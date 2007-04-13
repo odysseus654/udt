@@ -106,7 +106,7 @@ int CUnitQueue::init(const int& size, const int& mss, const int& version)
    m_iMSS = mss;
    m_iIPversion = version;
 
-   m_pAvailUnit = (CUnit*)m_vpUnit[0];
+   m_pAvailUnit = m_vpUnit[0];
    m_iVQ = 0;
 
    return 0;
@@ -119,7 +119,7 @@ int CUnitQueue::increase()
    for (unsigned int i = 0; i < m_vpUnit.size(); ++ i)
    {
       CUnit* p = m_vpUnit[i];
-      for (CUnit* end = p + m_viSize[i]; p != end; ++ p)
+      for (CUnit* end = p + m_viSize[i] - 1; p != end; ++ p)
          if (p->m_bValid)
             ++ real_count;
    }
@@ -178,17 +178,16 @@ CUnit* CUnitQueue::getNextAvailUnit()
 
    while (true)
    {
-      for (CUnit* sentinel = (CUnit*)m_vpUnit[m_iVQ] + m_viSize[m_iVQ] - 1; m_pAvailUnit != sentinel; ++ m_pAvailUnit)
+      for (CUnit* sentinel = m_vpUnit[m_iVQ] + m_viSize[m_iVQ] - 1; m_pAvailUnit != sentinel; ++ m_pAvailUnit)
          if (!m_pAvailUnit->m_bValid)
             return m_pAvailUnit;
 
       if (m_iVQ != int(m_vpUnit.size() - 1))
-         m_pAvailUnit = (CUnit*)m_vpUnit[++ m_iVQ];
+         ++ m_iVQ;
       else
-      {
          m_iVQ = 0;
-         m_pAvailUnit = (CUnit*)m_vpUnit[0];
-      }
+
+      m_pAvailUnit = m_vpUnit[m_iVQ];
    }
 
    return NULL;
