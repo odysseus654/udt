@@ -450,6 +450,7 @@ private:
    struct CRL
    {
       UDTSOCKET m_iID;
+      int m_iIPversion;
       sockaddr* m_pPeerAddr;
    };
    vector<CRL> m_vRendezvousID;         // The socket IDs currently in rendezvous mode

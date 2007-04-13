@@ -114,6 +114,19 @@ int CUnitQueue::init(const int& size, const int& mss, const int& version)
 
 int CUnitQueue::increase()
 {
+   // adjust/correct m_iCount
+   int real_count = 0;
+   for (unsigned int i = 0; i < m_vpUnit.size(); ++ i)
+   {
+      CUnit* p = m_vpUnit[i];
+      for (CUnit* end = p + m_viSize[i]; p != end; ++ p)
+         if (p->m_bValid)
+            ++ real_count;
+   }
+   m_iCount = real_count;
+   if (double(m_iCount) / m_iSize < 0.9)
+      return -1;
+
    CUnit* tempu = NULL;
    char* tempb = NULL;
    char* tempa = NULL;
@@ -814,7 +827,7 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& version, c
             id = self->m_ListenerID;
          else if (0 != self->m_vRendezvousID.size())
             for (vector<CRL>::iterator i = self->m_vRendezvousID.begin(); i != self->m_vRendezvousID.end(); ++ i)
-               if (CIPAddress::ipcmp(unit->m_pAddr, i->m_pPeerAddr /*IPversion*/))
+               if (CIPAddress::ipcmp(unit->m_pAddr, i->m_pPeerAddr, i->m_iIPversion))
                {
                   id = i->m_iID;
                   break;

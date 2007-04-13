@@ -34,7 +34,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 04/09/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/12/2007
 *****************************************************************************/
 
 #ifndef WIN32
@@ -570,11 +570,13 @@ void CUDT::connect(const sockaddr* serv_addr)
       r.m_iID = m_SocketID;
       if (AF_INET == m_iIPversion)
       {
+         r.m_iIPversion = m_iIPversion;
          r.m_pPeerAddr = (sockaddr*)new sockaddr_in;
          memcpy(r.m_pPeerAddr, serv_addr, sizeof(sockaddr_in));
       }
       else
       {
+         r.m_iIPversion = m_iIPversion;
          r.m_pPeerAddr = (sockaddr*)new sockaddr_in6;
          memcpy(r.m_pPeerAddr, serv_addr, sizeof(sockaddr_in6));
       }
@@ -810,8 +812,6 @@ void CUDT::close()
    // Signal the sender and recver if they are waiting for data.
    releaseSynch();
 
-   // Wait for the snd/rcv threads to exit.
-
    if (m_bListening)
    {
       m_bListening = false;
@@ -844,39 +844,6 @@ void CUDT::close()
    // waiting all send and recv calls to stop
    CGuard sendguard(m_SendLock);
    CGuard recvguard(m_RecvLock);
-
-   m_pSndQueue = NULL;
-   m_pRcvQueue = NULL;
-
-   // And structures released.
-   if (m_pSndBuffer)
-      delete m_pSndBuffer;
-   if (m_pRcvBuffer)
-      delete m_pRcvBuffer;
-   if (m_pSndLossList)
-      delete m_pSndLossList;
-   if (m_pRcvLossList)
-      delete m_pRcvLossList;
-   if (m_pACKWindow)
-      delete m_pACKWindow;
-   if (m_pSndTimeWindow)
-      delete m_pSndTimeWindow;
-   if (m_pRcvTimeWindow)
-      delete m_pRcvTimeWindow;
-   if (m_pCCFactory)
-      delete m_pCCFactory;
-   if (m_pCC)
-      delete m_pCC;
-
-   m_pSndBuffer = NULL;
-   m_pRcvBuffer = NULL;
-   m_pSndLossList = NULL;
-   m_pRcvLossList = NULL;
-   m_pACKWindow = NULL;
-   m_pSndTimeWindow = NULL;
-   m_pRcvTimeWindow = NULL;
-   m_pCCFactory = NULL;
-   m_pCC = NULL;
 
    // CLOSED.
    m_bOpened = false;
@@ -2017,8 +1984,7 @@ void CUDT::releaseSynch()
 
 int CUDT::packData(CPacket& packet, uint64_t& ts)
 {
-   CGuard cg(m_ConnectionLock);
-   if (m_bClosing)
+   if (m_bClosing || m_bBroken)
    {
       ts = 0;
       return 0;
@@ -2154,8 +2120,7 @@ int CUDT::packData(CPacket& packet, uint64_t& ts)
 
 void CUDT::checkTimers()
 {
-   CGuard cg(m_ConnectionLock);
-   if (m_bClosing)
+   if (m_bClosing || m_bBroken)
       return;
 
    // time
@@ -2268,6 +2233,9 @@ void CUDT::checkTimers()
 
 int CUDT::processData(CUnit* unit)
 {
+   if (m_bClosing || m_bBroken)
+      return -1;
+
    CPacket& packet = unit->m_Packet;
 
    // Just heard from the peer, reset the expiration count.
