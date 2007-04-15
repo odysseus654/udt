@@ -34,7 +34,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 04/12/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/14/2007
 *****************************************************************************/
 
 #ifndef WIN32
@@ -1351,6 +1351,8 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
       // Signal the sender and recver if they are waiting for data.
       releaseSynch();
 
+      CTimer::triggerEvent();
+
       break;
 
    case 7: //111 - Msg drop request
@@ -2195,6 +2197,8 @@ void CUDT::checkTimers()
          m_bBroken = true;
 
          releaseSynch();
+
+         CTimer::triggerEvent();
 
          return;
       }

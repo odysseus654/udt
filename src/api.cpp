@@ -31,7 +31,7 @@ reference: UDT programming manual and socket programming reference
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 04/08/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/14/2007
 *****************************************************************************/
 
 #ifndef WIN32
@@ -374,6 +374,8 @@ int CUDTUnited::newConnection(const UDTSOCKET listen, const sockaddr* peer, CHan
       ReleaseMutex(ls->m_AcceptLock);
    #endif
 
+   CTimer::triggerEvent();
+
    ERR_ROLLBACK:
    if (error > 0)
    {
@@ -673,6 +675,8 @@ int CUDTUnited::close(const UDTSOCKET u)
    // a timer is started and the socket will be removed after approximately 1 second
    s->m_TimeStamp = CTimer::getTime();
 
+   CTimer::triggerEvent();
+
    return 0;
 }
 
@@ -780,12 +784,7 @@ int CUDTUnited::select(ud_set* readfds, ud_set* writefds, ud_set* exceptfds, con
       if (0 < count)
          break;
 
-      #ifndef WIN32
-         usleep(10);
-      #else
-         Sleep(1);
-      #endif
-
+      CTimer::waitForEvent();
    } while (to > CTimer::getTime() - entertime);
 
    if (NULL != readfds)

@@ -256,6 +256,8 @@ void CSndBuffer::ackData(const int& len, const int& payloadsize)
       delete m_pBlock;
       m_pBlock = m_pCurrAckBlk;
 
+      CTimer::triggerEvent();
+
       if (NULL == m_pBlock)
          break;
    }
@@ -398,6 +400,8 @@ void CRcvBuffer::ackData(const int& len)
    m_iLastAckPos = (m_iLastAckPos + len) % m_iSize;
 
    m_iMaxPos -= len;
+
+   CTimer::triggerEvent();
 }
 
 int CRcvBuffer::getAvailBufSize() const

@@ -29,7 +29,7 @@ This header file contains the definitions of common types and utility classes.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/16/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/14/2007
 *****************************************************************************/
 
 #ifndef __UDT_COMMON_H__
@@ -149,11 +149,32 @@ public:
 
    static uint64_t getTime();
 
+      // Functionality:
+      //    trigger an event such as new connection, close, new data, etc. for "select" call.
+      // Parameters:
+      //    None.
+      // Returned value:
+      //    None.
+
+   static void triggerEvent();
+
+      // Functionality:
+      //    wait for an event to br triggered by "triggerEvent".
+      // Parameters:
+      //    None.
+      // Returned value:
+      //    None.
+
+   static void waitForEvent();
+
 private:
    uint64_t m_ullSchedTime;             // next schedulled time
 
    pthread_cond_t m_TickCond;
    pthread_mutex_t m_TickLock;
+
+   static pthread_cond_t m_EventCond;
+   static pthread_mutex_t m_EventLock;
 
 private:
    static uint64_t s_ullCPUFrequency;	// CPU frequency : clock cycles per microsecond

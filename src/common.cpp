@@ -30,7 +30,7 @@ mutex facility, and exception processing.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 04/09/2007
+   Yunhong Gu [ygu@cs.uic.edu], last updated 04/14/2007
 *****************************************************************************/
 
 
@@ -47,6 +47,13 @@ written by
 #include "common.h"
 
 uint64_t CTimer::s_ullCPUFrequency = CTimer::readCPUFrequency();
+#ifndef WIN32
+   pthread_mutex_t CTimer::m_EventLock = PTHREAD_MUTEX_INITIALIZER;
+   pthread_cond_t CTimer::m_EventCond = PTHREAD_COND_INITIALIZER;
+#else
+   pthread_mutex_t m_EventLock = CreateMutex(NULL, false, NULL);
+   pthread_cond_t m_EventCond = CreateEvent(NULL, false, false, NULL);
+#endif
 
 CTimer::CTimer()
 {
@@ -227,10 +234,44 @@ uint64_t CTimer::getTime()
       {
          FILETIME ft;
          GetSystemTimeAsFileTime((FILETIME *)&ft);
-         return (((uint64_t)ft.dwHighDateTime) << 32 + ft.dwLowDateTime) / 10;
+         return ((((uint64_t)ft.dwHighDateTime) << 32) + ft.dwLowDateTime) / 10;
       }
    #endif
 }
+
+void CTimer::triggerEvent()
+{
+   #ifndef WIN32
+      pthread_cond_signal(&m_EventCond);
+   #else
+      SetEvent(m_EventCond);
+   #endif
+}
+
+void CTimer::waitForEvent()
+{
+   #ifndef WIN32
+      timeval now;
+      timespec timeout;
+      gettimeofday(&now, 0);
+      if (now.tv_usec < 990000)
+      {
+         timeout.tv_sec = now.tv_sec;
+         timeout.tv_nsec = (now.tv_usec + 10000) * 1000;
+      }
+      else
+      {
+         timeout.tv_sec = now.tv_sec + 1;
+         timeout.tv_nsec = (now.tv_usec + 10000 - 1000000) * 1000;
+      }
+      pthread_mutex_lock(&m_EventLock);
+      pthread_cond_timedwait(&m_EventCond, &m_EventLock, &timeout);
+      pthread_mutex_unlock(&m_EventLock);
+   #else
+      WaitForSingleObject(m_EventCond, 1);
+   #endif
+}
+
 
 //
 // Automatically lock in constructor
