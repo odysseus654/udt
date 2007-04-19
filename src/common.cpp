@@ -51,8 +51,8 @@ uint64_t CTimer::s_ullCPUFrequency = CTimer::readCPUFrequency();
    pthread_mutex_t CTimer::m_EventLock = PTHREAD_MUTEX_INITIALIZER;
    pthread_cond_t CTimer::m_EventCond = PTHREAD_COND_INITIALIZER;
 #else
-   pthread_mutex_t m_EventLock = CreateMutex(NULL, false, NULL);
-   pthread_cond_t m_EventCond = CreateEvent(NULL, false, false, NULL);
+   pthread_mutex_t CTimer::m_EventLock = CreateMutex(NULL, false, NULL);
+   pthread_cond_t CTimer::m_EventCond = CreateEvent(NULL, false, false, NULL);
 #endif
 
 CTimer::CTimer()

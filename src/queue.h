@@ -29,7 +29,7 @@ This header file contains the definition of UDT multiplexer.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 04/08/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/18/2007
 *****************************************************************************/
 
 
@@ -441,9 +441,6 @@ private:
 private:
    pthread_mutex_t m_PassLock;
    pthread_cond_t m_PassCond;
-
-   pthread_cond_t m_QueueCond;
-   pthread_mutex_t m_QueueLock;
 
 private:
    volatile UDTSOCKET m_ListenerID;	// The only listening socket that is associated to the queue, if there is one

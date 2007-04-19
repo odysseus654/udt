@@ -29,7 +29,7 @@ This file contains the implementation of UDT multiplexer.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 04/12/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/18/2007
 *****************************************************************************/
 
 #ifdef WIN32
@@ -741,22 +741,22 @@ m_pTimer(NULL),
 m_ListenerID(-1)
 {
    #ifndef WIN32
-      pthread_cond_init(&m_QueueCond, NULL);
-      pthread_mutex_init(&m_QueueLock, NULL);
+      pthread_cond_init(&m_PassCond, NULL);
+      pthread_mutex_init(&m_PassLock, NULL);
    #else
-      m_QueueLock = CreateMutex(NULL, false, NULL);
-      m_QueueCond = CreateEvent(NULL, false, false, NULL);
+      m_PassLock = CreateMutex(NULL, false, NULL);
+      m_PassCond = CreateEvent(NULL, false, false, NULL);
    #endif
 }
 
 CRcvQueue::~CRcvQueue()
 {
    #ifndef WIN32
-      pthread_cond_destroy(&m_QueueCond);
-      pthread_mutex_destroy(&m_QueueLock);
+      pthread_cond_destroy(&m_PassCond);
+      pthread_mutex_destroy(&m_PassLock);
    #else
-      CloseHandle(m_QueueLock);
-      CloseHandle(m_QueueCond);
+      CloseHandle(m_PassLock);
+      CloseHandle(m_PassCond);
    #endif
 }
 
@@ -857,7 +857,15 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& version, c
             else if (u->m_bListening)
                u->listen(unit->m_pAddr, unit->m_Packet);
             else
+            {
                self->m_pHash->setUnit(id, unit);
+
+               #ifndef WIN32
+                  pthread_cond_signal(&self->m_PassCond);
+               #else
+                  SetEvent(self->m_PassCond);
+               #endif
+            }
          }
 
          self->m_pRcvUList->remove(id);

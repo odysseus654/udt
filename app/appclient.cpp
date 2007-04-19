@@ -29,40 +29,59 @@ int main(int argc, char* argv[])
       return 0;
    }
 
-   struct addrinfo hints, *res;
+   struct addrinfo hints, *local, *peer;
 
    memset(&hints, 0, sizeof(struct addrinfo));
 
+   hints.ai_flags = AI_PASSIVE;
    hints.ai_family = AF_INET;
    hints.ai_socktype = SOCK_STREAM;
    //hints.ai_socktype = SOCK_DGRAM;
 
-   if (0 != getaddrinfo(argv[1], argv[2], &hints, &res))
+   if (0 != getaddrinfo(NULL, "0", &hints, &local))
    {
       cout << "incorrect network address.\n" << endl;
       return 0;
    }
 
-   UDTSOCKET client = UDT::socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+   UDTSOCKET client = UDT::socket(local->ai_family, local->ai_socktype, local->ai_protocol);
 
    // UDT Options
    //UDT::setsockopt(client, 0, UDT_CC, new CCCFactory<CUDPBlast>, sizeof(CCCFactory<CUDPBlast>));
-   //UDT::setsockopt(client, 0, UDT_MSS, new int(7500), sizeof(int));
-   //UDT::setsockopt(client, 0, UDT_SNDBUF, new int(200000000), sizeof(int));
-   //UDT::setsockopt(client, 0, UDP_SNDBUF, new int(100000000), sizeof(int));
+   //UDT::setsockopt(client, 0, UDT_MSS, new int(9000), sizeof(int));
+   //UDT::setsockopt(client, 0, UDT_SNDBUF, new int(10000000), sizeof(int));
+   //UDT::setsockopt(client, 0, UDP_SNDBUF, new int(10000000), sizeof(int));
 
 #ifdef WIN32
    UDT::setsockopt(client, 0, UDT_MSS, new int(1052), sizeof(int));
 #endif
 
+   // for rendezvous connection, enable the code below
+   /*
+   UDT::setsockopt(client, 0, UDT_RENDEZVOUS, new bool(true), sizeof(bool));
+   if (UDT::ERROR == UDT::bind(client, local->ai_addr, local->ai_addrlen))
+   {
+      cout << "bind: " << UDT::getlasterror().getErrorMessage() << endl;
+      return 0;
+   }
+   */
+
+   freeaddrinfo(local);
+
+   if (0 != getaddrinfo(argv[1], argv[2], &hints, &peer))
+   {
+      cout << "incorrect server/peer address. " << argv[1] << ":" << argv[2] << endl;
+      return 0;
+   }
+
    // connect to the server, implict bind
-   if (UDT::ERROR == UDT::connect(client, res->ai_addr, res->ai_addrlen))
+   if (UDT::ERROR == UDT::connect(client, peer->ai_addr, peer->ai_addrlen))
    {
       cout << "connect: " << UDT::getlasterror().getErrorMessage() << endl;
       return 0;
    }
 
-   freeaddrinfo(res);
+   freeaddrinfo(peer);
 
    // using CC method
    //CUDPBlast* cchandle = NULL;

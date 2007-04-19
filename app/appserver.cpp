@@ -53,9 +53,9 @@ int main(int argc, char* argv[])
 
    // UDT Options
    //UDT::setsockopt(serv, 0, UDT_CC, new CCCFactory<CUDPBlast>, sizeof(CCCFactory<CUDPBlast>));
-   //UDT::setsockopt(serv, 0, UDT_MSS, new int(7500), sizeof(int));
-   //UDT::setsockopt(serv, 0, UDT_RCVBUF, new int(100000000), sizeof(int));
-   //UDT::setsockopt(serv, 0, UDP_RCVBUF, new int(100000000), sizeof(int));
+   //UDT::setsockopt(serv, 0, UDT_MSS, new int(9000), sizeof(int));
+   //UDT::setsockopt(serv, 0, UDT_RCVBUF, new int(10000000), sizeof(int));
+   //UDT::setsockopt(serv, 0, UDP_RCVBUF, new int(10000000), sizeof(int));
 
 
    if (UDT::ERROR == UDT::bind(serv, res->ai_addr, res->ai_addrlen))

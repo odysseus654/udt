@@ -37,7 +37,7 @@ UDT packet definition: packet.h
 
 /****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 04/08/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/19/2007
 *****************************************************************************/
 
 #ifndef WIN32
@@ -113,9 +113,7 @@ void CChannel::open(const sockaddr* addr)
       hints.ai_family = m_iIPversion;
       hints.ai_socktype = SOCK_DGRAM;
 
-      char* service = "0";
-
-      if (0 != getaddrinfo(NULL, service, &hints, &res))
+      if (0 != getaddrinfo(NULL, "0", &hints, &res))
 		  throw CUDTException(1, 3, NET_ERROR);
 
       if (0 != bind(m_iSocket, res->ai_addr, res->ai_addrlen))
