@@ -42,8 +42,6 @@ written by
 #endif
 #include "api.h"
 #include "core.h"
-#include <iostream>
-using namespace std;
 
 
 CUDTSocket::CUDTSocket():

@@ -27,27 +27,27 @@
     <td width="83%" class="table_headline"><strong>Comments</strong></td>
   </tr>
   <tr>
-    <td>UDTSOCKET</td>
+    <td><a href="#1">UDTSOCKET</a></td>
     <td>UDT socket descriptor</td>
   </tr>
   <tr>
-    <td>ERRORINFO</td>
+    <td><a href="#2">ERRORINFO</a></td>
     <td>Description of UDT system errors</td>
   </tr>
   <tr>
-    <td>UDSET</td>
+    <td><a href="#3">UDSET</a></td>
     <td>Set of UDT sockets</td>
   </tr>
   <tr>
-    <td>TRACEINFO</td>
+    <td><a href="#4">TRACEINFO</a></td>
     <td>UDT performance statistics and protocol parameters</td>
   </tr>
 </table>
 
-<h5>UDTSOCKET</h5>
+<h5><a name="1" id="1"></a>UDTSOCKET</h5>
 <p>This is used as the descriptor of a UDT socket. Its internal is not exposed to application and subject to future changes.</p>
 
-<h5>ERRORINFO</h5>
+<h5><a name="2" id="2"></a>ERRORINFO</h5>
 <p>The ERRORINFO structure contains the specific information of a UDT error. It has two helper functions to let applications know an integral error code and a piece of text information.</p>
 <table width="100%" border="1" cellpadding="1" cellspacing="0" bordercolor="#CCCCCC">
   <tr>
@@ -64,7 +64,7 @@
   </tr>
 </table>
 
-<h5>UDSET</h5>
+<h5><a name="3" id="3"></a>UDSET</h5>
 <p>The UDSET structure is used with <a href="select.htm"><strong>select</strong></a> call to access multiple UDT descriptors.</p>
 <p>Four macros are defined on the UDSET structure to processing a UDT socket set. They are very similar to the fd_set structure and macros in traditional standard socket API.</p>
 
@@ -91,7 +91,7 @@
   </tr>
 </table>
 
-<h5>TRACEINFO</h5>
+<h5><a name="4" id="4"></a>TRACEINFO</h5>
 <p>The TRACEINFO structure stores the performance trace information. Its member attributes can be read directly by applications.</p>
 
 <table width="100%" border="1" cellpadding="1" cellspacing="0" bordercolor="#CCCCCC">

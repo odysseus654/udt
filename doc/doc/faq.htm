@@ -30,7 +30,7 @@
 <hr />
 
 <p><strong><a name="1" id="1"></a>1. What is UDT?</strong></p>
-<p>UDT Stands for UDP-based Data Transfer. It can refer to both the UDT protocol and its implementation (the UDT library). Basically, UDT is built on top of UDP by adding reliability control and congestion control.</p>
+<p>UDT stands for UDP-based Data Transfer. It can refer to both the UDT protocol and its implementation (the UDT library). Basically, UDT is built on top of UDP by adding reliability control and congestion control.</p>
 <p><strong><a name="2" id="2"></a>2. Who developed UDT?</strong></p>
 <p>UDT is a research product of the National Center for Data Mining (NCDM) at the University of Illinois at Chicago. The project was supported in part by US National Science Foundation, US Department of Energy, and US Army.</p>
 <p><strong><a name="3" id="3"></a>3. Why and when do I need UDT?</strong></p>
@@ -44,7 +44,7 @@
 <p>If UDT's performance is much lower than the performance obtained from the benchmark, try to modify the UDT options.</p>
 <p>Finally, your applications affect the transfer speed. Any data intensive applications can cost substantial CPU time in computing and memory replication, which will affect UDT's performance. Try to test the throughput with the example applications in the UDT SDK.</p>
 <p><strong> <a name="6" id="6"></a>6. Can you give me some hints in tuning the performance?</strong></p>
-<p>Please read the Configuration section of the UDT Tutorial for the answer. The default parameter should work fine for most cases. </p>
+<p>Please read the Configuration section of the UDT Tutorial for the answer. The default UDT parameter are set for high speed networks. If your network bandwidth is siginicantly slower (&lt;&lt; 1Gb/s), you may set smaller buffer sizes. </p>
 <p><strong><a name="7" id="7"></a>7. I use UDT for file transfer, but it seems significantly slower than memory-memory transfer. Why?</strong></p>
 <p>Performance of file transfer is often limited by the bottleneck speed of disk IO. Besides, disk IO is often bursting and cause difficulties for the congestion control of transport protocols. UDT has been thoroughly tested for the disk-disk transfer scenario. Try to use some benchmark software to test your disk performance.</p>
 <p><strong> <a name="8" id="8"></a>8. When I run the example applications, it prompts for missing library error. What happens?</strong></p>
@@ -68,7 +68,7 @@
 <p><strong><a name="16" id="16"></a>16. What's the relationship between UDT and SABUL?</strong></p>
 <p>UDT is the successor of SABUL. It removes the TCP connection from SABUL and enhances the congestion/flow control.</p>
 <p><strong><a name="17" id="17"></a>17. Where can I find help regarding to the use of UDT library?</strong></p>
-<p>If you cannot find answers in this documentation, please go to the UDT home at sourceforge.net and post your questions. In order to help more users easily find answers about UDT usage and help increase the activity of this project, please post all general questions to the souceforge forum or send them to the sourceforge mailing list. The mailing list and the forum is monitored by the UDT developer and your questions will be replied as soon as possible.</p>
+<p>If you cannot find answers in this documentation, please go to the UDT home at sourceforge.net and post your questions. In order to help more users easily find answers about UDT usage and help increase the activity of this project, please post all general questions to the <a href="http://sourceforge.net/forum/forum.php?forum_id=393037" target="_blank">souceforge forum</a> or send them to the <a href="http://sourceforge.net/mail/?group_id=115059" target="_blank">sourceforge mailing list</a>. The forum and the mailing list are monitored by the UDT developers and your questions will be replied as soon as possible.</p>
 <p><strong><a name="18" id="18"></a>18. What background knowledge is necessary in order to use UDT?</strong></p>
 <p>Knowledge on socket programming and C++ is necessary. Knowledge on TCP is a plus.</p>
 <p>&nbsp;</p>
