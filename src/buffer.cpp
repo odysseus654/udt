@@ -34,7 +34,7 @@ The receiving buffer is a logically circular memeory block.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 01/29/2006
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/14/2007
 *****************************************************************************/
 
 #include <cstring>
@@ -829,7 +829,6 @@ void CRcvBuffer::initMsgList()
       m_pMessageList[i].m_bValid = false;
       m_pMessageList[i].m_bDropped = false;
       m_pMessageList[i].m_bInOrder = false;
-      m_pMessageList[i].m_iMsgNo = -1;
    }
 }
 

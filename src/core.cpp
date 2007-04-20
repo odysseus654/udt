@@ -288,10 +288,10 @@ void CUDT::setOpt(UDTOpt optName, const void* optval, const int&)
       if (*(int*)optval <= 0)
          throw CUDTException(5, 3, 0);
 
-      if (*(int*)optval > (m_iMSS - 28) * 16)
+      if (*(int*)optval > (m_iMSS - 28) * 32)
          m_iUDTBufSize = *(int*)optval;
       else
-         m_iUDTBufSize = (m_iMSS - 28) * 16;
+         m_iUDTBufSize = (m_iMSS - 28) * 32;
 
       break;
 

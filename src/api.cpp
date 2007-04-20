@@ -792,17 +792,14 @@ int CUDTUnited::select(ud_set* readfds, ud_set* writefds, ud_set* exceptfds, con
 
    } while (to > ((currtime.tv_sec - entertime.tv_sec) * 1000000 + currtime.tv_usec - entertime.tv_usec));
 
-   if (0 < count)
-   {
-      if (NULL != readfds)
-         *readfds = rs;
+   if (NULL != readfds)
+      *readfds = rs;
 
-      if (NULL != writefds)
-         *writefds = ws;
+   if (NULL != writefds)
+      *writefds = ws;
 
-      if (NULL != exceptfds)
-         *exceptfds = es;
-   }
+   if (NULL != exceptfds)
+      *exceptfds = es;
 
    return count;
 }
