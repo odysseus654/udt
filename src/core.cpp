@@ -34,7 +34,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 04/14/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/25/2007
 *****************************************************************************/
 
 #ifndef WIN32
@@ -514,9 +514,9 @@ void CUDT::open()
    #ifdef CUSTOM_CC
       CTimer::rdtsc(m_ullNextCCACKTime);
       m_ullNextCCACKTime += m_pCC->m_iACKPeriod * 1000 * m_ullCPUFrequency;
-      if (!m_bUserDefinedRTO)
+      if (!m_pCC->m_bUserDefinedRTO)
          m_pCC->m_iRTO = m_iRTT + 4 * m_iRTTVar;
-      CTimer::rdtsc(nextrto);
+      CTimer::rdtsc(m_ullNextRTO);
       m_ullNextRTO += m_pCC->m_iRTO * m_ullCPUFrequency;
    #endif
 
@@ -2041,7 +2041,7 @@ int CUDT::packData(CPacket& packet, uint64_t& ts)
       #ifndef CUSTOM_CC
          if (m_iFlowWindowSize >= CSeqNo::seqlen(const_cast<int32_t&>(m_iSndLastAck), CSeqNo::incseq(m_iSndCurrSeqNo)))
       #else
-         cwnd = (m_iFlowWindowSize < (int)m_dCongestionWindow) ? m_iFlowWindowSize : (int)m_dCongestionWindow;
+         int cwnd = (m_iFlowWindowSize < (int)m_dCongestionWindow) ? m_iFlowWindowSize : (int)m_dCongestionWindow;
          if (cwnd >= CSeqNo::seqlen(const_cast<int32_t&>(m_iSndLastAck), CSeqNo::incseq(m_iSndCurrSeqNo)))
       #endif
       {
@@ -2077,7 +2077,7 @@ int CUDT::packData(CPacket& packet, uint64_t& ts)
    packet.m_iID = m_PeerID;
 
    #ifdef CUSTOM_CC
-      m_pCC->onPktSent(&datapkt);
+      m_pCC->onPktSent(&packet);
    #endif
 
    ++ m_llTraceSent;
@@ -2227,7 +2227,7 @@ void CUDT::checkTimers()
    }
 
    #ifdef CUSTOM_CC
-      if ((currtime > nextrto) && (CSeqNo::incseq(m_iSndCurrSeqNo) != m_iSndLastAck))
+      if ((currtime > m_ullNextRTO) && (CSeqNo::incseq(m_iSndCurrSeqNo) != m_iSndLastAck))
       {
          m_pCC->onTimeout();
          m_ullNextRTO = currtime + m_pCC->m_iRTO * m_ullCPUFrequency;
@@ -2253,8 +2253,10 @@ int CUDT::processData(CUnit* unit)
 
    #ifdef CUSTOM_CC
       // reset RTO
-      if (!m_bUserDefinedRTO)
+      if (!m_pCC->m_bUserDefinedRTO)
          m_pCC->m_iRTO = m_iRTT + 4 * m_iRTTVar;
+      uint64_t currtime;
+      CTimer::rdtsc(currtime);
       m_ullNextRTO = currtime + m_pCC->m_iRTO * m_ullCPUFrequency;
 
       m_pCC->onPktReceived(&packet);
