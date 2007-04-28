@@ -29,7 +29,7 @@ This header file contains the definition of UDT multiplexer.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 04/18/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/27/2007
 *****************************************************************************/
 
 
@@ -447,10 +447,12 @@ private:
    struct CRL
    {
       UDTSOCKET m_iID;
+      UDTSOCKET m_iPeerID;
       int m_iIPversion;
       sockaddr* m_pPeerAddr;
    };
    vector<CRL> m_vRendezvousID;         // The socket IDs currently in rendezvous mode
+   pthread_mutex_t m_RIDVectorLock;
 
    int m_iPayloadSize;			// packet payload size
 };

@@ -13,8 +13,6 @@
 
 using namespace std;
 
-void DeleteBuf(char* buf, int) {delete [] buf;}
-
 #ifndef WIN32
 void* monitor(void*);
 #else

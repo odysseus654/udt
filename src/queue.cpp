@@ -29,7 +29,7 @@ This file contains the implementation of UDT multiplexer.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 04/18/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/27/2007
 *****************************************************************************/
 
 #ifdef WIN32
@@ -825,12 +825,16 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& version, c
          if (-1 != self->m_ListenerID)
             id = self->m_ListenerID;
          else if (0 != self->m_vRendezvousID.size())
+         {
+            UDTSOCKET peerid = ((CHandShake*)unit->m_Packet.m_pcData)->m_iID;
             for (vector<CRL>::iterator i = self->m_vRendezvousID.begin(); i != self->m_vRendezvousID.end(); ++ i)
-               if (CIPAddress::ipcmp(unit->m_pAddr, i->m_pPeerAddr, i->m_iIPversion))
+               if (CIPAddress::ipcmp(unit->m_pAddr, i->m_pPeerAddr, i->m_iIPversion) && ((0 == i->m_iPeerID) || (i->m_iPeerID == peerid)))
                {
                   id = i->m_iID;
+                  i->m_iPeerID = peerid;
                   break;
                }
+         }
       }
 
       u = self->m_pHash->lookup(id);

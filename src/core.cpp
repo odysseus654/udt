@@ -34,7 +34,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 04/25/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 04/27/2007
 *****************************************************************************/
 
 #ifndef WIN32
@@ -568,15 +568,15 @@ void CUDT::connect(const sockaddr* serv_addr)
    {
       CRcvQueue::CRL r;
       r.m_iID = m_SocketID;
+      r.m_iPeerID = 0;
+      r.m_iIPversion = m_iIPversion;
       if (AF_INET == m_iIPversion)
       {
-         r.m_iIPversion = m_iIPversion;
          r.m_pPeerAddr = (sockaddr*)new sockaddr_in;
          memcpy(r.m_pPeerAddr, serv_addr, sizeof(sockaddr_in));
       }
       else
       {
-         r.m_iIPversion = m_iIPversion;
          r.m_pPeerAddr = (sockaddr*)new sockaddr_in6;
          memcpy(r.m_pPeerAddr, serv_addr, sizeof(sockaddr_in6));
       }
@@ -597,7 +597,7 @@ void CUDT::connect(const sockaddr* serv_addr)
    req->m_iType = m_iSockType;
    req->m_iMSS = m_iMSS;
    req->m_iFlightFlagSize = m_iFlightFlagSize;
-   req->m_iReqType = (!m_bRendezvous) ? 1 : 0;
+   req->m_iReqType = (!m_bRendezvous) ? 1 : 2;
    req->m_iID = m_SocketID;
 
    // Random Initial Sequence Number
@@ -614,26 +614,34 @@ void CUDT::connect(const sockaddr* serv_addr)
    // ID = 0, connection request
    request.m_iID = 0;
 
-   m_pSndQueue->sendto(serv_addr, request);
-
    // Wait for the negotiated configurations from the peer side.
    response.pack(0, NULL, resdata, sizeof(CHandShake));
 
-   m_pRcvQueue->recvfrom(NULL, response, m_SocketID);
-
    uint64_t timeo = 3000000;
-
    if (m_bRendezvous)
       timeo *= 10;
-
    uint64_t entertime = CTimer::getTime();
 
-   while (((response.getLength() <= 0) || (1 != response.getFlag()) || (0 != response.getType())) && (!m_bClosing))
+   do
    {
       m_pSndQueue->sendto(serv_addr, request);
 
       response.setLength(m_iPayloadSize);
-      m_pRcvQueue->recvfrom(NULL, response, m_SocketID);
+      if (m_pRcvQueue->recvfrom(NULL, response, m_SocketID) > 0)
+      {
+         if ((1 != response.getFlag()) || (0 != response.getType()))
+            response.setLength(-1);
+
+         if (m_bRendezvous)
+         {
+            // regular connect should NOT communicate with rendezvous connect
+            // rendezvous connect require 3-way handshake
+            if (1 == res->m_iReqType)
+               response.setLength(-1);
+            else
+               req->m_iReqType = -1;
+         }
+      }
 
       if (CTimer::getTime() - entertime > timeo)
       {
@@ -641,12 +649,7 @@ void CUDT::connect(const sockaddr* serv_addr)
          delete [] resdata;
          throw CUDTException(1, 1, 0);
       }
-
-      #ifdef WIN32
-         if (response.getLength() <= 0)
-            Sleep(1);
-      #endif
-   }
+   } while (((response.getLength() <= 0) || (m_bRendezvous && (res->m_iReqType > 0))) && !m_bClosing);
 
    // if the socket is closed before connection...
    if (m_bClosing)
@@ -1327,7 +1330,7 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
       break;
 
    case 0: //000 - Handshake
-      if ((((CHandShake*)(ctrlpkt.m_pcData))->m_iReqType != -1) && (m_iPeerISN - 1 == m_iRcvCurrSeqNo) && (m_iISN == m_iSndLastAck))
+      if ((((CHandShake*)(ctrlpkt.m_pcData))->m_iReqType > 0) || (m_bRendezvous && (((CHandShake*)(ctrlpkt.m_pcData))->m_iReqType != -2)))
       {
          // The peer side has not received the handshake message, so it keeps querying
          // resend the handshake packet
@@ -1336,7 +1339,7 @@ void CUDT::processCtrl(CPacket& ctrlpkt)
          initdata.m_iISN = m_iISN;
          initdata.m_iMSS = m_iMSS;
          initdata.m_iFlightFlagSize = m_iFlightFlagSize;
-         initdata.m_iReqType = -1;
+         initdata.m_iReqType = (!m_bRendezvous) ? -1 : -2;
          initdata.m_iID = m_SocketID;
          sendCtrl(0, NULL, (char *)&initdata, sizeof(CHandShake));
       }
