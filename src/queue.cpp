@@ -423,10 +423,14 @@ CSndQueue::~CSndQueue()
    m_bClosing = true;
 
    #ifndef WIN32
+      pthread_mutex_lock(&m_WindowLock);
+      pthread_cond_signal(&m_WindowCond);
+      pthread_mutex_unlock(&m_WindowLock);
       pthread_join(m_WorkerThread, NULL);
       pthread_cond_destroy(&m_WindowCond);
       pthread_mutex_destroy(&m_WindowLock);
    #else
+      SetEvent(m_WindowCond);
       WaitForSingleObject(m_WorkerThread, INFINITE);
       CloseHandle(m_WindowLock);
       CloseHandle(m_WindowCond);
@@ -489,7 +493,7 @@ void CSndQueue::init(const CChannel* c, const CTimer* t)
          // wait here is there is no sockets with data to be sent
          #ifndef WIN32
             pthread_mutex_lock(&self->m_WindowLock);
-            if (NULL == self->m_pSndUList->m_pUList)
+            if (!self->m_bClosing && (NULL == self->m_pSndUList->m_pUList))
                pthread_cond_wait(&self->m_WindowCond, &self->m_WindowLock);
             pthread_mutex_unlock(&self->m_WindowLock);
          #else
