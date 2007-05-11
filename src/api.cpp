@@ -31,7 +31,7 @@ reference: UDT programming manual and socket programming reference
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 04/14/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 05/11/2007
 *****************************************************************************/
 
 #ifndef WIN32
@@ -624,10 +624,15 @@ int CUDTUnited::connect(const UDTSOCKET u, const sockaddr* name, const int& name
 
    // record peer address
    if (AF_INET == s->m_iIPversion)
+   {
       s->m_pPeerAddr = (sockaddr*)(new sockaddr_in);
+      memcpy(s->m_pPeerAddr, name, sizeof(sockaddr_in));
+   }
    else
+   {
       s->m_pPeerAddr = (sockaddr*)(new sockaddr_in6);
-   s->m_pUDT->m_pSndQueue->m_pChannel->getPeerAddr(s->m_pPeerAddr);
+      memcpy(s->m_pPeerAddr, name, sizeof(sockaddr_in6));
+   }
 
    return 0;
 }
@@ -685,7 +690,7 @@ int CUDTUnited::getpeername(const UDTSOCKET u, sockaddr* name, int* namelen)
    if (NULL == s)
       throw CUDTException(5, 4, 0);
 
-   if (!s->m_pUDT->m_bConnected)
+   if (!s->m_pUDT->m_bConnected || s->m_pUDT->m_bBroken)
       throw CUDTException(2, 2, 0);
 
    if (AF_INET == s->m_iIPversion)
@@ -705,6 +710,9 @@ int CUDTUnited::getsockname(const UDTSOCKET u, sockaddr* name, int* namelen)
 
    if (NULL == s)
       throw CUDTException(5, 4, 0);
+
+   if (!s->m_pUDT->m_bConnected || s->m_pUDT->m_bBroken)
+      throw CUDTException(2, 2, 0);
 
    if (AF_INET == s->m_iIPversion)
       *namelen = sizeof(sockaddr_in);
