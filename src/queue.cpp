@@ -427,7 +427,7 @@ CSndQueue::~CSndQueue()
       pthread_cond_destroy(&m_WindowCond);
       pthread_mutex_destroy(&m_WindowLock);
    #else
-      WaitForSingleObject(m_WorkerThread);
+      WaitForSingleObject(m_WorkerThread, INFINITE);
       CloseHandle(m_WindowLock);
       CloseHandle(m_WindowCond);
    #endif
@@ -763,7 +763,7 @@ CRcvQueue::~CRcvQueue()
       pthread_cond_destroy(&m_PassCond);
       pthread_mutex_destroy(&m_PassLock);
    #else
-      WaitForSingleObject(m_WorkerThread);
+      WaitForSingleObject(m_WorkerThread, INFINITE);
       CloseHandle(m_PassLock);
       CloseHandle(m_PassCond);
    #endif
