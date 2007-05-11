@@ -34,7 +34,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 04/27/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 05/09/2007
 *****************************************************************************/
 
 #ifndef WIN32
@@ -1797,6 +1797,7 @@ int64_t CUDT::recvfile(ofstream& ofs, const int64_t& offset, const int64_t& size
    }
    catch (...)
    {
+      delete [] tempbuf;
       throw CUDTException(4, 3);
    }
 
@@ -1813,6 +1814,7 @@ int64_t CUDT::recvfile(ofstream& ofs, const int64_t& offset, const int64_t& size
          if (recvsize <= 0)
          {
              m_bSynRecving = syn;
+             delete [] tempbuf;
              return size - torecv + recvsize;
          }
       }

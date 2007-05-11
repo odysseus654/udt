@@ -29,7 +29,7 @@ This file contains the implementation of UDT multiplexer.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 04/27/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 05/11/2007
 *****************************************************************************/
 
 #ifdef WIN32
@@ -406,7 +406,8 @@ int CSndUList::pop(int32_t& id, CUDT*& u)
 CSndQueue::CSndQueue():
 m_pSndUList(NULL),
 m_pChannel(NULL),
-m_pTimer(NULL)
+m_pTimer(NULL),
+m_bClosing(false)
 {
    #ifndef WIN32
       pthread_cond_init(&m_WindowCond, NULL);
@@ -419,10 +420,14 @@ m_pTimer(NULL)
 
 CSndQueue::~CSndQueue()
 {
+   m_bClosing = true;
+
    #ifndef WIN32
+      pthread_join(m_WorkerThread, NULL);
       pthread_cond_destroy(&m_WindowCond);
       pthread_mutex_destroy(&m_WindowLock);
    #else
+      WaitForSingleObject(m_WorkerThread);
       CloseHandle(m_WindowLock);
       CloseHandle(m_WindowCond);
    #endif
@@ -438,7 +443,6 @@ void CSndQueue::init(const CChannel* c, const CTimer* t)
 
    #ifndef WIN32
       pthread_create(&m_WorkerThread, NULL, CSndQueue::worker, this);
-      pthread_detach(m_WorkerThread);
    #else
       DWORD threadID;
       m_WorkerThread = CreateThread(NULL, 0, CSndQueue::worker, this, 0, &threadID);
@@ -455,7 +459,7 @@ void CSndQueue::init(const CChannel* c, const CTimer* t)
 
    CPacket pkt;
 
-   while (true)
+   while (!self->m_bClosing)
    {
       if (NULL != self->m_pSndUList->m_pUList)
       {
@@ -738,7 +742,8 @@ m_pRcvUList(NULL),
 m_pHash(NULL),
 m_pChannel(NULL),
 m_pTimer(NULL),
-m_ListenerID(-1)
+m_ListenerID(-1),
+m_bClosing(false)
 {
    #ifndef WIN32
       pthread_cond_init(&m_PassCond, NULL);
@@ -751,10 +756,14 @@ m_ListenerID(-1)
 
 CRcvQueue::~CRcvQueue()
 {
+   m_bClosing = true;
+
    #ifndef WIN32
+      pthread_join(m_WorkerThread, NULL);
       pthread_cond_destroy(&m_PassCond);
       pthread_mutex_destroy(&m_PassLock);
    #else
+      WaitForSingleObject(m_WorkerThread);
       CloseHandle(m_PassLock);
       CloseHandle(m_PassCond);
    #endif
@@ -776,7 +785,6 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& version, c
 
    #ifndef WIN32
       pthread_create(&m_WorkerThread, NULL, CRcvQueue::worker, this);
-      pthread_detach(m_WorkerThread);
    #else
       DWORD threadID;
       m_WorkerThread = CreateThread(NULL, 0, CRcvQueue::worker, this, 0, &threadID);
@@ -795,7 +803,7 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& version, c
    temp.m_Packet.m_pcData = new char[self->m_iPayloadSize];
    CUnit* unit;
 
-   while (true)
+   while (!self->m_bClosing)
    {
       #ifdef NO_BUSY_WAITING
          self->m_pTimer->tick();

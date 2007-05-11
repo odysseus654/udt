@@ -29,7 +29,7 @@ This header file contains the definition of UDT multiplexer.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 04/27/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 05/11/2007
 *****************************************************************************/
 
 
@@ -378,9 +378,10 @@ private:
    CChannel* m_pChannel;                // The UDP channel for data sending
    CTimer* m_pTimer;			// Timing facility
 
-private:
    pthread_mutex_t m_WindowLock;
    pthread_cond_t m_WindowCond;
+
+   bool m_bClosing;			// closing the worker
 };
 
 
@@ -432,17 +433,14 @@ private:
 private:
    CUnitQueue m_UnitQueue;	// The received packet queue
 
-private:
    CRcvUList* m_pRcvUList;	// List of UDT instances that will read packets from the queue
    CHash* m_pHash;		// Hash table for UDT socket looking up
    CChannel* m_pChannel;	// UDP channel for receving packets
    CTimer* m_pTimer;		// shared timer with the snd queue
 
-private:
    pthread_mutex_t m_PassLock;
    pthread_cond_t m_PassCond;
 
-private:
    volatile UDTSOCKET m_ListenerID;	// The only listening socket that is associated to the queue, if there is one
    struct CRL
    {
@@ -455,6 +453,8 @@ private:
    pthread_mutex_t m_RIDVectorLock;
 
    int m_iPayloadSize;			// packet payload size
+
+   bool m_bClosing;			// closing the workder
 };
 
 
