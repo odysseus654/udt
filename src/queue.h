@@ -212,13 +212,22 @@ public:
    void insert(const CUDT* u);
 
       // Functionality:
-      //    Remove the UDT instance to the list.
+      //    Remove the UDT instance from the list.
       // Parameters:
       //    1) [in] id: socket ID
       // Returned value:
       //    None.
 
    void remove(const int32_t& id);
+
+      // Functionality:
+      //    Move the UDT instance to the end of the list, if it already exists; otherwise, do nothing.
+      // Parameters:
+      //    1) [in] id: socket ID
+      // Returned value:
+      //    None.
+
+   void update(const int32_t& id);
 
       // Functionality:
       //    Insert a new UDT instance to the new entry list.
@@ -259,6 +268,10 @@ private:
 
 class CHash
 {
+public:
+   CHash();
+   ~CHash();
+
 public:
 
       // Functionality:

@@ -29,7 +29,7 @@ This file contains the implementation of UDT multiplexer.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 05/11/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 05/15/2007
 *****************************************************************************/
 
 #ifdef WIN32
@@ -435,6 +435,8 @@ CSndQueue::~CSndQueue()
       CloseHandle(m_WindowLock);
       CloseHandle(m_WindowCond);
    #endif
+
+   delete m_pSndUList;
 }
 
 void CSndQueue::init(const CChannel* c, const CTimer* t)
@@ -594,6 +596,61 @@ void CRcvUList::remove(const int32_t& id)
    }
 }
 
+void CRcvUList::update(const int32_t& id)
+{
+   if (NULL == m_pUList)
+      return;
+
+   if (id == m_pUList->m_iID)
+   {
+      CTimer::rdtsc(m_pUList->m_llTimeStamp);
+
+      // if there is only one node in the list, simply update it, otherwise move it to the end
+
+      if (NULL != m_pUList->m_pNext)
+      {
+         CUDTList* n = m_pUList;
+
+         m_pUList = m_pUList->m_pNext;
+         m_pUList->m_pPrev = NULL;
+
+         n->m_pNext = NULL;
+         n->m_pPrev = m_pLast;
+         m_pLast->m_pNext = n;
+         m_pLast = n;
+      }
+
+      return;
+   }
+
+   // check further
+   CUDTList* p = m_pUList;
+   while (NULL != p->m_pNext)
+   {
+      if (id == p->m_pNext->m_iID)
+      {
+         CTimer::rdtsc(p->m_pNext->m_llTimeStamp);
+
+         if (NULL != p->m_pNext->m_pNext)
+         {
+            CUDTList* n = p->m_pNext;
+
+            p->m_pNext = p->m_pNext->m_pNext;
+            p->m_pNext->m_pPrev = p;
+
+            n->m_pNext = NULL;
+            n->m_pPrev = m_pLast;
+            m_pLast->m_pNext = n;
+            m_pLast = n;
+         }
+
+         return;
+      }
+
+      p = p->m_pNext;
+   }
+}
+
 void CRcvUList::newEntry(CUDT* u)
 {
    CGuard listguard(m_ListLock);
@@ -602,12 +659,16 @@ void CRcvUList::newEntry(CUDT* u)
 
 bool CRcvUList::ifNewEntry()
 {
-   return m_vNewEntry.empty();
+   return !(m_vNewEntry.empty());
 }
 
 CUDT* CRcvUList::newEntry()
 {
    CGuard listguard(m_ListLock);
+
+   if (m_vNewEntry.empty())
+      return NULL;
+
    CUDT* u = (CUDT*)*(m_vNewEntry.begin());
    m_vNewEntry.erase(m_vNewEntry.begin());
 
@@ -615,6 +676,17 @@ CUDT* CRcvUList::newEntry()
 }
 
 //
+CHash::CHash():
+m_pBucket(NULL),
+m_iHashSize(0)
+{
+}
+
+CHash::~CHash()
+{
+   delete [] m_pBucket;
+}
+
 void CHash::init(const int& size)
 {
    m_pBucket = new CBucket* [size];
@@ -771,6 +843,9 @@ CRcvQueue::~CRcvQueue()
       CloseHandle(m_PassLock);
       CloseHandle(m_PassCond);
    #endif
+
+   delete m_pHash;
+   delete m_pRcvUList;
 }
 
 void CRcvQueue::init(const int& qsize, const int& payload, const int& version, const int& hsize, const CChannel* cc, const CTimer* t)
@@ -884,17 +959,22 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& version, c
             }
          }
 
-         self->m_pRcvUList->remove(id);
          if (u->m_bConnected && !u->m_bBroken)
-            self->m_pRcvUList->insert(u);
+            self->m_pRcvUList->update(id);
+         else
+            self->m_pRcvUList->remove(id);
       }
 
 TIMER_CHECK:
       // take care of the timing event for all UDT sockets
 
       // check waiting list, if new socket, insert it to the list
-      if (!self->m_pRcvUList->ifNewEntry())
-         self->m_pRcvUList->insert(self->m_pRcvUList->newEntry());
+      if (self->m_pRcvUList->ifNewEntry())
+      {
+         CUDT* ne = self->m_pRcvUList->newEntry();
+         if (NULL != ne)
+            self->m_pRcvUList->insert(ne);
+      }
 
       CUDTList* ul = self->m_pRcvUList->m_pUList;
       uint64_t currtime;
@@ -912,8 +992,7 @@ TIMER_CHECK:
          {
             u->checkTimers();
 
-            self->m_pRcvUList->remove(id);
-            self->m_pRcvUList->insert(u);
+            self->m_pRcvUList->update(id);
          }
          else
          {

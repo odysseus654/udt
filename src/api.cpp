@@ -31,7 +31,7 @@ reference: UDT programming manual and socket programming reference
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 05/14/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 05/15/2007
 *****************************************************************************/
 
 #ifndef WIN32
@@ -940,6 +940,8 @@ void CUDTUnited::removeSocket(const UDTSOCKET u)
    {
       delete m->m_pSndQueue;
       delete m->m_pRcvQueue;
+      delete m->m_pTimer;
+      delete m->m_pChannel;
       m_vMultiplexer.erase(m);
    }
 }
