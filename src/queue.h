@@ -29,7 +29,7 @@ This header file contains the definition of UDT multiplexer.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 05/11/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 05/15/2007
 *****************************************************************************/
 
 
@@ -381,7 +381,7 @@ private:
    pthread_mutex_t m_WindowLock;
    pthread_cond_t m_WindowCond;
 
-   bool m_bClosing;			// closing the worker
+   volatile bool m_bClosing;		// closing the worker
 };
 
 
@@ -454,7 +454,7 @@ private:
 
    int m_iPayloadSize;			// packet payload size
 
-   bool m_bClosing;			// closing the workder
+   volatile bool m_bClosing;		// closing the workder
 };
 
 

@@ -31,7 +31,7 @@ reference: UDT programming manual and socket programming reference
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 05/11/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 05/14/2007
 *****************************************************************************/
 
 #ifndef WIN32
@@ -711,7 +711,7 @@ int CUDTUnited::getsockname(const UDTSOCKET u, sockaddr* name, int* namelen)
    if (NULL == s)
       throw CUDTException(5, 4, 0);
 
-   if (!s->m_pUDT->m_bConnected || s->m_pUDT->m_bBroken)
+   if ((CUDTSocket::INIT == s->m_Status) || (CUDTSocket::CLOSED == s->m_Status))
       throw CUDTException(2, 2, 0);
 
    if (AF_INET == s->m_iIPversion)
