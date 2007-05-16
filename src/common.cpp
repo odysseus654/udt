@@ -30,7 +30,7 @@ mutex facility, and exception processing.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [ygu@cs.uic.edu], last updated 04/14/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 05/16/2007
 *****************************************************************************/
 
 
@@ -69,11 +69,11 @@ CTimer::CTimer()
 CTimer::~CTimer()
 {
    #ifndef WIN32
-      pthread_mutex_init(&m_TickLock, NULL);
-      pthread_cond_init(&m_TickCond, NULL);
+      pthread_mutex_destroy(&m_TickLock);
+      pthread_cond_destroy(&m_TickCond);
    #else
-      m_TickLock = CreateMutex(NULL, false, NULL);
-      m_TickCond = CreateEvent(NULL, false, false, NULL);
+      CloseHandle(m_TickLock);
+      CloseHandle(m_TickCond);
    #endif
 }
 

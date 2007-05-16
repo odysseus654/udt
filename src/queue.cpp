@@ -29,7 +29,7 @@ This file contains the implementation of UDT multiplexer.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 05/15/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 05/16/2007
 *****************************************************************************/
 
 #ifdef WIN32
@@ -432,6 +432,7 @@ CSndQueue::~CSndQueue()
    #else
       SetEvent(m_WindowCond);
       WaitForSingleObject(m_WorkerThread, INFINITE);
+      CloseHandle(m_WorkerThread);
       CloseHandle(m_WindowLock);
       CloseHandle(m_WindowCond);
    #endif
@@ -684,6 +685,22 @@ m_iHashSize(0)
 
 CHash::~CHash()
 {
+   for (int i = 0; i < m_iHashSize; ++ i)
+   {
+      CBucket* b = m_pBucket[i];
+      while (NULL != b)
+      {
+         CBucket* n = b->m_pNext;
+         if (NULL != b->m_pUnit)
+         {
+            delete [] b->m_pUnit->m_Packet.m_pcData;
+            delete b->m_pUnit;
+         }
+         delete b;
+         b = n;
+      }
+   }
+
    delete [] m_pBucket;
 }
 
@@ -840,6 +857,7 @@ CRcvQueue::~CRcvQueue()
       pthread_mutex_destroy(&m_PassLock);
    #else
       WaitForSingleObject(m_WorkerThread, INFINITE);
+      CloseHandle(m_WorkerThread);
       CloseHandle(m_PassLock);
       CloseHandle(m_PassCond);
    #endif
