@@ -31,7 +31,7 @@ reference: UDT programming manual and socket programming reference
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 05/16/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 05/17/2007
 *****************************************************************************/
 
 #ifndef WIN32
@@ -308,7 +308,6 @@ int CUDTUnited::newConnection(const UDTSOCKET listen, const sockaddr* peer, CHan
       ReleaseMutex(m_IDLock);
    #endif
 
-   ns->m_Status = CUDTSocket::INIT;
    ns->m_ListenSocket = listen;
    ns->m_iIPversion = ls->m_iIPversion;
    ns->m_pUDT->m_SocketID = ns->m_Socket;
@@ -329,6 +328,8 @@ int CUDTUnited::newConnection(const UDTSOCKET listen, const sockaddr* peer, CHan
       error = 1;
       goto ERR_ROLLBACK;
    }
+
+   ns->m_Status = CUDTSocket::CONNECTED;
 
    // copy address information of local node
    ns->m_pUDT->m_pSndQueue->m_pChannel->getSockAddr(ns->m_pSelfAddr);
@@ -485,6 +486,9 @@ int CUDTUnited::listen(const UDTSOCKET u, const int& backlog)
 
 UDTSOCKET CUDTUnited::accept(const UDTSOCKET listen, sockaddr* addr, int* addrlen)
 {
+   if ((NULL != addr) && (NULL == addrlen))
+      throw CUDTException(5, 3, 0);
+
    CUDTSocket* ls = locate(listen);
 
    if (ls == NULL)
@@ -566,19 +570,13 @@ UDTSOCKET CUDTUnited::accept(const UDTSOCKET listen, sockaddr* addr, int* addrle
       throw CUDTException(5, 6, 0);
    }
 
-   if (NULL != addr)
-   {
-      if (NULL == addrlen)
-         throw CUDTException(5, 3, 0);
+   if (AF_INET == locate(u)->m_iIPversion)
+      *addrlen = sizeof(sockaddr_in);
+   else
+      *addrlen = sizeof(sockaddr_in6);
 
-      if (AF_INET == locate(u)->m_iIPversion)
-         *addrlen = sizeof(sockaddr_in);
-      else
-         *addrlen = sizeof(sockaddr_in6);
-
-      // copy address information of peer node
-      memcpy(addr, locate(u)->m_pPeerAddr, *addrlen);
-   }
+   // copy address information of peer node
+   memcpy(addr, locate(u)->m_pPeerAddr, *addrlen);
 
    return u;
 }
@@ -926,7 +924,8 @@ void CUDTUnited::removeSocket(const UDTSOCKET u)
          delete m_Sockets[*j];
          m_Sockets.erase(*j);
 
-         m->m_iRefCount --;
+         if (m != m_vMultiplexer.end())
+            m->m_iRefCount --;
       }
    }
 
@@ -934,6 +933,9 @@ void CUDTUnited::removeSocket(const UDTSOCKET u)
    m_Sockets[u]->m_pUDT->close();
    delete m_Sockets[u];
    m_Sockets.erase(u);
+
+   if (m == m_vMultiplexer.end())
+      return;
 
    m->m_iRefCount --;
    if (0 == m->m_iRefCount)
