@@ -75,6 +75,9 @@ the address of the server or the peer side. In regular (default) client/server m
 both sides must call <strong>bind</strong> and connect to each other at (approximately) the same time.</p>
 <p><strong>connect</strong> takes at least one round trip to finish. This may become a bottleneck if applications frequently connect and disconnect to the same address.</p>
 <p>The blocking option does NOT affect the <strong>connect</strong> call, which is always blocked until the connection is either successfully set up or failed.</p>
+<p>When <strong>connect</strong> fails, the UDT socket can still be used to connect again. However, if the socket was not bound before, it may be bound implicitly, as mentioned above, even 
+if the <strong>connect</strong> fails. In addition, in the situation when the <strong>connect</strong> call fails, the UDT socket will not be automatically released, it is the application 
+developer's responsibility to <strong>close</strong> the socket, if he/she does not need it anymore (e.g., to re-connect).</p>
 
 <h5>See Also</h5>
 <p><strong><a href="listen.htm">listen</a>, <a href="bind.htm">bind</a></strong></p>
