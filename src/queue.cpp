@@ -29,7 +29,7 @@ This file contains the implementation of UDT multiplexer.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 05/16/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 05/18/2007
 *****************************************************************************/
 
 #ifdef WIN32
@@ -801,29 +801,28 @@ void CHash::insert(const int32_t& id, const CUDT* u)
 void CHash::remove(const int32_t& id)
 {
    CBucket* b = m_pBucket[id % m_iHashSize];
+   CBucket* p = NULL;
 
-   if (NULL == b)
-      return;
-
-   if (id == b->m_iID)
+   while (NULL != b)
    {
-      m_pBucket[id % m_iHashSize] = b->m_pNext;
-      delete b;
-
-      return;
-   }
-
-   while (NULL != b->m_pNext)
-   {
-      if (id == b->m_pNext->m_iID)
+      if (id == b->m_iID)
       {
-         CBucket* n = b->m_pNext;
-         b->m_pNext = n->m_pNext;
-         delete n;
+         if (NULL == p)
+            m_pBucket[id % m_iHashSize] = b->m_pNext;
+         else
+            p->m_pNext = b->m_pNext;
+
+         if (NULL != b->m_pUnit)
+         {
+            delete [] b->m_pUnit->m_Packet.m_pcData;
+            delete b->m_pUnit;
+         }
+         delete b;
 
          return;
       }
 
+      p = b;
       b = b->m_pNext;
    }
 }
