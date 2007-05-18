@@ -34,7 +34,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 05/09/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 05/18/2007
 *****************************************************************************/
 
 #ifndef WIN32
@@ -482,13 +482,15 @@ void CUDT::open()
    m_LastSampleTime = CTimer::getTime();
    m_llTraceSent = m_llTraceRecv = m_iTraceSndLoss = m_iTraceRcvLoss = m_iTraceRetrans = m_iSentACK = m_iRecvACK = m_iSentNAK = m_iRecvNAK = 0;
 
-   m_pSNode = new CUDTList;
+   if (NULL == m_pSNode)
+      m_pSNode = new CUDTList;
    m_pSNode->m_iID = m_SocketID;
    m_pSNode->m_pUDT = this;
    m_pSNode->m_llTimeStamp = 1;
    m_pSNode->m_pPrev = m_pSNode->m_pNext = NULL;
 
-   m_pRNode = new CUDTList;
+   if (NULL == m_pRNode)
+      m_pRNode = new CUDTList;
    m_pRNode->m_iID = m_SocketID;
    m_pRNode->m_pUDT = this;
    m_pRNode->m_llTimeStamp = 1;
@@ -562,27 +564,9 @@ void CUDT::connect(const sockaddr* serv_addr)
    if (m_bConnected)
       throw CUDTException(5, 2, 0);
 
-
    // rendezvous mode check in
    if (m_bRendezvous)
-   {
-      CRcvQueue::CRL r;
-      r.m_iID = m_SocketID;
-      r.m_iPeerID = 0;
-      r.m_iIPversion = m_iIPversion;
-      if (AF_INET == m_iIPversion)
-      {
-         r.m_pPeerAddr = (sockaddr*)new sockaddr_in;
-         memcpy(r.m_pPeerAddr, serv_addr, sizeof(sockaddr_in));
-      }
-      else
-      {
-         r.m_pPeerAddr = (sockaddr*)new sockaddr_in6;
-         memcpy(r.m_pPeerAddr, serv_addr, sizeof(sockaddr_in6));
-      }
-      m_pRcvQueue->m_vRendezvousID.insert(m_pRcvQueue->m_vRendezvousID.end(), r);
-   }
-
+      m_pRcvQueue->m_pRendezvousQueue->insert(m_SocketID, m_iIPversion, serv_addr);
 
    CPacket request;
    char* reqdata = new char [m_iPayloadSize];
@@ -621,6 +605,7 @@ void CUDT::connect(const sockaddr* serv_addr)
    if (m_bRendezvous)
       timeo *= 10;
    uint64_t entertime = CTimer::getTime();
+   CUDTException e(0, 0);
 
    do
    {
@@ -645,34 +630,33 @@ void CUDT::connect(const sockaddr* serv_addr)
 
       if (CTimer::getTime() - entertime > timeo)
       {
-         delete [] reqdata;
-         delete [] resdata;
-         throw CUDTException(1, 1, 0);
+         // timeout
+         e = CUDTException(1, 1, 0);
+         break;
       }
    } while (((response.getLength() <= 0) || (m_bRendezvous && (res->m_iReqType > 0))) && !m_bClosing);
 
-   // if the socket is closed before connection...
-   if (m_bClosing)
-   {
-      delete [] reqdata;
-      delete [] resdata;
-      throw CUDTException(1);
-   }
-
    delete [] reqdata;
 
-   if (1002 == res->m_iReqType)
-   {	
-      // connection request rejected
-      delete [] resdata;
-      throw CUDTException(1, 2, 0);
+   if (e.getErrorCode() == 0)
+   {
+      if (m_bClosing)						// if the socket is closed before connection...
+         e = CUDTException(1);
+      else if (1002 == res->m_iReqType)				// connection request rejected
+         e = CUDTException(1, 2, 0);
+      else if ((!m_bRendezvous) && (m_iISN != res->m_iISN))	// secuity check
+         e = CUDTException(1, 4, 0);
    }
 
-   // secuity check
-   if ((!m_bRendezvous) && (m_iISN != res->m_iISN))
+   if (e.getErrorCode() != 0)
    {
+      // connection failure, clean up and throw exception
       delete [] resdata;
-      throw CUDTException(1, 4, 0);
+
+      if (m_bRendezvous)
+         m_pRcvQueue->m_pRendezvousQueue->remove(m_SocketID);
+
+      throw e;
    }
 
    // Got it. Re-configure according to the negotiated values.
@@ -829,20 +813,7 @@ void CUDT::close()
    }
 
    if (m_bRendezvous)
-   {
-      for (vector<CRcvQueue::CRL>::iterator i = m_pRcvQueue->m_vRendezvousID.begin(); i != m_pRcvQueue->m_vRendezvousID.end(); ++ i)
-      {
-         if (i->m_iID == m_SocketID)
-         {
-            if (AF_INET == m_iIPversion)
-               delete (sockaddr_in*)(i->m_pPeerAddr);
-            else
-               delete (sockaddr_in6*)(i->m_pPeerAddr);
-            m_pRcvQueue->m_vRendezvousID.erase(i);
-            break;
-         }
-      }
-   }
+      m_pRcvQueue->m_pRendezvousQueue->remove(m_SocketID);
 
    // waiting all send and recv calls to stop
    CGuard sendguard(m_SendLock);

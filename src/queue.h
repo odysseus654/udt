@@ -29,7 +29,7 @@ This header file contains the definition of UDT multiplexer.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 05/15/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 05/18/2007
 *****************************************************************************/
 
 
@@ -345,6 +345,29 @@ private:
    int m_iHashSize;		// size of hash table
 };
 
+class CRendezvousQueue
+{
+public:
+   CRendezvousQueue();
+   ~CRendezvousQueue();
+
+public:
+   void insert(const UDTSOCKET& id, const int& ipv, const sockaddr* addr);
+   void remove(const UDTSOCKET& id);
+   bool retrieve(const sockaddr* addr, UDTSOCKET& id, const UDTSOCKET& peerid);
+
+private:
+   struct CRL
+   {
+      UDTSOCKET m_iID;
+      UDTSOCKET m_iPeerID;
+      int m_iIPversion;
+      sockaddr* m_pPeerAddr;
+   };
+   vector<CRL> m_vRendezvousID;         // The sockets currently in rendezvous mode
+
+   pthread_mutex_t m_RIDVectorLock;
+};
 
 class CSndQueue
 {
@@ -454,16 +477,8 @@ private:
    pthread_mutex_t m_PassLock;
    pthread_cond_t m_PassCond;
 
-   volatile UDTSOCKET m_ListenerID;	// The only listening socket that is associated to the queue, if there is one
-   struct CRL
-   {
-      UDTSOCKET m_iID;
-      UDTSOCKET m_iPeerID;
-      int m_iIPversion;
-      sockaddr* m_pPeerAddr;
-   };
-   vector<CRL> m_vRendezvousID;         // The socket IDs currently in rendezvous mode
-   pthread_mutex_t m_RIDVectorLock;
+   volatile UDTSOCKET m_ListenerID;		// The only listening socket that is associated to the queue, if there is one
+   CRendezvousQueue* m_pRendezvousQueue;	// The list of sockets in rendezvous mode
 
    int m_iPayloadSize;			// packet payload size
 

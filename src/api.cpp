@@ -31,7 +31,7 @@ reference: UDT programming manual and socket programming reference
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 05/17/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 05/18/2007
 *****************************************************************************/
 
 #ifndef WIN32
@@ -607,6 +607,7 @@ int CUDTUnited::connect(const UDTSOCKET u, const sockaddr* name, const int& name
       {
          s->m_pUDT->open();
          updateMux(s->m_pUDT);
+         s->m_Status = CUDTSocket::OPENED;
       }
       else
          throw CUDTException(5, 8, 0);
@@ -1006,7 +1007,16 @@ void CUDTUnited::updateMux(CUDT* u, const sockaddr* addr)
    m.m_pChannel->setSndBufSize(u->m_iUDPSndBufSize);
    m.m_pChannel->setRcvBufSize(u->m_iUDPRcvBufSize);
 
-   m.m_pChannel->open(addr);
+   try
+   {
+      m.m_pChannel->open(addr);
+   }
+   catch (CUDTException& e)
+   {
+      m.m_pChannel->close();
+      delete m.m_pChannel;
+      throw e;
+   }
 
    sockaddr* sa = (AF_INET == u->m_iIPversion) ? (sockaddr*) new sockaddr_in : (sockaddr*) new sockaddr_in6;
    m.m_pChannel->getSockAddr(sa);

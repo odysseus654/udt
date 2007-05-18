@@ -829,12 +829,91 @@ void CHash::remove(const int32_t& id)
 
 
 //
+CRendezvousQueue::CRendezvousQueue()
+{
+   #ifndef WIN32
+      pthread_mutex_init(&m_RIDVectorLock, NULL);
+   #else
+      m_RIDVectorLock = CreateMutex(NULL, false, NULL);
+   #endif
+
+   m_vRendezvousID.clear();
+}
+
+CRendezvousQueue::~CRendezvousQueue()
+{
+   #ifndef WIN32
+      pthread_mutex_destroy(&m_RIDVectorLock);
+   #else
+      CloseHandle(m_RIDVectorLock);
+   #endif
+
+   for (vector<CRL>::iterator i = m_vRendezvousID.begin(); i != m_vRendezvousID.end(); ++ i)
+   {
+      if (AF_INET == i->m_iIPversion)
+         delete (sockaddr_in*)i->m_pPeerAddr;
+      else
+         delete (sockaddr_in6*)i->m_pPeerAddr;
+   }
+
+   m_vRendezvousID.clear();
+}
+
+void CRendezvousQueue::insert(const UDTSOCKET& id, const int& ipv, const sockaddr* addr)
+{
+   CGuard vg(m_RIDVectorLock);
+
+   CRL r;
+   r.m_iID = id;
+   r.m_iPeerID = 0;
+   r.m_iIPversion = ipv;
+   r.m_pPeerAddr = (AF_INET == ipv) ? (sockaddr*)new sockaddr_in : (sockaddr*)new sockaddr_in6;
+   memcpy(r.m_pPeerAddr, addr, (AF_INET == ipv) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6));
+   m_vRendezvousID.insert(m_vRendezvousID.end(), r);
+}
+
+void CRendezvousQueue::remove(const UDTSOCKET& id)
+{
+   CGuard vg(m_RIDVectorLock);
+
+   for (vector<CRL>::iterator i = m_vRendezvousID.begin(); i != m_vRendezvousID.end(); ++ i)
+      if (i->m_iID == id)
+      {
+         if (AF_INET == i->m_iIPversion)
+            delete (sockaddr_in*)i->m_pPeerAddr;
+         else
+            delete (sockaddr_in6*)i->m_pPeerAddr;
+
+         m_vRendezvousID.erase(i);
+
+         return;
+      }
+}
+
+bool CRendezvousQueue::retrieve(const sockaddr* addr, UDTSOCKET& id, const UDTSOCKET& peerid)
+{
+   CGuard vg(m_RIDVectorLock);
+
+   for (vector<CRL>::iterator i = m_vRendezvousID.begin(); i != m_vRendezvousID.end(); ++ i)
+      if (CIPAddress::ipcmp(addr, i->m_pPeerAddr, i->m_iIPversion) && ((0 == i->m_iPeerID) || (peerid == i->m_iPeerID)))
+      {
+         id = i->m_iID;
+         i->m_iPeerID = peerid;
+         return true;
+      }
+
+   return false;
+}
+
+
+//
 CRcvQueue::CRcvQueue():
 m_pRcvUList(NULL),
 m_pHash(NULL),
 m_pChannel(NULL),
 m_pTimer(NULL),
 m_ListenerID(-1),
+m_pRendezvousQueue(NULL),
 m_bClosing(false)
 {
    #ifndef WIN32
@@ -861,8 +940,9 @@ CRcvQueue::~CRcvQueue()
       CloseHandle(m_PassCond);
    #endif
 
-   delete m_pHash;
    delete m_pRcvUList;
+   delete m_pHash;
+   delete m_pRendezvousQueue;
 }
 
 void CRcvQueue::init(const int& qsize, const int& payload, const int& version, const int& hsize, const CChannel* cc, const CTimer* t)
@@ -878,6 +958,7 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& version, c
    m_pTimer = (CTimer*)t;
 
    m_pRcvUList = new CRcvUList;
+   m_pRendezvousQueue = new CRendezvousQueue;
 
    #ifndef WIN32
       pthread_create(&m_WorkerThread, NULL, CRcvQueue::worker, this);
@@ -928,17 +1009,8 @@ void CRcvQueue::init(const int& qsize, const int& payload, const int& version, c
       {
          if (-1 != self->m_ListenerID)
             id = self->m_ListenerID;
-         else if (0 != self->m_vRendezvousID.size())
-         {
-            UDTSOCKET peerid = ((CHandShake*)unit->m_Packet.m_pcData)->m_iID;
-            for (vector<CRL>::iterator i = self->m_vRendezvousID.begin(); i != self->m_vRendezvousID.end(); ++ i)
-               if (CIPAddress::ipcmp(unit->m_pAddr, i->m_pPeerAddr, i->m_iIPversion) && ((0 == i->m_iPeerID) || (i->m_iPeerID == peerid)))
-               {
-                  id = i->m_iID;
-                  i->m_iPeerID = peerid;
-                  break;
-               }
-         }
+         else
+            self->m_pRendezvousQueue->retrieve(unit->m_pAddr, id, ((CHandShake*)unit->m_Packet.m_pcData)->m_iID);
       }
 
       u = self->m_pHash->lookup(id);
