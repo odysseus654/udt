@@ -31,7 +31,7 @@ reference: UDT programming manual and socket programming reference
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 05/18/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 05/22/2007
 *****************************************************************************/
 
 #ifndef WIN32
@@ -897,7 +897,7 @@ void CUDTUnited::removeSocket(const UDTSOCKET u)
       return;
 
    // decrease multiplexer reference count, and remove it if necessary
-   short port;
+   int port;
    if (AF_INET == i->second->m_iIPversion)
       port = ntohs(((sockaddr_in*)(i->second->m_pSelfAddr))->sin_port);
    else
@@ -974,7 +974,6 @@ CUDTException* CUDTUnited::getError()
    #endif
 }
 
-
 void CUDTUnited::updateMux(CUDT* u, const sockaddr* addr)
 {
    CGuard cg(m_ControlLock);
@@ -983,9 +982,11 @@ void CUDTUnited::updateMux(CUDT* u, const sockaddr* addr)
    {
       if ((i->m_iIPversion == u->m_iIPversion) && (i->m_iMTU == u->m_iMSS))
       {
-         if ((NULL == addr) ||
-             ((AF_INET == i->m_iIPversion) && (i->m_iPort == ntohs(((sockaddr_in*)addr)->sin_port))) ||
-             ((AF_INET6 == i->m_iIPversion) && (i->m_iPort == ntohs(((sockaddr_in6*)addr)->sin6_port))))
+         int port = 0;
+         if (NULL != addr)
+            port = (AF_INET == i->m_iIPversion) ? ntohs(((sockaddr_in*)addr)->sin_port) : ntohs(((sockaddr_in6*)addr)->sin6_port);
+
+         if ((0 == port) || (i->m_iPort == port))
          {
             // reuse the existing multiplexer
             ++ i->m_iRefCount;
