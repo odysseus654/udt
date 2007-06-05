@@ -2,7 +2,7 @@
 Copyright © 2001 - 2007, The Board of Trustees of the University of Illinois.
 All Rights Reserved.
 
-UDP-based Data Transfer Library (UDT) special version UDT-m
+UDP-based Data Transfer Library (UDT) version 4
 
 National Center for Data Mining (NCDM)
 University of Illinois at Chicago
@@ -612,7 +612,7 @@ void CUDT::connect(const sockaddr* serv_addr)
       m_pSndQueue->sendto(serv_addr, request);
 
       response.setLength(m_iPayloadSize);
-      if (m_pRcvQueue->recvfrom(NULL, response, m_SocketID) > 0)
+      if (m_pRcvQueue->recvfrom(m_SocketID, response) > 0)
       {
          if ((1 != response.getFlag()) || (0 != response.getType()))
             response.setLength(-1);
