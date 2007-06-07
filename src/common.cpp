@@ -85,15 +85,17 @@ void CTimer::rdtsc(uint64_t &x)
       }
    #elif IA32
       // read CPU clock with RDTSC instruction on IA32 acrh
-      __asm__ volatile (".byte 0x0f, 0x31" : "=A" (x));
+      unsigned int lval, hval;
+      __asm__ volatile ("rdtsc" : "=a" (lval), "=d" (hval));
+      x = hval;
+      x = (x << 32) | lval;
 
       // on Windows
       /*
          unsigned int a, b;
          __asm 
          {
-            __emit 0x0f
-            __emit 0x31
+            rdtsc
             mov a, eax
             mov b, ebx
          }
