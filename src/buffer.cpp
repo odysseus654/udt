@@ -34,7 +34,7 @@ The receiving buffer is a logically circular memeory block.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 03/14/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 06/07/2007
 *****************************************************************************/
 
 #include <cstring>
@@ -977,7 +977,7 @@ int CRcvBuffer::readMsg(char* data, const int& len)
    CGuard msgguard(m_MsgLock);
 
    // no message exist, return
-   if (-1 == m_iPtrFirstMsg)
+   if ((-1 == m_iPtrFirstMsg) || (-1 == m_iPtrRecentACK))
       return 0;
 
    int ptr = m_iPtrFirstMsg;
