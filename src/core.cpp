@@ -35,7 +35,7 @@ UDT protocol specification (draft-gg-udt-xx.txt)
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 05/09/2007
+   Yunhong Gu [gu@lac.uic.edu], last updated 06/28/2007
 *****************************************************************************/
 
 #ifndef WIN32
@@ -2698,7 +2698,7 @@ int64_t CUDT::sendfile(ifstream& ifs, const int64_t& offset, const int64_t& size
          m_bSndThrStart = true;
       #else
          DWORD threadID;
-         if (NULL == (m_SndThread = CreateThread(NULL, 0, CUDT::sndHandler, this, 0, threadID)))
+         if (NULL == (m_SndThread = CreateThread(NULL, 0, CUDT::sndHandler, this, 0, &threadID)))
          {
             delete m_pSndTimeWindow;
             m_pSndTimeWindow = NULL;
