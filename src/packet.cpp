@@ -57,7 +57,7 @@ written by
 //   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 //   |ff |o|                     Message Number                      |
 //   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//   |                          Time Stamp                           |
+//   |           Reserved            |           Session ID          |
 //   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 //   |                     Destination Socket ID                     |
 //   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -343,6 +343,12 @@ int32_t CPacket::getMsgSeq() const
    return m_nHeader[1] & 0x1FFFFFFF;
 }
 
+int32_t CPacket::getSessionID() const
+{
+   // read [2] bit 16~31
+   return m_nHeader[2] & 0xFFFF;
+}
+
 CPacket* CPacket::clone() const
 {
    CPacket* pkt = new CPacket;
@@ -355,7 +361,7 @@ CPacket* CPacket::clone() const
 }
 
 CHandShake::CHandShake():
-m_iVersion(5),
+m_iVersion(0),
 m_iType(0),
 m_iISN(0),
 m_iMSS(0),

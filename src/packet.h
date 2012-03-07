@@ -176,6 +176,15 @@ public:
    int32_t getMsgSeq() const;
 
       // Functionality:
+      //    Read the session ID.
+      // Parameters:
+      //    None.
+      // Returned value:
+      //    packet header field [2] (bit 16~31).
+
+   int32_t getSessionID() const;
+
+      // Functionality:
       //    Clone this packet.
       // Parameters:
       //    None.
