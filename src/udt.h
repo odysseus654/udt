@@ -110,12 +110,6 @@ typedef int UDTSOCKET;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-typedef std::set<UDTSOCKET> ud_set;
-#define UD_CLR(u, uset) ((uset)->erase(u))
-#define UD_ISSET(u, uset) ((uset)->find(u) != (uset)->end())
-#define UD_SET(u, uset) ((uset)->insert(u))
-#define UD_ZERO(uset) ((uset)->clear())
-
 enum EPOLLOpt
 {
    // this values are defined same as linux epoll.h
@@ -303,7 +297,6 @@ namespace UDT
 typedef CUDTException ERRORINFO;
 typedef UDTOpt SOCKOPT;
 typedef CPerfMon TRACEINFO;
-typedef ud_set UDSET;
 
 UDT_API extern const UDTSOCKET INVALID_SOCK;
 #undef ERROR
@@ -330,12 +323,6 @@ UDT_API int64_t sendfile(UDTSOCKET u, std::fstream& ifs, int64_t& offset, int64_
 UDT_API int64_t recvfile(UDTSOCKET u, std::fstream& ofs, int64_t& offset, int64_t size, int block = 7280000);
 UDT_API int64_t sendfile2(UDTSOCKET u, const char* path, int64_t* offset, int64_t size, int block = 364000);
 UDT_API int64_t recvfile2(UDTSOCKET u, const char* path, int64_t* offset, int64_t size, int block = 7280000);
-
-// select and selectEX are DEPRECATED; please use epoll. 
-UDT_API int select(int nfds, UDSET* readfds, UDSET* writefds, UDSET* exceptfds, const struct timeval* timeout);
-UDT_API int selectEx(const std::vector<UDTSOCKET>& fds, std::vector<UDTSOCKET>* readfds,
-                     std::vector<UDTSOCKET>* writefds, std::vector<UDTSOCKET>* exceptfds, int64_t msTimeOut);
-
 UDT_API int epoll_create();
 UDT_API int epoll_add_usock(int eid, UDTSOCKET u, const int* events = NULL);
 UDT_API int epoll_add_ssock(int eid, SYSSOCKET s, const int* events = NULL);

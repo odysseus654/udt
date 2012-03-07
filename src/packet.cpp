@@ -355,7 +355,7 @@ CPacket* CPacket::clone() const
 }
 
 CHandShake::CHandShake():
-m_iVersion(0),
+m_iVersion(5),
 m_iType(0),
 m_iISN(0),
 m_iMSS(0),
