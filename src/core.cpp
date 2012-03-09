@@ -476,6 +476,12 @@ void CUDT::getOpt(UDTOpt optName, void* optval, int& optlen)
       optlen = sizeof(int32_t);
       break;
 
+   case UDP_SOCKET:
+     // Not supported yet.
+     //*(UDPSOCKET*)optval = m_iSocketID;
+     optlen = sizeof(UDPSOCKET);
+     break;
+
    default:
       throw CUDTException(5, 0, 0);
    }
@@ -1008,7 +1014,7 @@ void CUDT::close()
    m_bOpened = false;
 }
 
-int CUDT::send(const char* data, int len)
+int CUDT::send(const char* data, int len, int session)
 {
    if (UDT_DGRAM == m_iSockType)
       throw CUDTException(5, 10, 0);
@@ -1117,7 +1123,7 @@ int CUDT::send(const char* data, int len)
    return size;
 }
 
-int CUDT::recv(char* data, int len)
+int CUDT::recv(char* data, int len, int session)
 {
    if (UDT_DGRAM == m_iSockType)
       throw CUDTException(5, 10, 0);
@@ -1204,7 +1210,7 @@ int CUDT::recv(char* data, int len)
    return res;
 }
 
-int CUDT::sendmsg(const char* data, int len, int msttl, bool inorder)
+int CUDT::sendmsg(const char* data, int len, int msttl, bool inorder, int session)
 {
    if (UDT_STREAM == m_iSockType)
       throw CUDTException(5, 9, 0);
@@ -1307,7 +1313,7 @@ int CUDT::sendmsg(const char* data, int len, int msttl, bool inorder)
    return len;   
 }
 
-int CUDT::recvmsg(char* data, int len)
+int CUDT::recvmsg(char* data, int len, int session)
 {
    if (UDT_STREAM == m_iSockType)
       throw CUDTException(5, 9, 0);
@@ -1406,7 +1412,7 @@ int CUDT::recvmsg(char* data, int len)
    return res;
 }
 
-int64_t CUDT::sendfile(fstream& ifs, int64_t& offset, int64_t size, int block)
+int64_t CUDT::sendfile(fstream& ifs, int64_t& offset, int64_t size, int block, int session)
 {
    if (UDT_DGRAM == m_iSockType)
       throw CUDTException(5, 10, 0);
@@ -1499,7 +1505,7 @@ int64_t CUDT::sendfile(fstream& ifs, int64_t& offset, int64_t size, int block)
    return size - tosend;
 }
 
-int64_t CUDT::recvfile(fstream& ofs, int64_t& offset, int64_t size, int block)
+int64_t CUDT::recvfile(fstream& ofs, int64_t& offset, int64_t size, int block, int session)
 {
    if (UDT_DGRAM == m_iSockType)
       throw CUDTException(5, 10, 0);

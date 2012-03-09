@@ -1612,12 +1612,12 @@ int CUDT::setsockopt(UDTSOCKET u, int, UDTOpt optname, const void* optval, int o
    }
 }
 
-int CUDT::send(UDTSOCKET u, const char* buf, int len, int)
+int CUDT::send(UDTSOCKET u, const char* buf, int len, int session)
 {
    try
    {
       CUDT* udt = s_UDTUnited.lookup(u);
-      return udt->send(buf, len);
+      return udt->send(buf, len, session);
    }
    catch (CUDTException e)
    {
@@ -1636,12 +1636,12 @@ int CUDT::send(UDTSOCKET u, const char* buf, int len, int)
    }
 }
 
-int CUDT::recv(UDTSOCKET u, char* buf, int len, int)
+int CUDT::recv(UDTSOCKET u, char* buf, int len, int session)
 {
    try
    {
       CUDT* udt = s_UDTUnited.lookup(u);
-      return udt->recv(buf, len);
+      return udt->recv(buf, len, session);
    }
    catch (CUDTException e)
    {
@@ -1655,55 +1655,12 @@ int CUDT::recv(UDTSOCKET u, char* buf, int len, int)
    }
 }
 
-int CUDT::sendmsg(UDTSOCKET u, const char* buf, int len, int ttl, bool inorder)
+int CUDT::sendmsg(UDTSOCKET u, const char* buf, int len, int ttl, bool inorder, int session)
 {
    try
    {
       CUDT* udt = s_UDTUnited.lookup(u);
-      return udt->sendmsg(buf, len, ttl, inorder);
-   }
-   catch (CUDTException e)
-   {
-      s_UDTUnited.setError(new CUDTException(e));
-      return ERROR;
-   }
-   catch (bad_alloc&)
-   {
-      s_UDTUnited.setError(new CUDTException(3, 2, 0));
-      return ERROR;
-   }
-   catch (...)
-   {
-      s_UDTUnited.setError(new CUDTException(-1, 0, 0));
-      return ERROR;
-   }
-}
-
-int CUDT::recvmsg(UDTSOCKET u, char* buf, int len)
-{
-   try
-   {
-      CUDT* udt = s_UDTUnited.lookup(u);
-      return udt->recvmsg(buf, len);
-   }
-   catch (CUDTException e)
-   {
-      s_UDTUnited.setError(new CUDTException(e));
-      return ERROR;
-   }
-   catch (...)
-   {
-      s_UDTUnited.setError(new CUDTException(-1, 0, 0));
-      return ERROR;
-   }
-}
-
-int64_t CUDT::sendfile(UDTSOCKET u, fstream& ifs, int64_t& offset, int64_t size, int block)
-{
-   try
-   {
-      CUDT* udt = s_UDTUnited.lookup(u);
-      return udt->sendfile(ifs, offset, size, block);
+      return udt->sendmsg(buf, len, ttl, inorder, session);
    }
    catch (CUDTException e)
    {
@@ -1722,12 +1679,55 @@ int64_t CUDT::sendfile(UDTSOCKET u, fstream& ifs, int64_t& offset, int64_t size,
    }
 }
 
-int64_t CUDT::recvfile(UDTSOCKET u, fstream& ofs, int64_t& offset, int64_t size, int block)
+int CUDT::recvmsg(UDTSOCKET u, char* buf, int len, int session)
 {
    try
    {
       CUDT* udt = s_UDTUnited.lookup(u);
-      return udt->recvfile(ofs, offset, size, block);
+      return udt->recvmsg(buf, len, session);
+   }
+   catch (CUDTException e)
+   {
+      s_UDTUnited.setError(new CUDTException(e));
+      return ERROR;
+   }
+   catch (...)
+   {
+      s_UDTUnited.setError(new CUDTException(-1, 0, 0));
+      return ERROR;
+   }
+}
+
+int64_t CUDT::sendfile(UDTSOCKET u, fstream& ifs, int64_t& offset, int64_t size, int block, int session)
+{
+   try
+   {
+      CUDT* udt = s_UDTUnited.lookup(u);
+      return udt->sendfile(ifs, offset, size, block, session);
+   }
+   catch (CUDTException e)
+   {
+      s_UDTUnited.setError(new CUDTException(e));
+      return ERROR;
+   }
+   catch (bad_alloc&)
+   {
+      s_UDTUnited.setError(new CUDTException(3, 2, 0));
+      return ERROR;
+   }
+   catch (...)
+   {
+      s_UDTUnited.setError(new CUDTException(-1, 0, 0));
+      return ERROR;
+   }
+}
+
+int64_t CUDT::recvfile(UDTSOCKET u, fstream& ofs, int64_t& offset, int64_t size, int block, int session)
+{
+   try
+   {
+      CUDT* udt = s_UDTUnited.lookup(u);
+      return udt->recvfile(ofs, offset, size, block, session);
    }
    catch (CUDTException e)
    {
@@ -1988,48 +1988,48 @@ int setsockopt(UDTSOCKET u, int level, SOCKOPT optname, const void* optval, int 
    return CUDT::setsockopt(u, level, optname, optval, optlen);
 }
 
-int send(UDTSOCKET u, const char* buf, int len, int flags)
+int send(UDTSOCKET u, const char* buf, int len, int session)
 {
-   return CUDT::send(u, buf, len, flags);
+   return CUDT::send(u, buf, len, session);
 }
 
-int recv(UDTSOCKET u, char* buf, int len, int flags)
+int recv(UDTSOCKET u, char* buf, int len, int session)
 {
-   return CUDT::recv(u, buf, len, flags);
+   return CUDT::recv(u, buf, len, session);
 }
 
-int sendmsg(UDTSOCKET u, const char* buf, int len, int ttl, bool inorder)
+int sendmsg(UDTSOCKET u, const char* buf, int len, int ttl, bool inorder, int session)
 {
-   return CUDT::sendmsg(u, buf, len, ttl, inorder);
+   return CUDT::sendmsg(u, buf, len, ttl, inorder, session);
 }
 
-int recvmsg(UDTSOCKET u, char* buf, int len)
+int recvmsg(UDTSOCKET u, char* buf, int len, int session)
 {
-   return CUDT::recvmsg(u, buf, len);
+   return CUDT::recvmsg(u, buf, len, session);
 }
 
-int64_t sendfile(UDTSOCKET u, fstream& ifs, int64_t& offset, int64_t size, int block)
+int64_t sendfile(UDTSOCKET u, fstream& ifs, int64_t& offset, int64_t size, int block, int session)
 {
-   return CUDT::sendfile(u, ifs, offset, size, block);
+   return CUDT::sendfile(u, ifs, offset, size, block, session);
 }
 
-int64_t recvfile(UDTSOCKET u, fstream& ofs, int64_t& offset, int64_t size, int block)
+int64_t recvfile(UDTSOCKET u, fstream& ofs, int64_t& offset, int64_t size, int block, int session)
 {
-   return CUDT::recvfile(u, ofs, offset, size, block);
+   return CUDT::recvfile(u, ofs, offset, size, block, session);
 }
 
-int64_t sendfile2(UDTSOCKET u, const char* path, int64_t* offset, int64_t size, int block)
+int64_t sendfile2(UDTSOCKET u, const char* path, int64_t* offset, int64_t size, int block, int session)
 {
    fstream ifs(path, ios::binary | ios::in);
-   int64_t ret = CUDT::sendfile(u, ifs, *offset, size, block);
+   int64_t ret = CUDT::sendfile(u, ifs, *offset, size, block, session);
    ifs.close();
    return ret;
 }
 
-int64_t recvfile2(UDTSOCKET u, const char* path, int64_t* offset, int64_t size, int block)
+int64_t recvfile2(UDTSOCKET u, const char* path, int64_t* offset, int64_t size, int block, int session)
 {
    fstream ofs(path, ios::binary | ios::out);
-   int64_t ret = CUDT::sendfile(u, ofs, *offset, size, block);
+   int64_t ret = CUDT::sendfile(u, ofs, *offset, size, block, session);
    ofs.close();
    return ret;
 }
