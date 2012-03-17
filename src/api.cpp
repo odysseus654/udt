@@ -697,7 +697,7 @@ UDTSOCKET CUDTUnited::accept(const UDTSOCKET listen, sockaddr* addr, int* addrle
          }
 
          if (ls->m_pQueuedSockets->empty())
-            m_EPoll.disable_read(listen, ls->m_pUDT->m_sPollID);
+            m_EPoll.update_events(listen, ls->m_pUDT->m_sPollID, UDT_EPOLL_IN, false);
       }
    #endif
 
@@ -1207,6 +1207,8 @@ void CUDTUnited::updateMux(CUDTSocket* s, const sockaddr* addr, const UDPSOCKET*
       {
          if ((i->second.m_iIPversion == s->m_pUDT->m_iIPversion) && (i->second.m_iMSS == s->m_pUDT->m_iMSS) && i->second.m_bReusable)
          {
+            //TODO: differentiate IP version and local IP addr as well.
+
             if (i->second.m_iPort == port)
             {
                // reuse the existing multiplexer
