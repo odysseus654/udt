@@ -135,24 +135,9 @@ CUDT::CUDT()
 
 CUDT::CUDT(const CUDT& ancestor)
 {
-   m_pSndBuffer = NULL;
-   m_pRcvBuffer = NULL;
-   m_pSndLossList = NULL;
-   m_pRcvLossList = NULL;
-   m_pACKWindow = NULL;
-   m_pSndTimeWindow = NULL;
-   m_pRcvTimeWindow = NULL;
+   CUDT();
 
-   m_pSndQueue = NULL;
-   m_pRcvQueue = NULL;
-   m_pPeerAddr = NULL;
-   m_pSNode = NULL;
-   m_pRNode = NULL;
-
-   // Initilize mutex and condition variables
-   initSynch();
-
-   // Default UDT configurations
+   // Set the following properties to the same as the ancestor.
    m_iMSS = ancestor.m_iMSS;
    m_bSynSending = ancestor.m_bSynSending;
    m_bSynRecving = ancestor.m_bSynRecving;
@@ -169,21 +154,8 @@ CUDT::CUDT(const CUDT& ancestor)
    m_iRcvTimeOut = ancestor.m_iRcvTimeOut;
    m_bReuseAddr = true;	// this must be true, because all accepted sockets shared the same port with the listener
    m_llMaxBW = ancestor.m_llMaxBW;
-
    m_pCCFactory = ancestor.m_pCCFactory->clone();
-   m_pCC = NULL;
    m_pCache = ancestor.m_pCache;
-
-   // Initial status
-   m_bOpened = false;
-   m_bListening = false;
-   m_bConnecting = false;
-   m_bConnected = false;
-   m_bClosing = false;
-   m_bShutdown = false;
-   m_bBroken = false;
-   m_bPeerHealth = true;
-   m_ullLingerExpiration = 0;
 }
 
 CUDT::~CUDT()
