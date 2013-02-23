@@ -127,6 +127,10 @@ DWORD WINAPI recvdata(LPVOID usocket)
       int rs;
       while (rsize < size)
       {
+         int rcv_size;
+         int var_size = sizeof(int);
+         UDT::getsockopt(recver, 0, UDT_RCVDATA, &rcv_size, &var_size);
+         cout << "TO READ " << rcv_size << endl;
          if (UDT::ERROR == (rs = UDT::recv(recver, data + rsize, size - rsize, 0)))
          {
             cout << "recv:" << UDT::getlasterror().getErrorMessage() << endl;
